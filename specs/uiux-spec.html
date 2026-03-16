@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Photo App — UX Contract v2</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #fff;
+      --text: #0f172a;
+      --muted: #475569;
+      --line: #dbe3ef;
+      --primary: #2563eb;
+      --good: #0f766e;
+      --warn: #b45309;
+      --bad: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 24px; }
+    .hero, .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+    .hero { padding: 20px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .sub { color: var(--muted); font-size: 14px; }
+    .grid { display: grid; gap: 12px; margin-top: 12px; }
+    .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card { padding: 14px; }
+    .card h3 { margin: 0 0 8px; font-size: 14px; }
+    .chip { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; margin:2px 6px 0 0; border:1px solid var(--line); }
+    .c1 { color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; }
+    .c2 { color:#065f46; border-color:#99f6e4; background:#ecfeff; }
+    .c3 { color:#92400e; border-color:#fde68a; background:#fffbeb; }
+    .flow { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .s { border:1px solid var(--line); border-radius:8px; padding:7px 10px; font-size:12px; background:#fff; }
+    .arr { color:var(--muted); }
+    table { width:100%; border-collapse: collapse; font-size:13px; }
+    th,td { border-bottom:1px solid var(--line); padding:8px; text-align:left; vertical-align:top; }
+    th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+    ul { margin:8px 0 0 18px; padding:0; }
+    li { margin:4px 0; }
+    .ok { color: var(--good); font-weight: 600; }
+    .warn { color: var(--warn); font-weight: 600; }
+    .bad { color: var(--bad); font-weight: 600; }
+    .refs a { color: var(--primary); text-decoration: none; }
+    .refs a:hover { text-decoration: underline; }
+    @media (max-width: 900px) { .g3, .g2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Live Photo App — UX Contract v2</h1>
+      <div class="sub">Mini App + Web · trust-first flow · free-to-paid conversion loop</div>
+      <div style="margin-top:10px">
+        <span class="chip c1">SLA copy: 40–180 sec</span>
+        <span class="chip c2">1 free generation / user_id</span>
+        <span class="chip c3">Tariffs: 5 / 20 / 50</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3>Canonical User Flow</h3>
+      <div class="flow">
+        <div class="s">Onboarding</div><div class="arr">→</div>
+        <div class="s">Upload</div><div class="arr">→</div>
+        <div class="s">Style Pick</div><div class="arr">→</div>
+        <div class="s">Credit Check</div><div class="arr">→</div>
+        <div class="s">Paywall (if needed)</div><div class="arr">→</div>
+        <div class="s">Processing</div><div class="arr">→</div>
+        <div class="s">Result</div><div class="arr">→</div>
+        <div class="s">History/Profile</div>
+      </div>
+    </div>
+
+    <div class="grid g2">
+      <div class="card">
+        <h3>State Vocabulary (locked)</h3>
+        <table>
+          <thead><tr><th>Domain</th><th>Statuses</th></tr></thead>
+          <tbody>
+            <tr><td>Order</td><td>draft → awaiting_credit_or_payment → queued → processing → done/failed</td></tr>
+            <tr><td>Job</td><td>queued → submitted → processing → done/failed/timeout</td></tr>
+            <tr><td>Payment</td><td>pending → paid/failed/refunded</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Trust & Copy Contract</h3>
+        <ul>
+          <li><span class="ok">Time:</span> «Обычно 40–180 секунд»</li>
+          <li><span class="ok">Quality:</span> «Лучше работают четкие портреты анфас»</li>
+          <li><span class="ok">Honesty:</span> «Итог может немного отличаться от превью»</li>
+          <li><span class="ok">Privacy:</span> «Source хранится 48ч, результат 30д»</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid g3">
+      <div class="card">
+        <h3>Paywall Rules</h3>
+        <ul>
+          <li>Проверка: free → paid credits → paywall</li>
+          <li>Package options: 5 / 20 / 50</li>
+          <li>Stars primary, Stripe fallback</li>
+          <li>После оплаты: мгновенный возврат в flow</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Failure UX</h3>
+        <ul>
+          <li><span class="ok">Technical fail:</span> авто-рефанд +1 кредит</li>
+          <li><span class="warn">Policy fail:</span> без авто-рефанда</li>
+          <li><span class="bad">Always:</span> показать retry/another-photo путь</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Result Loop</h3>
+        <ul>
+          <li>CTA: Play / Download / Share</li>
+          <li>Secondary CTA: Try another style</li>
+          <li>Переход в History/Profile для retention</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card refs" style="margin-top:12px">
+      <h3>Canonical References</h3>
+      <ul>
+        <li><a href="specs/00_unified_spec.md">specs/00_unified_spec.md</a></li>
+        <li><a href="specs/03_uiux_spec.md">specs/03_uiux_spec.md</a></li>
+        <li><a href="specs/06_technical_architecture_diagrams.md">specs/06_technical_architecture_diagrams.md</a></li>
+        <li><a href="specs/08_tariff_spec.md">specs/08_tariff_spec.md</a></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

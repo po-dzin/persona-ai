@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Photo App — Architecture v2</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --line: #dbe3ef;
+      --primary: #2563eb;
+      --ok: #0f766e;
+      --warn: #b45309;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 24px; }
+    .hero { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .sub { color: var(--muted); font-size: 14px; }
+    .grid { display: grid; gap: 12px; margin-top: 14px; }
+    .g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+    .card h3 { margin: 0 0 8px; font-size: 14px; }
+    .k { color: var(--muted); font-size: 12px; }
+    .tag { display: inline-block; font-size: 12px; padding: 3px 8px; border-radius: 999px; margin: 2px 4px 0 0; border: 1px solid var(--line); }
+    .tag.p { color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
+    .tag.s { color: #065f46; border-color: #99f6e4; background: #ecfeff; }
+    .tag.w { color: #92400e; border-color: #fde68a; background: #fffbeb; }
+    .flow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .step { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 7px 10px; font-size: 12px; }
+    .arr { color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 9px 8px; text-align: left; }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .ok { color: var(--ok); font-weight: 600; }
+    .warn { color: var(--warn); font-weight: 600; }
+    ul { margin: 8px 0 0 18px; padding: 0; }
+    li { margin: 4px 0; }
+    .refs a { color: var(--primary); text-decoration: none; }
+    .refs a:hover { text-decoration: underline; }
+    @media (max-width: 900px) { .g4, .g3 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>Live Photo App — Architecture v2</h1>
+      <div class="sub">Mini App + Web · Redis + Celery + Celery Beat · webhook_events idempotency · tariffs 5/20/50</div>
+      <div style="margin-top:10px">
+        <span class="tag p">SLA: 40–180 sec</span>
+        <span class="tag s">Retention: source 48h / result 30d</span>
+        <span class="tag w">Free: 1 generation / user_id</span>
+      </div>
+    </div>
+
+    <div class="grid g4">
+      <div class="card"><h3>Client</h3><div class="k">Telegram Mini App + Web</div></div>
+      <div class="card"><h3>API</h3><div class="k">FastAPI + webhook handlers</div></div>
+      <div class="card"><h3>Queue</h3><div class="k">Redis + Celery Workers + Celery Beat</div></div>
+      <div class="card"><h3>Data</h3><div class="k">Postgres + Object Storage</div></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <h3>Runtime Flow</h3>
+      <div class="flow">
+        <div class="step">Upload</div><div class="arr">→</div>
+        <div class="step">Credit Check</div><div class="arr">→</div>
+        <div class="step">Queue</div><div class="arr">→</div>
+        <div class="step">Replicate</div><div class="arr">→</div>
+        <div class="step">Webhook</div><div class="arr">→</div>
+        <div class="step">Result/Refund</div>
+      </div>
+      <ul>
+        <li><span class="ok">Primary AI:</span> Replicate LivePortrait</li>
+        <li><span class="warn">Fallback AI:</span> Runway Gen-4 Turbo</li>
+        <li><span class="ok">Idempotency:</span> only `webhook_events(provider,event_id)`</li>
+      </ul>
+    </div>
+
+    <div class="grid g3">
+      <div class="card">
+        <h3>Reliability</h3>
+        <ul>
+          <li>DB is source of truth for order/job/payment states</li>
+          <li>Retries: transient up to 2, policy fail 0</li>
+          <li>Reconciliation via Celery Beat</li>
+          <li>Hard timeout: 15 min</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Payment</h3>
+        <ul>
+          <li>Telegram Stars primary</li>
+          <li>Stripe fallback for web/region</li>
+          <li>Wallet ledger through wallet_transactions</li>
+          <li>Technical fail => auto-refund +1 credit</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Tariffs</h3>
+        <table>
+          <thead><tr><th>Package</th><th>Credits</th><th>Markup</th></tr></thead>
+          <tbody>
+            <tr><td>S</td><td>5</td><td>x3.0</td></tr>
+            <tr><td>M</td><td>20</td><td>x2.6</td></tr>
+            <tr><td>L</td><td>50</td><td>x2.2</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card refs" style="margin-top:12px">
+      <h3>Canonical References</h3>
+      <ul>
+        <li><a href="specs/00_unified_spec.md">specs/00_unified_spec.md</a></li>
+        <li><a href="specs/06_technical_architecture_diagrams.md">specs/06_technical_architecture_diagrams.md</a></li>
+        <li><a href="specs/07_database_er_diagram.md">specs/07_database_er_diagram.md</a></li>
+        <li><a href="specs/08_tariff_spec.md">specs/08_tariff_spec.md</a></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

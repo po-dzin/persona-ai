@@ -1,0 +1,94 @@
+<style>
+*{box-sizing:border-box}
+.wrap{padding:4px 0}
+.row{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
+.num{width:24px;height:24px;min-width:24px;border-radius:50%;background:#534AB7;color:white;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center}
+.col{flex:1;min-width:0}
+.p-pill{display:inline-block;font-size:10px;font-weight:500;padding:1px 7px;border-radius:4px;background:#FCEBEB;color:#791F1F;margin-bottom:4px}
+.s-pill{display:inline-block;font-size:10px;font-weight:500;padding:1px 7px;border-radius:4px;background:#E1F5EE;color:#085041;margin-bottom:4px}
+.title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.desc{font-size:12px;color:var(--color-text-secondary);line-height:1.4}
+.arrow{color:var(--color-text-tertiary);font-size:18px;padding-top:12px;flex-shrink:0}
+.divider{height:0.5px;background:var(--color-border-tertiary);margin:8px 0}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0}
+.step{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:7px 11px;font-size:12px}
+.step-title{font-weight:500;color:var(--color-text-primary)}
+.step-sub{font-size:10px;color:var(--color-text-tertiary)}
+.step-hi{background:#EEEDFE;border-color:#AFA9EC}
+.step-hi .step-title{color:#3C3489}
+.step-hi .step-sub{color:#534AB7}
+.step-ok{background:#E1F5EE;border-color:#5DCAA5}
+.step-ok .step-title{color:#085041}
+.step-ok .step-sub{color:#0F6E56}
+.sep{font-size:16px;color:var(--color-text-tertiary)}
+.hero{background:var(--color-background-primary);border:0.5px solid #AFA9EC;border-left:3px solid #534AB7;border-radius:0 10px 10px 0;padding:12px 14px;margin-top:12px}
+</style>
+
+<div class="wrap">
+
+<div style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">Боль → Решение (Unified MVP)</div>
+
+<div class="row">
+  <div class="num">1</div>
+  <div class="col"><div class="p-pill">Боль</div><div class="title">Слепой выбор стиля</div><div class="desc">Пользователь не понимает, чем отличаются пресеты</div></div>
+  <div class="arrow">→</div>
+  <div class="col"><div class="s-pill">Решение</div><div class="title">Style cards с реальными превью</div><div class="desc">GIF/видео-превью с честным дисклеймером «может отличаться»</div></div>
+</div>
+<div class="divider"></div>
+
+<div class="row">
+  <div class="num">2</div>
+  <div class="col"><div class="p-pill">Боль</div><div class="title">Paywall до ценности</div><div class="desc">Пользователь платит, не увидев value</div></div>
+  <div class="arrow">→</div>
+  <div class="col"><div class="s-pill">Решение</div><div class="title">1 free generation</div><div class="desc">Новый пользователь получает один бесплатный запуск, дальше пакеты кредитов</div></div>
+</div>
+<div class="divider"></div>
+
+<div class="row">
+  <div class="num">3</div>
+  <div class="col"><div class="p-pill">Боль</div><div class="title">Чёрный ящик ожидания</div><div class="desc">Во время генерации нет ощущения прогресса</div></div>
+  <div class="arrow">→</div>
+  <div class="col"><div class="s-pill">Решение</div><div class="title">Живой экран статусов</div><div class="desc">Этапы pipeline + диапазон ETA 40–180 сек</div></div>
+</div>
+<div class="divider"></div>
+
+<div class="row">
+  <div class="num">4</div>
+  <div class="col"><div class="p-pill">Боль</div><div class="title">Результат без next step</div><div class="desc">После выдачи видео пользователь выпадает из цикла</div></div>
+  <div class="arrow">→</div>
+  <div class="col"><div class="s-pill">Решение</div><div class="title">Result hub + smart CTA</div><div class="desc">Play/Download/Share + «Попробовать другой стиль» + переход в пакеты</div></div>
+</div>
+<div class="divider"></div>
+
+<div class="row">
+  <div class="num">5</div>
+  <div class="col"><div class="p-pill">Боль</div><div class="title">Нет единой поверхности</div><div class="desc">Разный опыт между Telegram и вебом</div></div>
+  <div class="arrow">→</div>
+  <div class="col"><div class="s-pill">Решение</div><div class="title">Mini App + Web на одной IA</div><div class="desc">Единые flow/state/copy; отличаются только auth и платежный fallback</div></div>
+</div>
+
+<div style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 8px">Поток экранов</div>
+<div class="flow">
+  <div class="step"><div class="step-title">Onboarding</div><div class="step-sub">wow + trust</div></div>
+  <div class="sep">→</div>
+  <div class="step"><div class="step-title">Upload</div><div class="step-sub">JPG/PNG ≤10MB</div></div>
+  <div class="sep">→</div>
+  <div class="step step-hi"><div class="step-title">Style Pick</div><div class="step-sub">real preview</div></div>
+  <div class="sep">→</div>
+  <div class="step"><div class="step-title">Credit Check</div><div class="step-sub">free / paid</div></div>
+  <div class="sep">→</div>
+  <div class="step"><div class="step-title">Paywall</div><div class="step-sub">packages</div></div>
+  <div class="sep">→</div>
+  <div class="step"><div class="step-title">Processing</div><div class="step-sub">live statuses</div></div>
+  <div class="sep">→</div>
+  <div class="step step-ok"><div class="step-title">Result</div><div class="step-sub">share + retry</div></div>
+  <div class="sep">→</div>
+  <div class="step"><div class="step-title">History/Profile</div><div class="step-sub">credits + stats</div></div>
+</div>
+
+<div class="hero">
+  <div style="font-size:12px;color:#534AB7;font-weight:500;margin-bottom:4px">Ключевая продуктовая ось: Trial → Value → Package conversion</div>
+  <div style="font-size:12px;color:var(--color-text-secondary)">MVP должен оптимизировать переход: first success (free) → repeat intent → покупка первого пакета.</div>
+</div>
+
+</div>
