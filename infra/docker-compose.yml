@@ -21,9 +21,13 @@ services:
     volumes:
       - ../:/app
     command: bash -lc "pip install -r apps/api/requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir apps/api"
+    env_file:
+      - ../.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/live_photo
       REDIS_URL: redis://redis:6379/0
+      APP_ENV: docker
+      API_PORT: 8000
     depends_on:
       - postgres
       - redis
@@ -36,8 +40,11 @@ services:
     volumes:
       - ../:/app
     command: bash -lc "pip install -r workers/celery/requirements.txt && celery -A workers.celery.tasks worker --loglevel=INFO"
+    env_file:
+      - ../.env
     environment:
       REDIS_URL: redis://redis:6379/0
+      APP_ENV: docker
     depends_on:
       - redis
 
@@ -47,7 +54,10 @@ services:
     volumes:
       - ../:/app
     command: bash -lc "pip install -r workers/celery/requirements.txt && celery -A workers.celery.tasks beat --loglevel=INFO"
+    env_file:
+      - ../.env
     environment:
       REDIS_URL: redis://redis:6379/0
+      APP_ENV: docker
     depends_on:
       - redis

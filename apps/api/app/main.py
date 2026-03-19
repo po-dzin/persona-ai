@@ -5,7 +5,7 @@ from app.services.vertical_slice import VerticalSliceService
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Live Photo API", version="0.1.0")
+    app = FastAPI(title="Persona Photo API", version="0.2.0")
     app.state.slice_service = VerticalSliceService()
     app.include_router(v1_router)
 

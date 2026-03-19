@@ -1,22 +1,22 @@
-# Live Photo App — Vertical Slice MVP
+# Persona — Photo-First MVP
 
-This repository contains a mock-first vertical slice implementation aligned with the v2 specs.
+This repository contains a mock-first implementation aligned with the photo-first Phase 1 specs (`v59` baseline).
 
 ## Structure
 
-- `apps/web` — React + TypeScript web client scaffold.
+- `apps/web` — React + TypeScript UI app with v59-style screens/components.
 - `apps/api` — FastAPI API contracts and in-memory vertical-slice domain implementation.
 - `workers/celery` — Celery worker/beat task scaffold.
 - `shared/contracts` — canonical statuses, tariffs, SLA, retention constants.
-- `infra/db/migrations` — Postgres schema + package seeds (`5/20/50`).
+- `infra/db/migrations` — Postgres schema + package seeds (`150/350/800/2000/5000`).
 - `specs` — source-of-truth product/architecture/database/tariff specs.
 
 ## Locked product constants
 
 - Surfaces: Mini App + Web
-- Tariffs: `5 / 20 / 50`
+- Tariffs: `Starter/Basic/Popular/Pro/Ultra = 150/350/800/2000/5000`
 - Free trial: `1 free generation per user_id`
-- SLA copy: `40–180 sec`
+- SLA copy: `30–120 sec`
 - Retention: `source 48h`, `result 30d`
 - Idempotency: `webhook_events(provider,event_id)`
 
@@ -24,17 +24,62 @@ This repository contains a mock-first vertical slice implementation aligned with
 
 ```bash
 python3 scripts/spec_lint.py
-pytest
+python3 scripts/check_env.py --mode mock --env-file .env
+python3 -m pytest -q
+python3 scripts/smoke_phase1.py
+cd apps/web && npm run build
 ```
+
+## Real-flow prep (without code changes)
+
+Env templates policy:
+
+- `.env.example` — universal template (mock/local by default).
+- `.env.real.example` — real integration checklist.
+
+1. Create local env file from template:
+
+```bash
+cp .env.real.example .env
+```
+
+2. Fill secrets from `docs/SECRETS_CHECKLIST.md`.
+3. Validate required vars:
+
+```bash
+python3 scripts/check_env.py --mode real --env-file .env
+```
+
+4. Start local runtime stack:
+
+```bash
+docker compose -f infra/docker-compose.yml up --build
+```
+
+Note: MVP flow is `photo-only` upload; user driving-video upload is intentionally disabled.
 
 ## API endpoints (v1)
 
+- `GET /v1/styles`
+- `GET /v1/models`
+- `GET /v1/me/balance`
+- `GET /v1/me/photos`
+- `POST /v1/purchase`
+- `POST /v1/generate`
 - `POST /v1/uploads`
 - `GET /v1/packages`
 - `POST /v1/orders`
 - `POST /v1/orders/{order_id}/start`
 - `GET /v1/orders/{order_id}`
 - `GET /v1/me/history`
+- `POST /v1/webhooks/{provider}`
 - `POST /v1/webhooks/replicate`
 - `POST /v1/webhooks/telegram`
 - `POST /v1/webhooks/stripe`
+
+## Make targets
+
+- `make spec-lint` — specs consistency checks
+- `make test` — pytest suite
+- `make smoke` — end-to-end smoke through API flow
+- `make ci-gate` — spec lint + tests + web build

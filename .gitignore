@@ -1,4 +1,6 @@
 .venv/
+.venv312/
+.venv_local/
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -6,3 +8,6 @@ node_modules/
 apps/web/dist/
 .DS_Store
 specs/Live Photo App.png
+.env
+.env.local
+.env.real

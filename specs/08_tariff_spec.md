@@ -1,72 +1,52 @@
-# 08 · Tariff Spec (3-tier, cost-based)
+# 08 · Tariff Spec (5-tier, model-priced)
 
 ## 1) Chosen pricing strategy (locked)
 
-- Unit billing: `1 generation = 1 credit`.
+- Unit billing: `1 generation = model_coin_cost`.
 - Trial: `1 free generation` per `user_id` (one-time).
-- Paid model: 3 пакета `S/M/L = 5/20/50`.
+- Paid model: 5 пакетов `Starter/Basic/Popular/Pro/Ultra = 150/350/800/2000/5000`.
 - Каналы оплаты: `Telegram Stars` (primary), `Stripe` (web/regional fallback).
 
-Почему это оптимально:
+## 2) Model price policy (photo-first)
 
-- 3 пакета уменьшают choice overload и повышают конверсию в MVP.
-- Кредитная модель упрощает UX и поддержку нескольких AI-провайдеров.
-- Cost-based pricing защищает маржу при изменении себестоимости моделей.
+- Стоимость генерации зависит от выбранной AI-модели.
+- Диапазон MVP: `10–40 🪙` за генерацию.
+- Канонический каталог (Phase 1):
+  - Nano Banana — `10 🪙`
+  - Stable Diffusion 3.5 Turbo — `15 🪙`
+  - Recraft V4 — `25 🪙`
+  - OpenAI GPT-image-1.5 — `30 🪙`
+  - FLUX.1 Kontext [pro] — `40 🪙`
 
-## 2) Base generation price model (Luma/Runway/Kling)
+## 3) Package matrix (Stars baseline)
 
-- Расчетная формула: `base_gen_usd = median(luma_base_usd, runway_base_usd, kling_base_usd)`.
-- Если `kling_base_usd` временно недоступен в контрактных данных, используем fallback: `median(luma_base_usd, runway_base_usd)`.
-- Для запуска фиксируем операционный baseline: `base_gen_usd = 0.25`.
-- Обновление baseline: weekly recalculation по свежим provider rates.
+| Package | Coins | Price (⭐) | Bonus |
+|---|---:|---:|---:|
+| Starter | 150 | 199 | — |
+| Basic | 350 | 399 | +5% |
+| Popular | 800 | 799 | +10% |
+| Pro | 2,000 | 1,599 | +18% |
+| Ultra | 5,000 | 2,999 | +25% |
 
-Причина выбора медианы:
-
-- медиана устойчива к резким всплескам стоимости у одного провайдера;
-- не завышает цену как `max`, но и не занижает маржу как `min`.
-
-## 3) Markup policy (x2..x3)
-
-- `S` пакет: `x3.0` на кредит.
-- `M` пакет: `x2.6` на кредит.
-- `L` пакет: `x2.2` на кредит.
-
-Интервал x2..x3 соблюдён и сохраняет нисходящую цену за кредит от S к L.
-
-## 4) Final package prices (USD anchor)
-
-Расчет от `base_gen_usd = 0.25`:
-
-| Package | Credits | Markup | Raw price (USD) | Final price (USD) |
-|---|---:|---:|---:|---:|
-| S | 5 | x3.0 | 3.75 | 3.99 |
-| M | 20 | x2.6 | 13.00 | 12.99 |
-| L | 50 | x2.2 | 27.50 | 27.99 |
-
-Правило для Stars:
-
-- `stars_price = ceil(usd_price / star_usd_rate)`
-- `star_usd_rate` задается конфигом биллинга и обновляется без релиза приложения.
-
-## 5) Credit and paywall rules
+## 4) Credit and paywall rules
 
 - При старте генерации проверяем по порядку: free credit → paid wallet → paywall.
-- Paywall trigger: `wallet_balance == 0` и free уже использован.
-- Успешная генерация списывает ровно 1 кредит.
-- Technical failure делает авто-рефанд `+1` кредит.
+- Paywall trigger: `wallet_balance < generation_cost` и free уже использован.
+- Успешная генерация списывает стоимость выбранной модели.
+- Technical failure делает авто-рефанд на списанную сумму.
 - Policy/content failure не делает auto-refund (manual support override).
 
-## 6) Payment outcome handling
+## 5) Payment outcome handling
 
 - `pending`: заказ остается в paywall состоянии.
 - `paid`: начисляем кредиты, снимаем paywall.
 - `failed`: кредиты не начисляются, доступен retry.
 - `refunded`: делаем обратную кредитную транзакцию, если кредиты не потрачены; иначе support case.
 
-## 7) Canonical scenarios (for QA)
+## 6) Canonical scenarios (for QA)
 
 - Новый пользователь проходит 1 free generation без оплаты.
 - После free при `0` балансе пользователь стабильно попадает в paywall.
-- Покупка `M` начисляет `+20` кредитов одним ledger событием.
+- Покупка `Basic` начисляет `+350` кредитов одним ledger событием.
 - Дубликат payment webhook не приводит к двойному начислению.
-- Technical fail после списания кредита создает `refund_generation +1`.
+- Technical fail после списания делает refund на полную стоимость модели.

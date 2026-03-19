@@ -7,39 +7,42 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-FILES = [
+ALL_FILES = [
     ROOT / "photo_animation_mvp_spec.md",
     ROOT / "live_photo_app_architecture.html",
     ROOT / "uiux-spec.html",
+    ROOT / "specs" / "photo_animation_mvp_spec.md",
+    ROOT / "specs" / "live_photo_app_architecture.html",
+    ROOT / "specs" / "uiux-spec.html",
     *sorted((ROOT / "specs").glob("*.md")),
 ]
+FILES = [f for f in ALL_FILES if f.exists()]
 
 OUTDATED_PATTERNS = [
     r"BackgroundTasks only",
-    r"5\s*/\s*15\s*/\s*35\s*/\s*80",
-    r"5/15/35/80",
-    r"\b20–40\b",
-    r"\b30–90\b",
-    r"S/M/L/XL",
+    r"5\s*/\s*20\s*/\s*50",
+    r"S/M/L\s*=\s*5/20/50",
+    r"\b40–180\b",
     r"bot-only",
-    r"Celery/RQ",
+    r"LivePortrait",
+    r"Runway Gen-4 Turbo",
 ]
 
 REQUIRED_GLOBAL = [
-    r"5/20/50",
+    r"150/350/800/2000/5000",
     r"webhook_events",
     r"Celery Beat",
-    r"40–180",
+    r"30–120",
     r"48h",
     r"30d",
 ]
 
 # High-signal per-file lock checks
 REQUIRED_BY_FILE = {
-    "photo_animation_mvp_spec.md": [r"Mini App \+ Web", r"Runway Gen-4 Turbo", r"webhook_events"],
-    "specs/00_unified_spec.md": [r"5\s*/\s*20\s*/\s*50", r"webhook_events\(provider,event_id\)"],
-    "specs/08_tariff_spec.md": [r"S/M/L\s*=\s*5/20/50", r"base_gen_usd\s*=\s*0\.25", r"x3\.0", r"x2\.6", r"x2\.2"],
-    "specs/06_technical_architecture_diagrams.md": [r"Redis \+ Celery", r"Runway Gen-4 Turbo", r"webhook_events\(provider,event_id\)"],
+    "specs/photo_animation_mvp_spec.md": [r"Mini App \+ Web", r"Nano Banana", r"webhook_events"],
+    "specs/00_unified_spec.md": [r"150/350/800/2000/5000", r"webhook_events\(provider,event_id\)"],
+    "specs/08_tariff_spec.md": [r"10–40", r"Starter/Basic/Popular/Pro/Ultra", r"150/350/800/2000/5000"],
+    "specs/06_technical_architecture_diagrams.md": [r"Redis \+ Celery", r"webhook_events\(provider,event_id\)"],
 }
 
 

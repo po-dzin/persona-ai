@@ -17,7 +17,7 @@ flowchart LR
 
   subgraph E[Edge/API]
     API[FastAPI API Gateway]
-    WH[Webhook Handler\nReplicate + Telegram + Stripe]
+    WH[Webhook Handler\nProviders + Telegram + Stripe]
   end
 
   subgraph O[Orchestration]
@@ -33,8 +33,11 @@ flowchart LR
   end
 
   subgraph X[External Providers]
-    REP[Replicate\nLivePortrait primary]
-    RW[Runway Gen-4 Turbo\nfallback]
+    NB[Nano Banana]
+    SD[Stable Diffusion]
+    FL[FLUX]
+    OI[OpenAI Image]
+    RCF[Recraft]
     TG[Telegram Stars]
     ST[Stripe]
   end
@@ -45,12 +48,19 @@ flowchart LR
   CE --> DB
   CE --> Q
   Q --> W
-  W --> REP
-  W -. fallback .-> RW
+  W --> NB
+  W --> SD
+  W --> FL
+  W --> OI
+  W --> RCF
   W --> OBJ
   W --> DB
 
-  REP -->|callback| WH
+  NB -->|callback| WH
+  SD -->|callback| WH
+  FL -->|callback| WH
+  OI -->|callback| WH
+  RCF -->|callback| WH
   TG -->|payment webhook| WH
   ST -->|payment webhook| WH
   WH --> DB
@@ -58,7 +68,7 @@ flowchart LR
   WH --> API
 
   RC --> DB
-  RC --> REP
+  RC --> NB
 
   P11[Phase 1.1\nGifts + Referrals + Dashboard]:::p11
   P2[Phase 2\nMulti-provider router + optional self-hosted GPU]:::p2
@@ -66,7 +76,7 @@ flowchart LR
   API -. extends .-> P11
   W -. evolves .-> P2
 
-  class MA,WEB,API,WH,CE,Q,W,RC,DB,OBJ,REP,RW,TG,ST mvp;
+  class MA,WEB,API,WH,CE,Q,W,RC,DB,OBJ,NB,SD,FL,OI,RCF,TG,ST mvp;
 ```
 
 ## 2) Order sequence: upload → credit check → queue → callback → result/refund
@@ -81,7 +91,7 @@ sequenceDiagram
   participant DB as Postgres
   participant Q as Redis Queue
   participant W as Worker
-  participant RP as Replicate
+  participant PR as Provider Adapter
   participant WH as Webhook Handler
 
   U->>APP: Upload photo + choose style
@@ -100,8 +110,8 @@ sequenceDiagram
   API->>DB: create order + generation_job=queued
   API->>Q: enqueue generation task
   Q->>W: deliver task
-  W->>RP: submit generation with callback_url
-  RP-->>WH: provider callback (processing/done/failed)
+  W->>PR: submit generation with callback_url
+  PR-->>WH: provider callback (processing/done/failed)
   WH->>DB: insert webhook_events(provider,event_id)
   WH->>DB: idempotent job/order update
 
@@ -119,6 +129,6 @@ sequenceDiagram
 
 ## 3) Phase boundaries
 
-- MVP: `Mini App + Web`, `FastAPI`, `Redis + Celery Workers + Celery Beat`, `Postgres`, `Object Storage`, `Replicate + Runway fallback`, `Stars + Stripe`, `Webhook + Reconciliation`.
+- MVP: `Mini App + Web`, `FastAPI`, `Redis + Celery Workers + Celery Beat`, `Postgres`, `Object Storage`, `5 official photo providers`, `Stars + Stripe`, `Webhook + Reconciliation`.
 - Phase 1.1: `Gifts`, `Referrals`, `Profile dashboards`.
 - Phase 2: `Multi-provider routing`, `optional self-hosted GPU`.

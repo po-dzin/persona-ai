@@ -1,80 +1,73 @@
-# 05 · Database Spec
+# 05 · Database Spec (Persona — Coin Economy)
 
 ## 1) Design goals
 
-- Состояния заказов и генераций храним только в БД.
-- Кредитная модель и платежи полностью трассируемы.
-- Идемпотентность обеспечивается уникальными ключами и event-log подходом.
+- Coin-ledger модель для прозрачного учёта монет
+- Каталог стилей и AI-моделей в БД (управляемый через API)
+- Все состояния заказов и генераций только в БД
+- Идемпотентность через уникальные ключи и event-log подход
 
 ## 2) Core entities
 
-- `users` — профиль и флаги trial/free.
-- `packages` — тарифные пакеты генераций.
-- `wallets` — агрегированный баланс кредитов.
-- `wallet_transactions` — неизменяемый журнал начислений/списаний.
-- `orders` — пользовательские заказы на генерацию.
-- `generation_jobs` — жизненный цикл генерации и provider links.
-- `payments` — платежи Stars/Stripe.
-- `media_assets` — source/result файлы.
+- `users` — профиль (telegram_id, username, avatar, flags)
+- `style_categories` — категории стилей (Тренды, Бизнес, Лайфстайл, Арт, Особый повод)
+- `styles` — стили (name, category_id, gradient_class, prompt_template, tag, sort_order)
+- `ai_models` — AI модели (name, price_coins, is_active)
+- `wallets` — агрегированный баланс монет
+- `wallet_transactions` — неизменяемый журнал начислений/списаний в монетах
+- `coin_packages` — пакеты монет (name, coins, price_stars, bonus_percent)
+- `orders` — пользовательские заказы на генерацию
+- `generation_jobs` — жизненный цикл генерации
+- `payments` — платежи Telegram Stars
+- `media_assets` — source/result файлы
 
 ## 3) Optional entities (Phase 1.1)
 
-- `gift_packages`, `gift_redemptions`.
-- `referrals`, `referral_rewards`.
+- `referrals`, `referral_rewards`
+- `gift_packages`, `gift_redemptions`
+- `user_favorites` — избранные фото
 
 ## 4) Status contracts
 
 ### orders.status
-
-- `draft`
-- `awaiting_credit_or_payment`
-- `queued`
-- `processing`
-- `done`
-- `failed`
-- `canceled`
+`draft` → `queued` → `processing` → `done` → `failed` → `canceled`
 
 ### generation_jobs.status
-
-- `queued`
-- `submitted`
-- `processing`
-- `done`
-- `failed`
-- `timeout`
+`queued` → `submitted` → `processing` → `done` → `failed` → `timeout`
 
 ### payments.status
-
-- `pending`
-- `paid`
-- `failed`
-- `refunded`
+`pending` → `paid` → `failed` → `refunded`
 
 ## 5) Ledger rules
 
-- Любое изменение баланса только через `wallet_transactions`.
-- `wallets.balance_credits` = сумма подтвержденных транзакций.
-- Списание кредита происходит при старте generation (atomically).
-- Refund кредита при technical failure фиксируется отдельной транзакцией.
+- Любое изменение баланса только через `wallet_transactions`
+- `wallets.balance_coins` = сумма подтвержденных транзакций
+- Списание монет при старте генерации (atomically) — количество = `ai_models.price_coins`
+- Refund монет при technical failure — отдельная транзакция
+- Покупка пакета: base coins + bonus coins (ceil(coins * bonus_percent / 100))
 
-## 6) Idempotency rules
+## 6) AI model pricing
 
-- `payments.external_charge_id` уникален per provider.
-- `generation_jobs.provider_task_id` уникален per provider.
-- Для webhook event используем только таблицу `webhook_events` с уникальным `(provider, event_id)`.
+| Model | Price (🪙) |
+|-------|--------:|
+| Nano Banana | 10 |
+| Stable Diffusion XL | 15 |
+| Midjourney | 25 |
+| DALL·E 3 | 30 |
+| Flux Pro | 40 |
 
-## 7) Retention (baseline)
+## 7) Coin packages
 
-- `source` media TTL: 48 часов.
-- `result` media TTL: 30 дней (MVP default; дальше параметризуется тарифом).
-- Метаданные заказов и платежей храним дольше для аналитики и support.
+| Package | Coins | Price (⭐) | Bonus |
+|---------|------:|---------:|------:|
+| Starter | 150 | 199 | — |
+| Basic | 350 | 399 | +5% |
+| Popular | 800 | 799 | +10% |
+| Pro | 2 000 | 1 599 | +18% |
+| Ultra | 5 000 | 2 999 | +25% |
 
-## 8) Tariff pricing basis
+## 8) Retention
 
-- Базовая цена генерации (`base_gen_usd`) определяется как медиана по базовым провайдерам (Luma/Runway/Kling).
-- Если один провайдер временно без верифицированного прайса, baseline считается по доступным провайдерам.
-- Цена пакетов рассчитывается от `base_gen_usd` через мультипликатор `x2..x3` на кредит.
-- Формула: `package_price = credits * base_gen_usd * markup_multiplier`.
-- Locked baseline: `base_gen_usd = 0.25`.
-- Locked multipliers: `S=x3.0`, `M=x2.6`, `L=x2.2`.
-- Пакеты в системе: `5/20/50`, где `price_per_credit(S) > price_per_credit(M) > price_per_credit(L)`.
+- Source media TTL: 48 часов
+- Result media TTL: 30 дней
+- Метаданные заказов и платежей — длительное хранение

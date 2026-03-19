@@ -13,7 +13,7 @@ class MockAIResult:
 
 
 class MockAIAdapter:
-    """Mock-first AI adapter with webhook-compatible payloads."""
+    """Mock-first image adapter with webhook-compatible payloads."""
 
     provider = "replicate"
 
@@ -22,5 +22,5 @@ class MockAIAdapter:
         return MockAIResult(
             provider_task_id=str(uuid4()),
             status="submitted",
-            result_url=f"https://r2.example/result/{order_id}.mp4",
+            result_url=f"https://r2.example/result/{order_id}.jpg",
         )

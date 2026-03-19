@@ -1,10 +1,27 @@
-.PHONY: spec-lint test api worker beat web
+.PHONY: spec-lint env-check env-check-real test smoke ci-gate api worker beat web
+
+PYTHON ?= python3
+VENV_PY := $(if $(wildcard .venv312/bin/python),.venv312/bin/python,$(PYTHON))
 
 spec-lint:
-	python3 scripts/spec_lint.py
+	$(PYTHON) scripts/spec_lint.py
+
+env-check:
+	$(PYTHON) scripts/check_env.py --mode mock --env-file .env
+
+env-check-real:
+	$(PYTHON) scripts/check_env.py --mode real --env-file .env
 
 test:
-	pytest -q
+	$(VENV_PY) -m pytest -q
+
+smoke:
+	$(VENV_PY) scripts/smoke_phase1.py
+
+ci-gate:
+	$(PYTHON) scripts/spec_lint.py
+	$(VENV_PY) -m pytest -q
+	cd apps/web && npm run build
 
 api:
 	uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir apps/api

@@ -56,9 +56,9 @@
   <div class="wrap">
     <div class="hero">
       <h1>Live Photo App — Architecture v2</h1>
-      <div class="sub">Mini App + Web · Redis + Celery + Celery Beat · webhook_events idempotency · tariffs 5/20/50</div>
+      <div class="sub">Mini App + Web · Redis + Celery + Celery Beat · webhook_events idempotency · tariffs 150/350/800/2000/5000</div>
       <div style="margin-top:10px">
-        <span class="tag p">SLA: 40–180 sec</span>
+        <span class="tag p">SLA: 30–120 sec</span>
         <span class="tag s">Retention: source 48h / result 30d</span>
         <span class="tag w">Free: 1 generation / user_id</span>
       </div>
@@ -82,8 +82,8 @@
         <div class="step">Result/Refund</div>
       </div>
       <ul>
-        <li><span class="ok">Primary AI:</span> Replicate LivePortrait</li>
-        <li><span class="warn">Fallback AI:</span> Runway Gen-4 Turbo</li>
+        <li><span class="ok">Primary AI:</span> Nano Banana / SD / FLUX / OpenAI Image / Recraft</li>
+        <li><span class="warn">Fallback AI:</span> Official-only photo providers</li>
         <li><span class="ok">Idempotency:</span> only `webhook_events(provider,event_id)`</li>
       </ul>
     </div>
