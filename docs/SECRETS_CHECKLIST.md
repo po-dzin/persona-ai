@@ -1,32 +1,52 @@
-# Secrets Checklist for Real-Flow Test
+# Secrets Checklist (Render + Upstash + R2)
 
 Use this checklist before switching `INTEGRATION_MODE=real`.
 
 Templates:
 
-- `.env.example` for universal local setup.
-- `.env.real.example` for real-flow setup.
+- `.env.example` as the single template for both local and real-flow setups.
 
-## 1) Must-have secrets
+## Checklist A: Must-have secrets (provided by operator)
 
+- `DATABASE_URL`
+- `REDIS_URL`
+- `R2_ENDPOINT`
+- `R2_BUCKET`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `R2_PUBLIC_BASE_URL`
 - `NANO_BANANA_API_KEY`
+- `NANO_BANANA_API_URL`
 - `STABILITY_API_KEY`
+- `STABILITY_API_URL`
 - `BFL_API_KEY`
 - `OPENAI_API_KEY`
 - `RECRAFT_API_KEY`
 - `PROVIDER_WEBHOOK_SECRET`
-- `NANO_BANANA_API_URL`
-- `STABILITY_API_URL`
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_WEBHOOK_SECRET`
 - `TELEGRAM_STARS_PROVIDER_TOKEN`
-- `R2_ACCESS_KEY_ID`
-- `R2_SECRET_ACCESS_KEY`
-- `R2_ENDPOINT`
-- `R2_BUCKET`
-- `R2_PUBLIC_BASE_URL`
+- `TELEGRAM_MINIAPP_URL`
 
-## 2) Required if Stripe fallback is enabled
+## Checklist B: Non-secret runtime defaults (already decided)
+
+- `APP_ENV=prod`
+- `INTEGRATION_MODE=real`
+- `API_PORT=8000`
+- `PROVIDER_REAL_CALLS_ENABLED=true`
+- `PROVIDER_REQUEST_TIMEOUT_SECONDS=45`
+- `MODEL_ENABLED_NANO_BANANA=true`
+- `MODEL_ENABLED_STABLE_DIFFUSION=true`
+- `MODEL_ENABLED_FLUX=true`
+- `MODEL_ENABLED_OPENAI_IMAGE=true`
+- `MODEL_ENABLED_RECRAFT=true`
+- `SLA_SECONDS_MIN=30`
+- `SLA_SECONDS_MAX=120`
+- `SOURCE_RETENTION_HOURS=48`
+- `RESULT_RETENTION_DAYS=30`
+- `BASE_GEN_USD=0.25`
+
+## Phase 2 backlog (not required in current release)
 
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
@@ -36,27 +56,11 @@ Templates:
 - `STRIPE_PRICE_ID_PRO`
 - `STRIPE_PRICE_ID_ULTRA`
 
-## 3) Provider flags (optional, runtime)
-
-- `MODEL_ENABLED_NANO_BANANA`
-- `MODEL_ENABLED_STABLE_DIFFUSION`
-- `MODEL_ENABLED_FLUX`
-- `MODEL_ENABLED_OPENAI_IMAGE`
-- `MODEL_ENABLED_RECRAFT`
-- `PROVIDER_REAL_CALLS_ENABLED`
-- `PROVIDER_REQUEST_TIMEOUT_SECONDS`
-
-## 4) Minimal non-secret runtime vars
-
-- `INTEGRATION_MODE=real`
-- `DATABASE_URL`
-- `REDIS_URL`
-- `API_PORT`
-
-## 5) Quick validation
+## Quick validation
 
 ```bash
-cp .env.real.example .env
+cp .env.example .env
+# then set APP_ENV=prod, INTEGRATION_MODE=real, PROVIDER_REAL_CALLS_ENABLED=true
 python3 scripts/check_env.py --mode real --env-file .env
 ```
 

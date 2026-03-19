@@ -32,25 +32,35 @@ cd apps/web && npm run build
 
 ## Real-flow prep (without code changes)
 
+Current infra baseline: `Render + Upstash + Cloudflare R2` (3 services total).
+Stripe payments are intentionally moved to Phase 2 backlog; Phase 1 uses Telegram Stars only.
+
 Env templates policy:
 
-- `.env.example` — universal template (mock/local by default).
-- `.env.real.example` — real integration checklist.
+- `.env.example` — single template for both mock/local and real integration.
 
 1. Create local env file from template:
 
 ```bash
-cp .env.real.example .env
+cp .env.example .env
 ```
 
-2. Fill secrets from `docs/SECRETS_CHECKLIST.md`.
-3. Validate required vars:
+2. For real-flow set:
+
+```bash
+APP_ENV=prod
+INTEGRATION_MODE=real
+PROVIDER_REAL_CALLS_ENABLED=true
+```
+
+3. Fill secrets from `docs/SECRETS_CHECKLIST.md`.
+4. Validate required vars:
 
 ```bash
 python3 scripts/check_env.py --mode real --env-file .env
 ```
 
-4. Start local runtime stack:
+5. Start local runtime stack:
 
 ```bash
 docker compose -f infra/docker-compose.yml up --build
