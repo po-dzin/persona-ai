@@ -3,7 +3,7 @@ import type { PackageItem } from "../data/packages";
 interface BalanceScreenProps {
   credits: number;
   packages: PackageItem[];
-  onPurchase: (code: string) => void;
+  onSelectPackage: (pkg: PackageItem) => void;
   onOpenModelsPricing: () => void;
 }
 
@@ -21,7 +21,7 @@ const PACKAGE_ICON_BG: Record<string, string> = {
   ULTRA: "rgba(74,222,128,0.12)",
 };
 
-export function BalanceScreen({ credits, packages, onPurchase, onOpenModelsPricing }: BalanceScreenProps) {
+export function BalanceScreen({ credits, packages, onSelectPackage, onOpenModelsPricing }: BalanceScreenProps) {
   return (
     <section className="screen">
       <div className="top-bar"><div className="top-bar-title">Баланс</div></div>
@@ -41,7 +41,7 @@ export function BalanceScreen({ credits, packages, onPurchase, onOpenModelsPrici
             <button
               key={pkg.code}
               className={`package-card${isFeatured ? " featured" : ""}`}
-              onClick={() => onPurchase(pkg.code)}
+              onClick={() => onSelectPackage(pkg)}
             >
               {isFeatured ? <div className="package-featured-tag">Популярное</div> : null}
               <div className="package-icon" style={{ background: PACKAGE_ICON_BG[pkg.code] ?? "rgba(255,214,102,0.1)" }}>

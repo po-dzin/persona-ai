@@ -1,9 +1,24 @@
+import { useState } from "react";
+
 interface ProfileScreenProps {
   credits: number;
   generations: number;
 }
 
 export function ProfileScreen({ credits, generations }: ProfileScreenProps) {
+  const [copied, setCopied] = useState(false);
+  const referralLink = "persona.app/ref/anna_v";
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard may be unavailable in some environments.
+    }
+  };
+
   return (
     <section className="screen">
       <div className="top-bar"><div className="top-bar-title">Профиль</div></div>
@@ -27,6 +42,40 @@ export function ProfileScreen({ credits, generations }: ProfileScreenProps) {
           <div className="profile-stat-value">0</div>
           <div className="profile-stat-label">Рефералов</div>
         </div>
+      </div>
+
+      <div className="profile-section-title">Партнёрская программа</div>
+      <div className="partner-block">
+        <div className="partner-metrics-row">
+          <div className="partner-metric">
+            <div className="partner-metric-value">24</div>
+            <div className="partner-metric-label">Переходы</div>
+          </div>
+          <div className="partner-metric">
+            <div className="partner-metric-value">5</div>
+            <div className="partner-metric-label">Оплат</div>
+          </div>
+          <div className="partner-metric">
+            <div className="partner-metric-value green">$12.40</div>
+            <div className="partner-metric-label">Заработано</div>
+          </div>
+        </div>
+
+        <div className="partner-link-row">
+          <div className="partner-link-text">{referralLink}</div>
+          <button className="partner-copy-btn" onClick={handleCopy}>
+            {copied ? "Готово!" : "Копировать"}
+          </button>
+        </div>
+
+        <div className="partner-tier-row">
+          <div className="partner-tier-label">Бонус с покупок</div>
+          <div className="partner-tier-value">15%</div>
+        </div>
+        <div className="partner-progress">
+          <div className="partner-progress-bar" style={{ width: "50%" }} />
+        </div>
+        <div className="partner-tier-hint">Ещё 5 оплативших друзей до 20%</div>
       </div>
 
       <div className="profile-section-title">Настройки</div>
