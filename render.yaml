@@ -15,9 +15,7 @@ services:
       - key: FREE_DEMO_MODE
         value: "true"
       - key: DATABASE_URL
-        fromDatabase:
-          name: persona-ai-db
-          property: connectionString
+        sync: false
       - key: REDIS_URL
         sync: false
       - key: R2_ENDPOINT
@@ -49,8 +47,3 @@ services:
       - key: PROVIDER_REQUEST_TIMEOUT_SECONDS
         value: "90"
     healthCheckPath: /healthz
-
-databases:
-  - name: persona-ai-db
-    databaseName: personai
-    plan: free
