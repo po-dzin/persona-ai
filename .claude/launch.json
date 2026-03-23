@@ -1,0 +1,30 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Web (Vite)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "apps/web",
+      "port": 5174
+    },
+    {
+      "name": "API (FastAPI)",
+      "runtimeExecutable": "uvicorn",
+      "runtimeArgs": ["app.main:app", "--host", "0.0.0.0", "--port", "8000", "--app-dir", "apps/api"],
+      "port": 8000
+    },
+    {
+      "name": "Worker (Celery)",
+      "runtimeExecutable": "celery",
+      "runtimeArgs": ["-A", "workers.celery.tasks", "worker", "--loglevel=INFO"],
+      "port": null
+    },
+    {
+      "name": "Beat (Celery Scheduler)",
+      "runtimeExecutable": "celery",
+      "runtimeArgs": ["-A", "workers.celery.tasks", "beat", "--loglevel=INFO"],
+      "port": null
+    }
+  ]
+}

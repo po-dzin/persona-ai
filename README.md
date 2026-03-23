@@ -35,6 +35,10 @@ cd apps/web && npm run build
 Current infra baseline: `Render + Upstash + Cloudflare R2` (3 services total).
 Stripe payments are intentionally moved to Phase 2 backlog; Phase 1 uses Telegram Stars only.
 
+For free demo runs without a paid worker, set `FREE_DEMO_MODE=true`:
+- `REDIS_URL` is not required by env validator in this mode.
+- If provider adapter returns `result_url` on submit, order is finalized synchronously.
+
 Env templates policy:
 
 - `.env.example` — single template for both mock/local and real integration.
