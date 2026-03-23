@@ -9,6 +9,8 @@ export function useCatalog() {
   const [styles, setStyles] = useState<StyleItem[]>(FALLBACK_STYLES);
   const [models, setModels] = useState<AIModel[]>(FALLBACK_MODELS);
   const [packages, setPackages] = useState<PackageItem[]>(FALLBACK_PACKAGES);
+  const [isLoading, setIsLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -19,9 +21,15 @@ export function useCatalog() {
         if (remoteStyles.length > 0) setStyles(remoteStyles);
         if (remoteModels.length > 0) setModels(remoteModels);
         if (remotePackages.length > 0) setPackages(remotePackages);
+        setCatalogError(null);
       })
-      .catch(() => {
-        // Fallback data keeps the prototype usable when API is unavailable.
+      .catch((err: unknown) => {
+        if (!active) return;
+        // Fallback data keeps the app usable when API is unavailable
+        setCatalogError(err instanceof Error ? err.message : "Не удалось загрузить каталог");
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
       });
 
     return () => {
@@ -29,5 +37,5 @@ export function useCatalog() {
     };
   }, []);
 
-  return { styles, models, packages };
+  return { styles, models, packages, isLoading, catalogError };
 }

@@ -15,7 +15,7 @@ import { PhotosScreen } from "./screens/PhotosScreen";
 import { PhotoViewerScreen } from "./screens/PhotoViewerScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import type { StyleItem } from "./data/styles";
-import type { PhotoRecord } from "./utils/api";
+import type { GenerateResult, PhotoRecord } from "./utils/api";
 
 // Telegram WebApp integration
 declare global {
@@ -93,13 +93,13 @@ export function App() {
 
   const handleGenerate = async () => {
     if (!selectedModelId) return;
-    const response = (await startGenerate({
+    const response: GenerateResult = await startGenerate({
       userId: USER_ID,
       modelId: selectedModelId,
       styleCode: selectedStyle?.id || "hollywood",
       prompt: selectedPrompt,
       aspectRatio: selectedAspectRatio,
-    })) as { result?: string };
+    });
 
     if (response.result === "paywall_required") {
       setPaywallModalOpen(true);

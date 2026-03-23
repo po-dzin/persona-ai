@@ -143,15 +143,11 @@ class FluxAdapter(MockPhotoProvider):
 
     @staticmethod
     def _store_to_r2(bfl_url: str, order_id: str) -> str:
-        try:
-            from app.adapters.r2_client import upload_bytes
+        from app.adapters.r2_client import upload_bytes
 
-            img_bytes = fetch_bytes(bfl_url, timeout_seconds=30)
-            key = f"results/flux/{order_id}.jpg"
-            return upload_bytes(key, img_bytes, content_type="image/jpeg")
-        except Exception:
-            # Fallback: return the temporary BFL URL if R2 upload fails
-            return bfl_url
+        img_bytes = fetch_bytes(bfl_url, timeout_seconds=30)
+        key = f"results/flux/{order_id}.jpg"
+        return upload_bytes(key, img_bytes, content_type="image/jpeg")
 
     def _is_real(self) -> bool:
         return (

@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+from typing import Generator
+
 from sqlalchemy import (
     Boolean,
     Column,
-    DateTime,
+    Index,
     Integer,
     String,
     Text,
     create_engine,
-    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -41,6 +43,10 @@ class UserRow(Base):
 
 class OrderRow(Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        Index("idx_orders_user_created", "user_id", "created_at"),
+        Index("idx_orders_status", "status"),
+    )
 
     order_id = Column(String, primary_key=True)
     user_id = Column(String, nullable=False, index=True)
@@ -60,6 +66,9 @@ class OrderRow(Base):
 
 class JobRow(Base):
     __tablename__ = "jobs"
+    __table_args__ = (
+        Index("idx_jobs_status", "status"),
+    )
 
     job_id = Column(String, primary_key=True)
     order_id = Column(String, nullable=False, index=True)
@@ -72,12 +81,15 @@ class JobRow(Base):
 
 class PaymentRow(Base):
     __tablename__ = "payments"
+    __table_args__ = (
+        Index("idx_payments_user", "user_id"),
+    )
 
     payment_id = Column(String, primary_key=True)
     provider = Column(String, nullable=False)
     status = Column(String, nullable=False)
     package_code = Column(String, nullable=False)
-    user_id = Column(String, nullable=True, index=True)
+    user_id = Column(String, nullable=True)
     amount = Column(Integer, nullable=False, default=0)
     created_at = Column(String, nullable=False)
 
@@ -87,5 +99,15 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
 
-def get_session() -> Session:
-    return SessionLocal()
+@contextmanager
+def get_session() -> Generator[Session, None, None]:
+    """Context-manager that commits on success and rolls back on exception."""
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

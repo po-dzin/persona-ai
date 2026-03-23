@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import hmac
 import json
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
+from app.core.auth import require_user
+from app.core.settings import settings
 from app.models.api_models import (
     CreateOrderRequest,
     GenerateRequest,
@@ -16,9 +20,11 @@ from app.models.api_models import (
     WebhookRequest,
 )
 from app.services.vertical_slice import VerticalSliceService
-from app.core.settings import settings
 
 router = APIRouter(prefix="/v1", tags=["v1"])
+
+# Thread pool for running blocking provider calls without blocking event loop
+_executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="gen-worker")
 
 
 def get_service(request: Request) -> VerticalSliceService:
@@ -45,19 +51,19 @@ def list_packages(request: Request):
 # ──────────────────────────── user ───────────────────────────────
 
 @router.get("/me/balance")
-def get_balance(user_id: str, request: Request):
+def get_balance(request: Request, user_id: str = Depends(require_user)):
     return {"wallet": get_service(request).get_balance(user_id)}
 
 
 @router.get("/me/photos")
-def get_photos(user_id: str, request: Request):
+def get_photos(request: Request, user_id: str = Depends(require_user)):
     svc = get_service(request)
     svc.get_or_create_user(user_id)
     return {"photos": svc.photos(user_id)}
 
 
 @router.get("/me/history")
-def get_history(user_id: str, request: Request):
+def get_history(request: Request, user_id: str = Depends(require_user)):
     svc = get_service(request)
     svc.get_or_create_user(user_id)
     return {"orders": svc.history(user_id)}
@@ -66,18 +72,23 @@ def get_history(user_id: str, request: Request):
 # ──────────────────────────── uploads ────────────────────────────
 
 @router.post("/uploads")
-def create_upload(data: UploadRequest, request: Request):
-    return get_service(request).register_upload(user_id=data.user_id, filename=data.filename)
+def create_upload(data: UploadRequest, request: Request, user_id: str = Depends(require_user)):
+    # Validate file extension
+    allowed = {".jpg", ".jpeg", ".png", ".webp"}
+    suffix = "." + data.filename.rsplit(".", 1)[-1].lower() if "." in data.filename else ""
+    if suffix not in allowed:
+        raise HTTPException(status_code=400, detail="invalid_file_type")
+    return get_service(request).register_upload(user_id=user_id, filename=data.filename)
 
 
 # ──────────────────────────── orders ─────────────────────────────
 
 @router.post("/orders")
-def create_order(data: CreateOrderRequest, request: Request):
+def create_order(data: CreateOrderRequest, request: Request, user_id: str = Depends(require_user)):
     svc = get_service(request)
     try:
         order = svc.create_order(
-            data.user_id,
+            user_id,
             data.style_code,
             data.source_key,
             model_id=data.model_id,
@@ -90,50 +101,63 @@ def create_order(data: CreateOrderRequest, request: Request):
 
 
 @router.post("/orders/{order_id}/start")
-def start_order(order_id: str, data: StartOrderRequest, request: Request):
+def start_order(order_id: str, data: StartOrderRequest, request: Request, user_id: str = Depends(require_user)):
     svc = get_service(request)
     try:
-        result = svc.start_order(order_id)
+        return svc.start_order(order_id, requesting_user_id=user_id)
     except ValueError as exc:
-        status = 404 if "not_found" in str(exc) else 403
-        raise HTTPException(status_code=status, detail=str(exc)) from exc
-    return result
+        code = str(exc)
+        status = 404 if "not_found" in code else 403
+        raise HTTPException(status_code=status, detail=code) from exc
 
 
 @router.get("/orders/{order_id}")
-def get_order(order_id: str, request: Request):
+def get_order(order_id: str, request: Request, user_id: str = Depends(require_user)):
     svc = get_service(request)
     try:
-        return svc.order_status(order_id)
+        result = svc.order_status(order_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # Ensure user can only see their own orders
+    if result["order"]["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="forbidden")
+    return result
 
 
-# ──────────────────────────── generate ───────────────────────────
+# ──────────────────────── generate (async) ───────────────────────
 
 @router.post("/generate")
-def generate(data: GenerateRequest, request: Request):
+async def generate(data: GenerateRequest, request: Request, user_id: str = Depends(require_user)):
+    """
+    Runs provider.submit() in a thread pool so the blocking Flux polling
+    (up to 120s) doesn't stall the FastAPI event loop.
+    """
     svc = get_service(request)
+    loop = asyncio.get_event_loop()
     try:
-        return svc.generate(
-            user_id=data.user_id,
-            source_key=data.source_key,
-            model_id=data.model_id,
-            style_code=data.style_code,
-            prompt=data.prompt,
-            aspect_ratio=data.aspect_ratio,
+        result = await loop.run_in_executor(
+            _executor,
+            lambda: svc.generate(
+                user_id=user_id,
+                source_key=data.source_key,
+                model_id=data.model_id,
+                style_code=data.style_code,
+                prompt=data.prompt,
+                aspect_ratio=data.aspect_ratio,
+            ),
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return result
 
 
 # ──────────────────────────── purchase ───────────────────────────
 
 @router.post("/purchase")
-def purchase(data: PurchaseRequest, request: Request):
+def purchase(data: PurchaseRequest, request: Request, user_id: str = Depends(require_user)):
     svc = get_service(request)
     try:
-        return svc.purchase(data.user_id, data.package_code, provider=data.provider)
+        return svc.purchase(user_id, data.package_code, provider=data.provider)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -142,17 +166,18 @@ def purchase(data: PurchaseRequest, request: Request):
 
 @router.post("/webhooks/{provider}")
 def webhook_provider(provider: str, data: WebhookRequest, request: Request):
+    """Generic provider/payment webhook — no user auth, protected by PROVIDER_WEBHOOK_SECRET."""
+    _verify_webhook_secret(request)
     return get_service(request).ingest_webhook(provider, data.event_id, data.payload)
 
 
-@router.post("/webhooks/replicate")
-def webhook_replicate(data: WebhookRequest, request: Request):
-    return get_service(request).ingest_webhook("replicate", data.event_id, data.payload)
-
-
-@router.post("/webhooks/stripe")
-def webhook_stripe(data: WebhookRequest, request: Request):
-    return get_service(request).ingest_webhook("stripe", data.event_id, data.payload)
+def _verify_webhook_secret(request: Request) -> None:
+    secret = settings.provider_webhook_secret
+    if not secret or secret == "replace":
+        return
+    token = request.headers.get("X-Webhook-Secret", "")
+    if not hmac.compare_digest(token, secret):
+        raise HTTPException(status_code=403, detail="invalid_webhook_secret")
 
 
 # ──────────────────── Telegram bot webhook ────────────────────────
@@ -188,24 +213,21 @@ async def _handle_tg_update(update: dict[str, Any], svc: VerticalSliceService) -
         send_start_message,
     )
 
-    # /start command
     message = update.get("message") or {}
     text = message.get("text", "")
     chat_id = (message.get("chat") or {}).get("id")
     user = message.get("from") or {}
-    user_id = str(user.get("id", "")) if user.get("id") else None
+    user_id = str(user.get("id")) if user.get("id") else None
 
     if text.startswith("/start") and chat_id:
         await send_start_message(chat_id)
         return
 
-    # Stars: must approve pre_checkout_query within 10s
     pcq = update.get("pre_checkout_query")
     if pcq:
         await answer_pre_checkout(pcq["id"])
         return
 
-    # Stars: successful_payment → credit user
     sp = message.get("successful_payment")
     if sp and user_id:
         handle_successful_payment(

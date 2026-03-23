@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { generate, purchasePackage, uploadPhoto } from "../utils/api";
+import { generate, purchasePackage, uploadPhoto, type GenerateResult } from "../utils/api";
 
 interface StartGenerateInput {
   userId: string;
@@ -16,11 +16,13 @@ export function useGenerateFlow() {
 
   const clearError = () => setLastError(null);
 
-  const startGenerate = async (input: StartGenerateInput) => {
+  const startGenerate = async (input: StartGenerateInput): Promise<GenerateResult> => {
     setIsSubmitting(true);
     setLastError(null);
     try {
-      const uploaded = await uploadPhoto(input.userId, "upload.jpg");
+      // Unique filename prevents concurrent uploads from overwriting each other
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+      const uploaded = await uploadPhoto(input.userId, uniqueName);
       return await generate({
         user_id: input.userId,
         source_key: uploaded.source_key,

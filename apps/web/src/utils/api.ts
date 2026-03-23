@@ -4,6 +4,10 @@ import type { StyleItem } from "../data/styles";
 
 const API_BASE = "/v1";
 
+function getTgInitData(): string {
+  return (window as any).Telegram?.WebApp?.initData ?? "";
+}
+
 export interface Wallet {
   free_credit_available: boolean;
   paid_credits: number;
@@ -28,9 +32,25 @@ export interface GeneratePayload {
   aspect_ratio?: string;
 }
 
+export interface GenerateResult {
+  result: "enqueued" | "paywall_required";
+  order: {
+    order_id: string;
+    status: string;
+    result_url?: string | null;
+    credit_cost: number;
+    [key: string]: unknown;
+  };
+  wallet?: Wallet;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Telegram-Init-Data": getTgInitData(),
+      ...(init?.headers ?? {}),
+    },
     ...init,
   });
   if (!res.ok) {
@@ -72,8 +92,8 @@ export async function uploadPhoto(userId: string, filename: string): Promise<{ s
   });
 }
 
-export async function generate(payload: GeneratePayload) {
-  return await request<Record<string, unknown>>("/generate", {
+export async function generate(payload: GeneratePayload): Promise<GenerateResult> {
+  return await request<GenerateResult>("/generate", {
     method: "POST",
     body: JSON.stringify(payload),
   });

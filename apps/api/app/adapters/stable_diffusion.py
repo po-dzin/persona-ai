@@ -123,13 +123,10 @@ class StableDiffusionAdapter(MockPhotoProvider):
 
     @staticmethod
     def _store_to_r2(img_bytes: bytes, order_id: str) -> str:
-        try:
-            from app.adapters.r2_client import upload_bytes
+        from app.adapters.r2_client import upload_bytes
 
-            key = f"results/sd/{order_id}.jpg"
-            return upload_bytes(key, img_bytes, content_type="image/jpeg")
-        except Exception:
-            return f"data:image/jpeg;base64,error-{order_id}"
+        key = f"results/sd/{order_id}.jpg"
+        return upload_bytes(key, img_bytes, content_type="image/jpeg")
 
     def _is_real(self) -> bool:
         return (

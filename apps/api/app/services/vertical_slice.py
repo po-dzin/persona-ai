@@ -68,6 +68,8 @@ GENERATION_PROVIDER_ALIASES = {
     "runway": "stable_diffusion",
 }
 
+_VALID_ASPECT_RATIOS = frozenset({"1:1", "16:9", "9:16", "3:4", "4:3", "21:9", "5:4", "2:3"})
+
 
 class VerticalSliceService:
     """Domain service backed by PostgreSQL."""
@@ -169,6 +171,8 @@ class VerticalSliceService:
         model = self._resolve_model(model_id)
         style = STYLE_BY_ID.get(style_code)
         prompt_value = (prompt or (style["prompt_template"] if style else "") or "").strip()
+        if aspect_ratio not in _VALID_ASPECT_RATIOS:
+            aspect_ratio = "1:1"
         order = OrderRow(
             order_id=str(uuid4()),
             user_id=user_id,
@@ -209,12 +213,21 @@ class VerticalSliceService:
         )
         return self.start_order(order.order_id)
 
-    def start_order(self, order_id: str) -> dict[str, Any]:
+    def start_order(self, order_id: str, requesting_user_id: str | None = None) -> dict[str, Any]:
         with get_session() as db:
             order = db.get(OrderRow, order_id)
             if not order:
                 raise ValueError("order_not_found")
-            user = db.get(UserRow, order.user_id)
+            if requesting_user_id and order.user_id != requesting_user_id:
+                raise ValueError("forbidden")
+
+            # SELECT FOR UPDATE — prevents concurrent double-spend
+            user = (
+                db.query(UserRow)
+                .filter(UserRow.user_id == order.user_id)
+                .with_for_update()
+                .first()
+            )
             if not user:
                 raise ValueError("user_not_found")
 
@@ -438,7 +451,13 @@ class VerticalSliceService:
 
                 if status == "paid" and user_id and package_code in PACKAGE_CREDITS:
                     uid = str(user_id)
-                    user = db.get(UserRow, uid)
+                    # SELECT FOR UPDATE prevents double-credit on duplicate webhooks
+                    user = (
+                        db.query(UserRow)
+                        .filter(UserRow.user_id == uid)
+                        .with_for_update()
+                        .first()
+                    )
                     if not user:
                         user = UserRow(
                             user_id=uid,
