@@ -1,6 +1,12 @@
 import { useState } from "react";
 
-import { generate, purchasePackage, uploadPhoto, type GenerateResult } from "../utils/api";
+import {
+  generate,
+  purchasePackage,
+  uploadFileToSignedUrl,
+  uploadPhoto,
+  type GenerateResult,
+} from "../utils/api";
 
 interface StartGenerateInput {
   userId: string;
@@ -8,6 +14,7 @@ interface StartGenerateInput {
   styleCode: string;
   prompt: string;
   aspectRatio: string;
+  photoFile: File;
 }
 
 export function useGenerateFlow() {
@@ -23,6 +30,9 @@ export function useGenerateFlow() {
       // Unique filename prevents concurrent uploads from overwriting each other
       const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
       const uploaded = await uploadPhoto(input.userId, uniqueName);
+      if (uploaded.signed_put_url) {
+        await uploadFileToSignedUrl(uploaded.signed_put_url, input.photoFile);
+      }
       return await generate({
         user_id: input.userId,
         source_key: uploaded.source_key,

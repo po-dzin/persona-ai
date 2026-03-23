@@ -18,6 +18,7 @@ export interface PhotoRecord {
   style_code: string;
   model_id: string;
   status: "queued" | "processing" | "done" | "failed";
+  prompt?: string;
   result_url?: string | null;
   created_at: string;
   updated_at: string;
@@ -85,11 +86,28 @@ export async function getPhotos(userId: string): Promise<PhotoRecord[]> {
   return data.photos;
 }
 
-export async function uploadPhoto(userId: string, filename: string): Promise<{ source_key: string }> {
-  return await request<{ source_key: string }>("/uploads", {
+export interface UploadPhotoResponse {
+  source_key: string;
+  signed_put_url?: string;
+}
+
+export async function uploadPhoto(userId: string, filename: string): Promise<UploadPhotoResponse> {
+  return await request<UploadPhotoResponse>("/uploads", {
     method: "POST",
     body: JSON.stringify({ user_id: userId, filename }),
   });
+}
+
+export async function uploadFileToSignedUrl(url: string, file: File): Promise<void> {
+  if (!url || url.includes("r2.example")) return;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!res.ok) {
+    throw new Error(`upload_failed:${res.status}`);
+  }
 }
 
 export async function generate(payload: GeneratePayload): Promise<GenerateResult> {
