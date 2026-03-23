@@ -18,8 +18,12 @@ export function FlowUploadScreen({
   isOpen, selectedStyle, selectedModel, prompt, aspectRatio,
   isSubmitting, onGenerate, onBack,
 }: FlowUploadScreenProps) {
+  const MAX_FILE_SIZE_MB = 20;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const pickPhoto = () => inputRef.current?.click();
@@ -27,6 +31,26 @@ export function FlowUploadScreen({
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const mime = (file.type || "").toLowerCase();
+    if (!["image/jpeg", "image/png"].includes(mime)) {
+      setValidationError("Поддерживаются только JPG и PNG");
+      setPhoto(null);
+      if (photoUrl) {
+        URL.revokeObjectURL(photoUrl);
+        setPhotoUrl(null);
+      }
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setValidationError(`Файл слишком большой. Максимум ${MAX_FILE_SIZE_MB} МБ`);
+      setPhoto(null);
+      if (photoUrl) {
+        URL.revokeObjectURL(photoUrl);
+        setPhotoUrl(null);
+      }
+      return;
+    }
+    setValidationError(null);
     setPhoto(file);
     if (photoUrl) URL.revokeObjectURL(photoUrl);
     setPhotoUrl(URL.createObjectURL(file));
@@ -63,7 +87,7 @@ export function FlowUploadScreen({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/jpeg,image/png"
         style={{ display: "none" }}
         onChange={handleFile}
       />
@@ -98,9 +122,15 @@ export function FlowUploadScreen({
             </svg>
           </div>
           <div className="upload-text">Загрузить фото</div>
-          <div className="upload-hint">JPG, PNG, WEBP · до 20 МБ</div>
+          <div className="upload-hint">JPG, PNG · до 20 МБ</div>
         </div>
       )}
+
+      {validationError ? (
+        <div style={{ margin: "10px 20px 0", fontSize: 12, color: "#E24B4A" }}>
+          {validationError}
+        </div>
+      ) : null}
 
       {/* Prompt preview */}
       {(prompt || selectedStyle?.prompt_template) ? (
@@ -115,11 +145,18 @@ export function FlowUploadScreen({
         </div>
       ) : null}
 
+      <div style={{ margin: "10px 20px 0", fontSize: 11, color: "#666", lineHeight: 1.45 }}>
+        <div>Обычно 30–120 секунд</div>
+        <div>Лучше работают четкие портреты с хорошим освещением</div>
+        <div>Итог может немного отличаться от превью</div>
+        <div>Фото удаляется по политике хранения</div>
+      </div>
+
       {/* Generate button */}
       <div className="flow-bottom-bar">
         <button
           className={"flow-btn " + (photo && !isSubmitting ? "purple" : "disabled")}
-          disabled={!photo || isSubmitting}
+          disabled={!photo || isSubmitting || Boolean(validationError)}
           onClick={() => onGenerate(photo)}
         >
           {isSubmitting ? (

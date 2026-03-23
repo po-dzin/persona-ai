@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AIModel } from "../data/models";
 import type { StyleItem } from "../data/styles";
@@ -8,6 +8,9 @@ interface FlowStyleScreenProps {
   styles: StyleItem[];
   models: AIModel[];
   selectedStyle: StyleItem | null;
+  initialTab?: "styles" | "custom";
+  initialCustomPrompt?: string;
+  initialCustomModelId?: string;
   onSelectStyle: (style: StyleItem) => void;
   onContinue: (payload: { modelId: string; prompt: string; aspectRatio: string }) => void;
   onClose: () => void;
@@ -15,14 +18,38 @@ interface FlowStyleScreenProps {
 
 export function FlowStyleScreen({
   isOpen, styles, models, selectedStyle,
+  initialTab = "styles",
+  initialCustomPrompt = "",
+  initialCustomModelId,
   onSelectStyle, onContinue, onClose,
 }: FlowStyleScreenProps) {
-  const [tab, setTab] = useState<"styles" | "custom">("styles");
-  const [customModel, setCustomModel] = useState(models[0]?.id || "nano-banana-v1");
-  const [customPrompt, setCustomPrompt] = useState("");
+  const ratioOptions = ["1:1", "9:16", "16:9", "3:4", "4:3", "2:3", "5:4", "21:9"];
+  const categoryOrder = ["Тренды", "Бизнес и карьера", "Лайфстайл", "Арт и креатив", "Особый повод"];
+  const [tab, setTab] = useState<"styles" | "custom">(initialTab);
+  const [customModel, setCustomModel] = useState(initialCustomModelId || models[0]?.id || "nano-banana-v1");
+  const [customPrompt, setCustomPrompt] = useState(initialCustomPrompt);
   const [ratio, setRatio] = useState("1:1");
 
   const selectedModel = useMemo(() => models.find(m => m.id === customModel), [customModel, models]);
+  const stylesByCategory = useMemo(() => {
+    const grouped: Record<string, StyleItem[]> = {};
+    for (const style of styles) {
+      if (!grouped[style.category]) grouped[style.category] = [];
+      grouped[style.category].push(style);
+    }
+    const ordered = categoryOrder.filter((category) => grouped[category]);
+    for (const category of Object.keys(grouped)) {
+      if (!ordered.includes(category)) ordered.push(category);
+    }
+    return ordered.map((category) => ({ category, items: grouped[category] || [] }));
+  }, [styles]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setTab(initialTab);
+    setCustomPrompt(initialCustomPrompt);
+    setCustomModel(initialCustomModelId || models[0]?.id || "nano-banana-v1");
+  }, [isOpen, initialTab, initialCustomPrompt, initialCustomModelId, models]);
 
   if (!isOpen) return null;
 
@@ -47,22 +74,33 @@ export function FlowStyleScreen({
 
       {tab === "styles" ? (
         <>
-          <div className="pick-styles-grid">
-            {styles.map((style) => (
-              <button
-                key={style.id}
-                className={"pick-style" + (selectedStyle?.id === style.id ? " selected" : "")}
-                onClick={() => onSelectStyle(style)}
-              >
-                <div className="style-preview" style={{ background: style.gradient }}>
-                  {style.is_trending ? <span className="style-tag fire">Hot</span> : null}
-                  {style.is_new ? <span className="style-tag new">New</span> : null}
-                  <div className="style-overlay">
-                    <div className="style-name">{style.name}</div>
-                  </div>
+          <div>
+            {stylesByCategory.map((block) => (
+              <div key={block.category}>
+                <div className="section-header"><div className="section-title">{block.category}</div></div>
+                <div className="styles-scroll">
+                  {block.items.map((style) => (
+                    <button
+                      key={style.id}
+                      className="style-card"
+                      onClick={() => onSelectStyle(style)}
+                      style={selectedStyle?.id === style.id ? { boxShadow: "inset 0 0 0 3px #8B83D4" } : undefined}
+                    >
+                      <div className="style-preview" style={{ background: style.gradient }}>
+                        {style.is_trending ? <span className="style-tag fire">Hot</span> : null}
+                        {style.is_new ? <span className="style-tag new">New</span> : null}
+                        <div className="style-overlay">
+                          <div className="style-name">{style.name}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              </button>
+              </div>
             ))}
+            <div style={{ height: 16 }}>
+              <div />
+            </div>
           </div>
           <div className="flow-bottom-bar">
             <button
@@ -96,7 +134,7 @@ export function FlowStyleScreen({
           <div className="custom-field">
             <div className="custom-label">Соотношение сторон</div>
             <div className="ratio-grid">
-              {["1:1", "9:16", "16:9", "4:5", "5:4"].map(v => (
+              {ratioOptions.map(v => (
                 <button key={v} className={"ratio-chip" + (ratio === v ? " active" : "")} onClick={() => setRatio(v)}>{v}</button>
               ))}
             </div>

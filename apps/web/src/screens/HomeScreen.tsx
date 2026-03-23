@@ -7,7 +7,7 @@ interface QueueItem { title: string; detail: string; }
 interface HomeScreenProps {
   styles: StyleItem[];
   queueItem?: QueueItem | null;
-  onPickStyle: (style: StyleItem) => void;
+  onPreviewStyle: (style: StyleItem) => void;
 }
 
 const CATEGORY_ORDER = ["Тренды", "Бизнес и карьера", "Лайфстайл", "Арт и креатив", "Особый повод"];
@@ -29,7 +29,7 @@ function CameraIcon() {
   );
 }
 
-export function HomeScreen({ styles, queueItem, onPickStyle }: HomeScreenProps) {
+export function HomeScreen({ styles, queueItem, onPreviewStyle }: HomeScreenProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
     "Лайфстайл": true, "Арт и креатив": true, "Особый повод": true,
   });
@@ -77,7 +77,7 @@ export function HomeScreen({ styles, queueItem, onPickStyle }: HomeScreenProps) 
             <div className={`category-body${isCollapsed ? " collapsed" : ""}`}>
               <div className="styles-scroll">
                 {categoryStyles.map((style) => (
-                  <button key={style.id} className="style-card" onClick={() => onPickStyle(style)}>
+                  <button key={style.id} className="style-card" onClick={() => onPreviewStyle(style)}>
                     <div className="style-preview" style={{ background: style.gradient }}>
                       {style.is_trending ? <span className="style-tag fire">Hot</span> : null}
                       {style.is_new ? <span className="style-tag new">New</span> : null}
