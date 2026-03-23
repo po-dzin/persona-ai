@@ -38,20 +38,15 @@ class Settings:
 
     provider_webhook_secret: str = os.getenv("PROVIDER_WEBHOOK_SECRET", "")
     provider_real_calls_enabled: bool = _bool_env("PROVIDER_REAL_CALLS_ENABLED", False)
+    free_demo_mode: bool = _bool_env("FREE_DEMO_MODE", False)
     provider_request_timeout_seconds: int = int(os.getenv("PROVIDER_REQUEST_TIMEOUT_SECONDS", "45"))
 
     nano_banana_api_url: str = os.getenv("NANO_BANANA_API_URL", "")
     stability_api_url: str = os.getenv("STABILITY_API_URL", "")
-
-    model_enabled_nano_banana: bool = _bool_env("MODEL_ENABLED_NANO_BANANA", True)
-    model_enabled_stable_diffusion: bool = _bool_env("MODEL_ENABLED_STABLE_DIFFUSION", True)
-    model_enabled_flux: bool = _bool_env("MODEL_ENABLED_FLUX", True)
-    model_enabled_openai_image: bool = _bool_env("MODEL_ENABLED_OPENAI_IMAGE", True)
-    model_enabled_recraft: bool = _bool_env("MODEL_ENABLED_RECRAFT", True)
+    bfl_api_base_url: str = os.getenv("BFL_API_BASE_URL", "https://api.bfl.ai/v1")
 
     telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
     telegram_webhook_secret: str = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
-    telegram_stars_provider_token: str = os.getenv("TELEGRAM_STARS_PROVIDER_TOKEN", "")
     telegram_miniapp_url: str = os.getenv("TELEGRAM_MINIAPP_URL", "")
 
     stripe_secret_key: str = os.getenv("STRIPE_SECRET_KEY", "")
@@ -76,14 +71,16 @@ settings = Settings()
 
 def required_env_for_mode(mode: str) -> dict[str, list[str]]:
     mode = mode.lower().strip()
+    free_demo_mode = _bool_env("FREE_DEMO_MODE", False)
     common = [
         "DATABASE_URL",
-        "REDIS_URL",
         "R2_ENDPOINT",
         "R2_BUCKET",
         "R2_ACCESS_KEY_ID",
         "R2_SECRET_ACCESS_KEY",
     ]
+    if not free_demo_mode:
+        common.append("REDIS_URL")
     provider_keys = [
         "NANO_BANANA_API_KEY",
         "STABILITY_API_KEY",
@@ -97,7 +94,6 @@ def required_env_for_mode(mode: str) -> dict[str, list[str]]:
     payment_keys = [
         "TELEGRAM_BOT_TOKEN",
         "TELEGRAM_WEBHOOK_SECRET",
-        "TELEGRAM_STARS_PROVIDER_TOKEN",
     ]
     stripe_optional_bundle = [
         "STRIPE_SECRET_KEY",

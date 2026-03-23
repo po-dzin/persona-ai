@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from threading import Lock
 from typing import Any
 from uuid import uuid4
 
 from app.adapters.provider_registry import build_provider_registry
+from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, get_session
 from app.core.settings import settings
 from shared.contracts.status import (
     MODEL_BY_ID,
@@ -70,61 +69,35 @@ GENERATION_PROVIDER_ALIASES = {
 }
 
 
-@dataclass
-class UserState:
-    user_id: str
-    free_credits_granted: bool = True
-    free_credit_available: bool = True
-    paid_credits: int = 0
-    created_at: str = field(default_factory=now_iso)
-
-
-@dataclass
-class OrderState:
-    order_id: str
-    user_id: str
-    style_code: str
-    source_key: str
-    model_id: str
-    prompt: str
-    aspect_ratio: str
-    status: str = "draft"
-    credit_cost: int = 10
-    is_free_credit_used: bool = False
-    result_url: str | None = None
-    fail_reason_code: str | None = None
-    created_at: str = field(default_factory=now_iso)
-    updated_at: str = field(default_factory=now_iso)
-
-
-@dataclass
-class JobState:
-    job_id: str
-    order_id: str
-    provider: str
-    status: str = "queued"
-    provider_task_id: str | None = None
-    attempts: int = 0
-    updated_at: str = field(default_factory=now_iso)
-
-
 class VerticalSliceService:
-    """In-memory domain service for photo-first vertical-slice MVP."""
+    """Domain service backed by PostgreSQL."""
 
     def __init__(self) -> None:
-        self._lock = Lock()
         self.provider_registry = build_provider_registry()
-        self.users: dict[str, UserState] = {}
-        self.orders: dict[str, OrderState] = {}
-        self.jobs: dict[str, JobState] = {}
-        self.webhook_events: set[tuple[str, str]] = set()
-        self.payments: dict[str, dict[str, Any]] = {}
 
-    def get_or_create_user(self, user_id: str) -> UserState:
-        with self._lock:
-            if user_id not in self.users:
-                self.users[user_id] = UserState(user_id=user_id)
-            return self.users[user_id]
+    # ------------------------------------------------------------------ users
+
+    def get_or_create_user(self, user_id: str) -> UserRow:
+        with get_session() as db:
+            user = db.get(UserRow, user_id)
+            if not user:
+                user = UserRow(
+                    user_id=user_id,
+                    free_credits_granted=True,
+                    free_credit_available=True,
+                    paid_credits=0,
+                    created_at=now_iso(),
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+            return user
+
+    def get_balance(self, user_id: str) -> dict[str, Any]:
+        user = self.get_or_create_user(user_id)
+        return self._serialize_wallet(user)
+
+    # ---------------------------------------------------------------- catalog
 
     def list_styles(self) -> list[dict[str, Any]]:
         return [dict(style) for style in STYLE_CATALOG]
@@ -156,20 +129,31 @@ class VerticalSliceService:
             for pkg in PACKAGE_MATRIX
         ]
 
-    def get_balance(self, user_id: str) -> dict[str, Any]:
-        user = self.get_or_create_user(user_id)
-        return self._serialize_wallet(user)
+    # --------------------------------------------------------------- uploads
 
     def register_upload(self, user_id: str, filename: str) -> dict[str, str]:
-        _ = self.get_or_create_user(user_id)
+        self.get_or_create_user(user_id)
         upload_id = str(uuid4())
         source_key = f"source/{user_id}/{upload_id}/{filename}"
-        signed_put_url = f"https://r2.example/upload/{source_key}"
+        signed_put_url = self._presigned_upload_url(source_key)
         return {
             "upload_id": upload_id,
             "source_key": source_key,
             "signed_put_url": signed_put_url,
         }
+
+    @staticmethod
+    def _presigned_upload_url(source_key: str) -> str:
+        if not settings.r2_access_key_id:
+            return f"https://r2.example/upload/{source_key}"
+        try:
+            from app.adapters.r2_client import presigned_put_url
+
+            return presigned_put_url(source_key, content_type="image/jpeg")
+        except Exception:
+            return f"https://r2.example/upload/{source_key}"
+
+    # --------------------------------------------------------------- orders
 
     def create_order(
         self,
@@ -180,12 +164,12 @@ class VerticalSliceService:
         model_id: str | None = None,
         prompt: str | None = None,
         aspect_ratio: str = "1:1",
-    ) -> OrderState:
-        _ = self.get_or_create_user(user_id)
+    ) -> OrderRow:
+        self.get_or_create_user(user_id)
         model = self._resolve_model(model_id)
         style = STYLE_BY_ID.get(style_code)
-        prompt_value = (prompt or style["prompt_template"] if style else prompt or "").strip()
-        order = OrderState(
+        prompt_value = (prompt or (style["prompt_template"] if style else "") or "").strip()
+        order = OrderRow(
             order_id=str(uuid4()),
             user_id=user_id,
             style_code=style_code,
@@ -195,9 +179,14 @@ class VerticalSliceService:
             aspect_ratio=aspect_ratio,
             status="awaiting_credit_or_payment",
             credit_cost=model["coins"],
+            is_free_credit_used=False,
+            created_at=now_iso(),
+            updated_at=now_iso(),
         )
-        with self._lock:
-            self.orders[order.order_id] = order
+        with get_session() as db:
+            db.add(order)
+            db.commit()
+            db.refresh(order)
         return order
 
     def generate(
@@ -221,10 +210,15 @@ class VerticalSliceService:
         return self.start_order(order.order_id)
 
     def start_order(self, order_id: str) -> dict[str, Any]:
-        with self._lock:
-            order = self.orders[order_id]
-            user = self.users[order.user_id]
+        with get_session() as db:
+            order = db.get(OrderRow, order_id)
+            if not order:
+                raise ValueError("order_not_found")
+            user = db.get(UserRow, order.user_id)
+            if not user:
+                raise ValueError("user_not_found")
 
+            # Debit credits
             if user.free_credit_available:
                 user.free_credit_available = False
                 order.is_free_credit_used = True
@@ -233,16 +227,26 @@ class VerticalSliceService:
             else:
                 order.status = "awaiting_credit_or_payment"
                 order.updated_at = now_iso()
+                db.commit()
                 return {
                     "result": "paywall_required",
                     "order": self._serialize_order(order),
                     "wallet": self._serialize_wallet(user),
                 }
 
+            # Submit to provider
             provider_id = MODEL_BY_ID[order.model_id]["provider"]
             provider = self.provider_registry[provider_id]
-            job = JobState(job_id=str(uuid4()), order_id=order.order_id, provider=provider_id)
-            self.jobs[job.job_id] = job
+
+            job = JobRow(
+                job_id=str(uuid4()),
+                order_id=order.order_id,
+                provider=provider_id,
+                status="queued",
+                attempts=0,
+                updated_at=now_iso(),
+            )
+            db.add(job)
 
             submit = provider.submit(
                 order_id=order.order_id,
@@ -257,8 +261,16 @@ class VerticalSliceService:
             job.provider_task_id = submit.provider_task_id
             job.updated_at = now_iso()
 
-            order.status = "processing"
+            if settings.free_demo_mode and submit.result_url:
+                order.status = "done"
+                order.result_url = submit.result_url
+                job.status = "done"
+                job.updated_at = now_iso()
+            else:
+                order.status = "processing"
+
             order.updated_at = now_iso()
+            db.commit()
 
             return {
                 "result": "enqueued",
@@ -268,40 +280,56 @@ class VerticalSliceService:
             }
 
     def order_status(self, order_id: str) -> dict[str, Any]:
-        with self._lock:
-            order = self.orders[order_id]
-            job = next((j for j in self.jobs.values() if j.order_id == order_id), None)
+        with get_session() as db:
+            order = db.get(OrderRow, order_id)
+            if not order:
+                raise ValueError("order_not_found")
+            job = (
+                db.query(JobRow)
+                .filter(JobRow.order_id == order_id)
+                .order_by(JobRow.updated_at.desc())
+                .first()
+            )
             return {
                 "order": self._serialize_order(order),
                 "job": self._serialize_job(job) if job else None,
             }
 
     def history(self, user_id: str) -> list[dict[str, Any]]:
-        with self._lock:
-            rows = [self._serialize_order(o) for o in self.orders.values() if o.user_id == user_id]
-        rows.sort(key=lambda item: item["created_at"], reverse=True)
-        return rows
+        with get_session() as db:
+            orders = (
+                db.query(OrderRow)
+                .filter(OrderRow.user_id == user_id)
+                .order_by(OrderRow.created_at.desc())
+                .all()
+            )
+            return [self._serialize_order(o) for o in orders]
 
     def photos(self, user_id: str) -> list[dict[str, Any]]:
-        with self._lock:
-            rows = [
+        with get_session() as db:
+            orders = (
+                db.query(OrderRow)
+                .filter(OrderRow.user_id == user_id)
+                .order_by(OrderRow.created_at.desc())
+                .all()
+            )
+            return [
                 {
-                    "order_id": order.order_id,
-                    "style_code": order.style_code,
-                    "model_id": order.model_id,
-                    "status": order.status,
-                    "result_url": order.result_url,
-                    "created_at": order.created_at,
-                    "updated_at": order.updated_at,
+                    "order_id": o.order_id,
+                    "style_code": o.style_code,
+                    "model_id": o.model_id,
+                    "status": o.status,
+                    "result_url": o.result_url,
+                    "created_at": o.created_at,
+                    "updated_at": o.updated_at,
                 }
-                for order in self.orders.values()
-                if order.user_id == user_id
+                for o in orders
             ]
-        rows.sort(key=lambda item: item["created_at"], reverse=True)
-        return rows
+
+    # -------------------------------------------------------------- payments
 
     def purchase(self, user_id: str, package_code: str, provider: str = "telegram") -> dict[str, Any]:
-        _ = self.get_or_create_user(user_id)
+        self.get_or_create_user(user_id)
         canonical_code = self._normalize_package_code(package_code)
         if canonical_code not in PACKAGE_CREDITS:
             raise ValueError("package_not_found")
@@ -316,37 +344,50 @@ class VerticalSliceService:
             "amount": PACKAGE_STARS_PRICES[canonical_code],
         }
         result = self.ingest_webhook(provider, event_id, payload)
-        return {
-            "payment_id": payment_id,
-            "provider": provider,
-            "package_code": canonical_code,
-            "result": result,
-            "wallet": self._serialize_wallet(self.users[user_id]),
-        }
+        with get_session() as db:
+            user = db.get(UserRow, user_id)
+            return {
+                "payment_id": payment_id,
+                "provider": provider,
+                "package_code": canonical_code,
+                "result": result,
+                "wallet": self._serialize_wallet(user),
+            }
 
     def ingest_webhook(self, provider: str, event_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        with self._lock:
-            provider = GENERATION_PROVIDER_ALIASES.get(provider, provider)
-            key = (provider, event_id)
-            if key in self.webhook_events:
-                return {"deduplicated": True}
-            self.webhook_events.add(key)
+        provider = GENERATION_PROVIDER_ALIASES.get(provider, provider)
 
+        with get_session() as db:
+            # Idempotency: check if this event was already processed
+            existing = (
+                db.query(PaymentRow)
+                .filter(PaymentRow.payment_id == event_id)
+                .first()
+            )
+            if existing:
+                return {"deduplicated": True}
+
+            # Provider generation webhook (result/failure callback)
             if provider in self.provider_registry:
                 order_id = str(payload.get("order_id", ""))
                 event_type = str(payload.get("event_type", "done"))
-                if not order_id or order_id not in self.orders:
+                if not order_id:
                     return {"deduplicated": False, "ignored": True}
 
-                order = self.orders[order_id]
-                job = next((j for j in self.jobs.values() if j.order_id == order_id), None)
+                order = db.get(OrderRow, order_id)
+                if not order:
+                    return {"deduplicated": False, "ignored": True}
+
+                job = (
+                    db.query(JobRow)
+                    .filter(JobRow.order_id == order_id)
+                    .order_by(JobRow.updated_at.desc())
+                    .first()
+                )
 
                 if event_type == "done":
                     order.status = "done"
-                    order.result_url = payload.get(
-                        "result_url",
-                        f"https://r2.example/result/{order.user_id}/{order.order_id}.jpg",
-                    )
+                    order.result_url = payload.get("result_url")
                     if job:
                         job.status = "done"
                         job.updated_at = now_iso()
@@ -361,9 +402,10 @@ class VerticalSliceService:
                     if job:
                         job.status = "failed"
                         job.updated_at = now_iso()
-                    user = self.users[order.user_id]
                     if not order.is_free_credit_used:
-                        user.paid_credits += order.credit_cost
+                        user = db.get(UserRow, order.user_id)
+                        if user:
+                            user.paid_credits += order.credit_cost
                 elif event_type == "policy_failed":
                     order.status = "failed"
                     order.fail_reason_code = "policy_failed"
@@ -372,31 +414,47 @@ class VerticalSliceService:
                         job.updated_at = now_iso()
 
                 order.updated_at = now_iso()
+                db.commit()
 
+            # Payment webhook (Stars / Stripe)
             if provider in {"telegram", "stripe"}:
                 payment_id = str(payload.get("payment_id", uuid4()))
                 user_id = payload.get("user_id")
                 package_code_raw = str(payload.get("package_code", ""))
                 package_code = self._normalize_package_code(package_code_raw)
-                status = payload.get("status", "paid")
-                amount = payload.get("amount", PACKAGE_STARS_PRICES.get(package_code, 0))
-                self.payments[payment_id] = {
-                    "payment_id": payment_id,
-                    "provider": provider,
-                    "status": status,
-                    "package_code": package_code,
-                    "user_id": user_id,
-                    "amount": amount,
-                    "created_at": now_iso(),
-                }
+                status = str(payload.get("status", "paid"))
+                amount = int(payload.get("amount", PACKAGE_STARS_PRICES.get(package_code, 0)))
+
+                payment = PaymentRow(
+                    payment_id=payment_id,
+                    provider=provider,
+                    status=status,
+                    package_code=package_code,
+                    user_id=str(user_id) if user_id else None,
+                    amount=amount,
+                    created_at=now_iso(),
+                )
+                db.add(payment)
+
                 if status == "paid" and user_id and package_code in PACKAGE_CREDITS:
                     uid = str(user_id)
-                    if uid not in self.users:
-                        self.users[uid] = UserState(user_id=uid)
-                    user = self.users[uid]
+                    user = db.get(UserRow, uid)
+                    if not user:
+                        user = UserRow(
+                            user_id=uid,
+                            free_credits_granted=True,
+                            free_credit_available=True,
+                            paid_credits=0,
+                            created_at=now_iso(),
+                        )
+                        db.add(user)
                     user.paid_credits += PACKAGE_CREDITS[package_code]
 
-            return {"deduplicated": False, "accepted": True}
+                db.commit()
+
+        return {"deduplicated": False, "accepted": True}
+
+    # ------------------------------------------------------------ helpers
 
     def _resolve_model(self, model_id: str | None) -> dict[str, Any]:
         if not model_id:
@@ -419,14 +477,14 @@ class VerticalSliceService:
         return PACKAGE_ALIASES.get(normalized, normalized)
 
     @staticmethod
-    def _serialize_wallet(user: UserState) -> dict[str, Any]:
+    def _serialize_wallet(user: UserRow) -> dict[str, Any]:
         return {
             "free_credit_available": user.free_credit_available,
             "paid_credits": user.paid_credits,
         }
 
     @staticmethod
-    def _serialize_order(order: OrderState) -> dict[str, Any]:
+    def _serialize_order(order: OrderRow) -> dict[str, Any]:
         return {
             "order_id": order.order_id,
             "user_id": order.user_id,
@@ -445,7 +503,7 @@ class VerticalSliceService:
         }
 
     @staticmethod
-    def _serialize_job(job: JobState) -> dict[str, Any]:
+    def _serialize_job(job: JobRow) -> dict[str, Any]:
         return {
             "job_id": job.job_id,
             "order_id": job.order_id,

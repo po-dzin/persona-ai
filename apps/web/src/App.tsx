@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Modal } from "./components/Modal";
 import { TabBar } from "./components/TabBar";
@@ -17,9 +17,31 @@ import { ProfileScreen } from "./screens/ProfileScreen";
 import type { StyleItem } from "./data/styles";
 import type { PhotoRecord } from "./utils/api";
 
-const USER_ID = "demo-user";
+// Telegram WebApp integration
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        ready(): void;
+        expand(): void;
+        initDataUnsafe?: {
+          user?: { id: number; first_name?: string; username?: string };
+        };
+      };
+    };
+  }
+}
+
+const tg = window.Telegram?.WebApp;
+const tgUser = tg?.initDataUnsafe?.user;
+const USER_ID = tgUser?.id ? String(tgUser.id) : "demo-user";
 
 export function App() {
+  useEffect(() => {
+    tg?.ready();
+    tg?.expand();
+  }, []);
+
   const { styles, models, packages } = useCatalog();
   const { wallet, photos, refresh } = useWalletAndPhotos(USER_ID);
   const { isSubmitting, lastError, clearError, startGenerate, buyPackage } = useGenerateFlow();

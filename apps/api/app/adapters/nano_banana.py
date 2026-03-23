@@ -1,24 +1,40 @@
 from __future__ import annotations
 
+import base64
+
 from app.adapters.http_client import ProviderHTTPError, post_json
 from app.adapters.mock_provider import MockPhotoProvider
 from app.adapters.provider_base import ProviderSubmitResult
 
+# Google AI Studio (Imagen 3) — text-to-image (cheapest tier)
+_IMAGEN_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
+_IMAGEN_MODEL = "imagen-3.0-generate-002"
+
+# Imagen 3 accepts these aspect ratios
+_VALID_AR = {"1:1", "3:4", "4:3", "9:16", "16:9"}
+
+
 class NanoBananaAdapter(MockPhotoProvider):
+    """
+    Nano Banana = Google Imagen 3 via AI Studio API.
+
+    Text-to-image only (cheapest tier, 10 coins).
+    Source photo is ignored by the model; style is conveyed via prompt.
+    Result: base64 PNG → stored in R2.
+    """
+
     def __init__(
         self,
         *,
         integration_mode: str = "mock",
         real_calls_enabled: bool = False,
         api_key: str = "",
-        api_url: str = "",
         timeout_seconds: int = 45,
     ) -> None:
         super().__init__(provider_id="nano_banana")
         self.integration_mode = integration_mode
         self.real_calls_enabled = real_calls_enabled
         self.api_key = api_key
-        self.api_url = api_url.strip()
         self.timeout_seconds = timeout_seconds
 
     def submit(
@@ -31,7 +47,7 @@ class NanoBananaAdapter(MockPhotoProvider):
         prompt: str,
         aspect_ratio: str,
     ) -> ProviderSubmitResult:
-        if not self._is_real_mode_enabled():
+        if not self._is_real():
             return super().submit(
                 order_id=order_id,
                 model_id=model_id,
@@ -41,22 +57,20 @@ class NanoBananaAdapter(MockPhotoProvider):
                 aspect_ratio=aspect_ratio,
             )
 
+        ar = aspect_ratio if aspect_ratio in _VALID_AR else "1:1"
+        url = f"{_IMAGEN_BASE}/{_IMAGEN_MODEL}:predict?key={self.api_key}"
+
         payload = {
-            "model": model_id,
-            "prompt": prompt,
-            "aspect_ratio": aspect_ratio,
-            "source_image_url": source_image_url,
-            "order_id": order_id,
+            "instances": [{"prompt": prompt}],
+            "parameters": {
+                "sampleCount": 1,
+                "aspectRatio": ar,
+                "outputMimeType": "image/jpeg",
+            },
         }
-        headers = {"Authorization": f"Bearer {self.api_key}"}
 
         try:
-            response = post_json(
-                url=self.api_url,
-                headers=headers,
-                payload=payload,
-                timeout_seconds=self.timeout_seconds,
-            )
+            resp = post_json(url=url, headers={}, payload=payload, timeout_seconds=self.timeout_seconds)
         except ProviderHTTPError:
             return super().submit(
                 order_id=order_id,
@@ -67,24 +81,49 @@ class NanoBananaAdapter(MockPhotoProvider):
                 aspect_ratio=aspect_ratio,
             )
 
-        provider_task_id = str(
-            response.get("id")
-            or response.get("job_id")
-            or response.get("task_id")
-            or response.get("name")
-            or f"nano-banana-{order_id}"
-        )
-        result_url = response.get("result_url")
+        predictions = resp.get("predictions") or []
+        if not predictions:
+            return super().submit(
+                order_id=order_id,
+                model_id=model_id,
+                source_key=source_key,
+                source_image_url=source_image_url,
+                prompt=prompt,
+                aspect_ratio=aspect_ratio,
+            )
+
+        b64 = predictions[0].get("bytesBase64Encoded", "")
+        if not b64:
+            return super().submit(
+                order_id=order_id,
+                model_id=model_id,
+                source_key=source_key,
+                source_image_url=source_image_url,
+                prompt=prompt,
+                aspect_ratio=aspect_ratio,
+            )
+
+        img_bytes = base64.b64decode(b64)
+        result_url = self._store_to_r2(img_bytes, order_id)
         return ProviderSubmitResult(
-            provider_task_id=provider_task_id,
-            status="submitted",
-            result_url=result_url if isinstance(result_url, str) else None,
+            provider_task_id=f"imagen-{order_id}",
+            status="done",
+            result_url=result_url,
         )
 
-    def _is_real_mode_enabled(self) -> bool:
+    @staticmethod
+    def _store_to_r2(img_bytes: bytes, order_id: str) -> str:
+        try:
+            from app.adapters.r2_client import upload_bytes
+
+            key = f"results/nano/{order_id}.jpg"
+            return upload_bytes(key, img_bytes, content_type="image/jpeg")
+        except Exception:
+            return f"data:image/jpeg;base64,error-{order_id}"
+
+    def _is_real(self) -> bool:
         return (
             self.integration_mode == "real"
             and self.real_calls_enabled
             and bool(self.api_key)
-            and bool(self.api_url)
         )
