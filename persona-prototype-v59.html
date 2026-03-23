@@ -32,7 +32,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 68px;
+  bottom: 78px;
   overflow-y: auto;
   scrollbar-width: none;
   opacity: 0;
@@ -145,8 +145,8 @@ body {
 }
 .styles-scroll::-webkit-scrollbar { display: none; }
 .style-card {
-  min-width: 130px;
-  border-radius: 14px;
+  min-width: 140px;
+  border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
   transition: transform 0.15s;
@@ -277,7 +277,7 @@ body {
 /* ─── Flow screens (fullscreen overlay) ─── */
 .flow-screen {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 68px;
+  top: 0; left: 0; right: 0; bottom: 78px;
   background: #111;
   z-index: 20;
   overflow-y: auto;
@@ -333,7 +333,7 @@ body {
 /* ─── Style preview screen ─── */
 .style-preview-screen {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 68px;
+  top: 0; left: 0; right: 0; bottom: 78px;
   background: #111;
   z-index: 22;
   opacity: 0;
@@ -397,7 +397,7 @@ body {
 /* ─── Category page ─── */
 .category-screen {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 68px;
+  top: 0; left: 0; right: 0; bottom: 78px;
   background: #111;
   z-index: 20;
   overflow-y: auto;
@@ -1047,7 +1047,7 @@ body {
 /* ─── Purchase confirmation ─── */
 .purchase-screen {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 68px;
+  top: 0; left: 0; right: 0; bottom: 78px;
   background: #111;
   z-index: 25;
   overflow-y: auto;
@@ -1415,7 +1415,7 @@ body {
 /* ─── Photo viewer screen ─── */
 .viewer-screen {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 68px;
+  top: 0; left: 0; right: 0; bottom: 78px;
   background: #111;
   z-index: 25;
   overflow-y: auto;
@@ -1585,32 +1585,35 @@ body {
 .tab-bar {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  height: 68px;
-  background: #111;
-  border-top: 0.5px solid rgba(255,255,255,0.06);
+  height: 78px;
+  background: rgba(17,17,17,0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 0.5px solid rgba(255,255,255,0.08);
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 6px 6px;
+  padding: 0 4px 10px;
   z-index: 40;
 }
 .tab-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 10px;
+  padding: 6px 10px;
+  border-radius: 12px;
   transition: background 0.15s;
   border: none;
   background: none;
   font-family: 'DM Sans', sans-serif;
-  min-width: 48px;
+  min-width: 52px;
 }
-.tab-item:active { background: rgba(255,255,255,0.05); }
-.tab-item svg { width: 22px; height: 22px; }
-.tab-label { font-size: 10px; font-weight: 500; color: #555; }
+.tab-item:active { background: rgba(255,255,255,0.06); }
+.tab-item svg { width: 24px; height: 24px; color: #555; transition: color 0.15s; }
+.tab-item.active svg { color: #F0F0F0; }
+.tab-label { font-size: 10px; font-weight: 600; color: #555; transition: color 0.15s; }
 .tab-item.active .tab-label { color: #F0F0F0; }
 .tab-icon-wrap {
   position: relative;
@@ -1634,10 +1637,16 @@ body {
   padding: 0 4px;
   border: 2px solid #111;
 }
+.tab-ai-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
 .tab-ai {
-  width: 58px;
-  height: 40px;
-  border-radius: 14px;
+  width: 64px;
+  height: 42px;
+  border-radius: 16px;
   background: linear-gradient(145deg, #A78BFA, #7C3AED);
   border: none;
   cursor: pointer;
@@ -1645,9 +1654,43 @@ body {
   align-items: center;
   justify-content: center;
   transition: transform 0.15s, opacity 0.15s;
-  box-shadow: 0 0 16px rgba(124,58,237,0.5), 0 0 4px rgba(167,139,250,0.3);
+  box-shadow: 0 0 20px rgba(124,58,237,0.55), 0 0 6px rgba(167,139,250,0.3);
 }
 .tab-ai:active { transform: scale(0.93); opacity: 0.9; }
+.tab-ai-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #A78BFA;
+  pointer-events: none;
+}
+
+/* ─── Collapsible categories ─── */
+.section-header {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.section-header:active { opacity: 0.75; }
+.section-chevron {
+  margin-left: auto;
+  margin-right: 4px;
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+.section-header.collapsed .section-chevron {
+  transform: rotate(-90deg);
+}
+.category-body {
+  overflow: hidden;
+  transition: max-height 0.28s ease, opacity 0.2s ease;
+  max-height: 400px;
+  opacity: 1;
+}
+.category-body.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
 </style>
 </head>
 <body>
@@ -1669,44 +1712,79 @@ body {
       <div class="queue-dots"><span></span><span></span><span></span></div>
     </div>
 
-    <div class="section-header"><div class="section-title">Тренды</div><div class="section-link" onclick="openCategory('Тренды')">Все →</div></div>
-    <div class="styles-scroll">
-      <div class="style-card s1"><div class="style-preview"><div class="style-tag fire">Hot</div><div class="style-overlay"><div class="style-name">Голливуд</div></div></div></div>
-      <div class="style-card s5"><div class="style-preview"><div class="style-tag fire">Hot</div><div class="style-overlay"><div class="style-name">Гламур 90-х</div></div></div></div>
-      <div class="style-card s2"><div class="style-preview"><div class="style-tag new">New</div><div class="style-overlay"><div class="style-name">Киберпанк</div></div></div></div>
-      <div class="style-card s8"><div class="style-preview"><div class="style-tag fire">Hot</div><div class="style-overlay"><div class="style-name">K-pop</div></div></div></div>
+    <!-- ── Category: Тренды (expanded by default) ── -->
+    <div class="section-header" onclick="toggleCategory(this)">
+      <div class="section-title">Тренды</div>
+      <svg class="section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="section-link" onclick="event.stopPropagation(); openCategory('Тренды')">Все →</div>
+    </div>
+    <div class="category-body">
+      <div class="styles-scroll">
+        <div class="style-card s1" onclick="openStylePreview('Голливуд','s1')"><div class="style-preview"><div class="style-tag fire">Hot</div><div class="style-overlay"><div class="style-name">Голливуд</div></div></div></div>
+        <div class="style-card s5" onclick="openStylePreview('Гламур 90-х','s5')"><div class="style-preview"><div class="style-tag fire">Hot</div><div class="style-overlay"><div class="style-name">Гламур 90-х</div></div></div></div>
+        <div class="style-card s2" onclick="openStylePreview('Киберпанк','s2')"><div class="style-preview"><div class="style-tag new">New</div><div class="style-overlay"><div class="style-name">Киберпанк</div></div></div></div>
+        <div class="style-card s8" onclick="openStylePreview('K-pop','s8')"><div class="style-preview"><div class="style-tag fire">Hot</div><div class="style-overlay"><div class="style-name">K-pop</div></div></div></div>
+      </div>
     </div>
 
-    <div class="section-header"><div class="section-title">Бизнес и карьера</div><div class="section-link" onclick="openCategory('Бизнес и карьера')">Все →</div></div>
-    <div class="styles-scroll">
-      <div class="style-card s2"><div class="style-preview"><div class="style-overlay"><div class="style-name">Бизнес-портрет</div></div></div></div>
-      <div class="style-card s7"><div class="style-preview"><div class="style-overlay"><div class="style-name">LinkedIn</div></div></div></div>
-      <div class="style-card s6"><div class="style-preview"><div class="style-overlay"><div class="style-name">CEO-стиль</div></div></div></div>
+    <!-- ── Category: Бизнес и карьера ── -->
+    <div class="section-header" onclick="toggleCategory(this)">
+      <div class="section-title">Бизнес и карьера</div>
+      <svg class="section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="section-link" onclick="event.stopPropagation(); openCategory('Бизнес и карьера')">Все →</div>
+    </div>
+    <div class="category-body">
+      <div class="styles-scroll">
+        <div class="style-card s2" onclick="openStylePreview('Бизнес-портрет','s2')"><div class="style-preview"><div class="style-overlay"><div class="style-name">Бизнес-портрет</div></div></div></div>
+        <div class="style-card s7" onclick="openStylePreview('LinkedIn','s7')"><div class="style-preview"><div class="style-overlay"><div class="style-name">LinkedIn</div></div></div></div>
+        <div class="style-card s6" onclick="openStylePreview('CEO-стиль','s6')"><div class="style-preview"><div class="style-overlay"><div class="style-name">CEO-стиль</div></div></div></div>
+      </div>
     </div>
 
-    <div class="section-header"><div class="section-title">Лайфстайл</div><div class="section-link" onclick="openCategory('Лайфстайл')">Все →</div></div>
-    <div class="styles-scroll">
-      <div class="style-card s4"><div class="style-preview"><div class="style-overlay"><div class="style-name">Природа</div></div></div></div>
-      <div class="style-card s3"><div class="style-preview"><div class="style-overlay"><div class="style-name">Винтаж</div></div></div></div>
-      <div class="style-card s6"><div class="style-preview"><div class="style-overlay"><div class="style-name">Путешествие</div></div></div></div>
-      <div class="style-card s8"><div class="style-preview"><div class="style-tag new">New</div><div class="style-overlay"><div class="style-name">Уютный вечер</div></div></div></div>
+    <!-- ── Category: Лайфстайл ── -->
+    <div class="section-header collapsed" onclick="toggleCategory(this)">
+      <div class="section-title">Лайфстайл</div>
+      <svg class="section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="section-link" onclick="event.stopPropagation(); openCategory('Лайфстайл')">Все →</div>
+    </div>
+    <div class="category-body collapsed">
+      <div class="styles-scroll">
+        <div class="style-card s4" onclick="openStylePreview('Природа','s4')"><div class="style-preview"><div class="style-overlay"><div class="style-name">Природа</div></div></div></div>
+        <div class="style-card s3" onclick="openStylePreview('Винтаж','s3')"><div class="style-preview"><div class="style-overlay"><div class="style-name">Винтаж</div></div></div></div>
+        <div class="style-card s6" onclick="openStylePreview('Путешествие','s6')"><div class="style-preview"><div class="style-overlay"><div class="style-name">Путешествие</div></div></div></div>
+        <div class="style-card s8" onclick="openStylePreview('Уютный вечер','s8')"><div class="style-preview"><div class="style-tag new">New</div><div class="style-overlay"><div class="style-name">Уютный вечер</div></div></div></div>
+      </div>
     </div>
 
-    <div class="section-header"><div class="section-title">Арт и креатив</div><div class="section-link" onclick="openCategory('Арт и креатив')">Все →</div></div>
-    <div class="styles-scroll">
-      <div class="style-card s7"><div class="style-preview"><div class="style-tag new">New</div><div class="style-overlay"><div class="style-name">Аниме</div></div></div></div>
-      <div class="style-card s1"><div class="style-preview"><div class="style-overlay"><div class="style-name">Масло</div></div></div></div>
-      <div class="style-card s5"><div class="style-preview"><div class="style-overlay"><div class="style-name">Комикс</div></div></div></div>
-      <div class="style-card s3"><div class="style-preview"><div class="style-overlay"><div class="style-name">Ренессанс</div></div></div></div>
+    <!-- ── Category: Арт и креатив ── -->
+    <div class="section-header collapsed" onclick="toggleCategory(this)">
+      <div class="section-title">Арт и креатив</div>
+      <svg class="section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="section-link" onclick="event.stopPropagation(); openCategory('Арт и креатив')">Все →</div>
+    </div>
+    <div class="category-body collapsed">
+      <div class="styles-scroll">
+        <div class="style-card s7" onclick="openStylePreview('Аниме','s7')"><div class="style-preview"><div class="style-tag new">New</div><div class="style-overlay"><div class="style-name">Аниме</div></div></div></div>
+        <div class="style-card s1" onclick="openStylePreview('Масло','s1')"><div class="style-preview"><div class="style-overlay"><div class="style-name">Масло</div></div></div></div>
+        <div class="style-card s5" onclick="openStylePreview('Комикс','s5')"><div class="style-preview"><div class="style-overlay"><div class="style-name">Комикс</div></div></div></div>
+        <div class="style-card s3" onclick="openStylePreview('Ренессанс','s3')"><div class="style-preview"><div class="style-overlay"><div class="style-name">Ренессанс</div></div></div></div>
+      </div>
     </div>
 
-    <div class="section-header"><div class="section-title">Особый повод</div><div class="section-link" onclick="openCategory('Особый повод')">Все →</div></div>
-    <div class="styles-scroll">
-      <div class="style-card s5"><div class="style-preview"><div class="style-overlay"><div class="style-name">Свадьба</div></div></div></div>
-      <div class="style-card s4"><div class="style-preview"><div class="style-overlay"><div class="style-name">День рождения</div></div></div></div>
-      <div class="style-card s1"><div class="style-preview"><div class="style-overlay"><div class="style-name">Выпускной</div></div></div></div>
+    <!-- ── Category: Особый повод ── -->
+    <div class="section-header collapsed" onclick="toggleCategory(this)">
+      <div class="section-title">Особый повод</div>
+      <svg class="section-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="section-link" onclick="event.stopPropagation(); openCategory('Особый повод')">Все →</div>
     </div>
-    <div style="height:16px"></div>
+    <div class="category-body collapsed">
+      <div class="styles-scroll">
+        <div class="style-card s5" onclick="openStylePreview('Свадьба','s5')"><div class="style-preview"><div class="style-overlay"><div class="style-name">Свадьба</div></div></div></div>
+        <div class="style-card s4" onclick="openStylePreview('День рождения','s4')"><div class="style-preview"><div class="style-overlay"><div class="style-name">День рождения</div></div></div></div>
+        <div class="style-card s1" onclick="openStylePreview('Выпускной','s1')"><div class="style-preview"><div class="style-overlay"><div class="style-name">Выпускной</div></div></div></div>
+      </div>
+    </div>
+    <div style="height:20px"></div>
   </div>
 
   <!-- ═══════ SCREEN: Мои фото ═══════ -->
@@ -2292,9 +2370,12 @@ body {
       </div>
       <span class="tab-label">Мои фото</span>
     </button>
-    <button class="tab-ai" onclick="openFlow()">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 20h-6.5a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v3" /><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M19 22.5a4.75 4.75 0 0 1 3.5 -3.5a4.75 4.75 0 0 1 -3.5 -3.5a4.75 4.75 0 0 1 -3.5 3.5a4.75 4.75 0 0 1 3.5 3.5" /></svg>
-    </button>
+    <div class="tab-ai-wrap">
+      <button class="tab-ai" onclick="openFlow()">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 20h-6.5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h1a2 2 0 0 0 2-2 1 1 0 0 1 1-1h6a1 1 0 0 1 1 1 2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v3"/><path d="M9 13a3 3 0 1 0 6 0 3 3 0 0 0-6 0"/><path d="M19 22.5a4.75 4.75 0 0 1 3.5-3.5 4.75 4.75 0 0 1-3.5-3.5 4.75 4.75 0 0 1-3.5 3.5 4.75 4.75 0 0 1 3.5 3.5"/></svg>
+      </button>
+      <span class="tab-ai-label">✨ AI</span>
+    </div>
     <button class="tab-item" onclick="switchTab('balance', this)">
       <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0-18 0" stroke="currentColor" stroke-width="1.8"/><path d="M14.8 9a2 2 0 0 0-1.8-1h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1-1.8-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v2m0 6v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       <span class="tab-label">Баланс</span>
@@ -2323,6 +2404,12 @@ const photoData = {
   'CEO-стиль': { bg: 'linear-gradient(145deg, #3D3020, #6B5530, #A08050)', prompt: 'Executive portrait, dark suit, confident posture, luxury office background, dramatic side lighting' },
   'Комикс': { bg: 'linear-gradient(145deg, #3D1E28, #6B2E42, #9B4A68)', prompt: 'Comic book style hero portrait, bold outlines, halftone dots, dynamic pose, pop art colors' },
 };
+
+function toggleCategory(header) {
+  var body = header.nextElementSibling;
+  header.classList.toggle('collapsed');
+  body.classList.toggle('collapsed');
+}
 
 function switchTab(name, btn) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));

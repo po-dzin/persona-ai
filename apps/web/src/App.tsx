@@ -91,7 +91,7 @@ export function App() {
     setFlowUploadOpen(true);
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (_photoFile?: File | null) => {
     if (!selectedModelId) return;
     const response: GenerateResult = await startGenerate({
       userId: USER_ID,
@@ -124,7 +124,15 @@ export function App() {
 
   return (
     <main className="app-shell">
-      {activeScreen === "home" ? <HomeScreen styles={styles} onPickStyle={handlePickStyle} /> : null}
+      {activeScreen === "home" ? (
+        <HomeScreen
+          styles={styles}
+          onPickStyle={handlePickStyle}
+          queueItem={photos.find(p => p.status === "queued" || p.status === "processing")
+            ? { title: photos.find(p => p.status === "queued" || p.status === "processing")!.style_code, detail: "Генерация" }
+            : null}
+        />
+      ) : null}
       {activeScreen === "photos" ? <PhotosScreen photos={photos} styles={styles} onOpenPhoto={handleOpenPhoto} /> : null}
       {activeScreen === "balance" ? (
         <BalanceScreen
@@ -156,8 +164,8 @@ export function App() {
           setFlowUploadOpen(false);
           setFlowStyleOpen(true);
         }}
-        onGenerate={() => {
-          void handleGenerate();
+        onGenerate={(file) => {
+          void handleGenerate(file);
         }}
       />
 
