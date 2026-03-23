@@ -2,7 +2,8 @@ from pathlib import Path
 import sys
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 # Ensure repo-level packages (e.g. shared.contracts) are importable in managed runtimes.
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -40,13 +41,30 @@ def create_app() -> FastAPI:
     app.state.slice_service = VerticalSliceService()
     app.include_router(v1_router)
 
-    @app.get("/", include_in_schema=False)
-    def root() -> RedirectResponse:
-        return RedirectResponse(url="/docs")
-
     @app.get("/healthz", tags=["infra"])
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
+
+    # Serve built React app (present after Docker build)
+    web_dist = REPO_ROOT / "apps" / "web" / "dist"
+    if web_dist.exists():
+        assets_dir = web_dist / "assets"
+        if assets_dir.exists():
+            app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="web-assets")
+
+        @app.get("/", include_in_schema=False)
+        def root() -> FileResponse:
+            return FileResponse(str(web_dist / "index.html"))
+
+        # SPA catch-all: return index.html for all non-API paths
+        @app.get("/{full_path:path}", include_in_schema=False)
+        def spa_fallback(full_path: str) -> FileResponse:
+            return FileResponse(str(web_dist / "index.html"))
+    else:
+        # No frontend build — redirect root to API docs
+        @app.get("/", include_in_schema=False)
+        def root() -> RedirectResponse:  # type: ignore[misc]
+            return RedirectResponse(url="/docs")
 
     return app
 
