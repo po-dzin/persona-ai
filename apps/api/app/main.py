@@ -2,6 +2,7 @@ from pathlib import Path
 import sys
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 
 # Ensure repo-level packages (e.g. shared.contracts) are importable in managed runtimes.
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -38,6 +39,10 @@ def create_app() -> FastAPI:
 
     app.state.slice_service = VerticalSliceService()
     app.include_router(v1_router)
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        return RedirectResponse(url="/docs")
 
     @app.get("/healthz", tags=["infra"])
     def healthz() -> dict[str, str]:
