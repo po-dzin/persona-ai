@@ -20,6 +20,7 @@ export interface PhotoRecord {
   status: "queued" | "processing" | "done" | "failed";
   prompt?: string;
   result_url?: string | null;
+  is_favorite: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -121,5 +122,31 @@ export async function purchasePackage(userId: string, packageCode: string) {
   return await request<Record<string, unknown>>("/purchase", {
     method: "POST",
     body: JSON.stringify({ user_id: userId, package_code: packageCode, provider: "telegram" }),
+  });
+}
+
+export interface UserProfile {
+  user_id: string;
+  paid_credits: number;
+  free_credit_available: boolean;
+  generations_count: number;
+  referrals_count: number;
+}
+
+export async function getProfile(): Promise<UserProfile> {
+  const data = await request<{ profile: UserProfile }>("/me/profile");
+  return data.profile;
+}
+
+export async function toggleFavorite(orderId: string): Promise<{ is_favorite: boolean }> {
+  return await request<{ order_id: string; is_favorite: boolean }>(
+    `/me/photos/${encodeURIComponent(orderId)}/favorite`,
+    { method: "POST" },
+  );
+}
+
+export async function sendPhotoToTelegram(orderId: string): Promise<void> {
+  await request<{ ok: boolean }>(`/me/photos/${encodeURIComponent(orderId)}/send`, {
+    method: "POST",
   });
 }

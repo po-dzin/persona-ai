@@ -49,8 +49,6 @@ export function HomeScreen({ styles, queueItem, onPreviewStyle }: HomeScreenProp
 
   return (
     <section className="screen">
-      <div className="top-bar"><div className="logo">Persona</div></div>
-
       {queueItem ? (
         <div className="queue-single">
           <div className="queue-thumb"><CameraIcon /></div>

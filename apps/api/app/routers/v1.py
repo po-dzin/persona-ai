@@ -55,6 +55,11 @@ def get_balance(request: Request, user_id: str = Depends(require_user)):
     return {"wallet": get_service(request).get_balance(user_id)}
 
 
+@router.get("/me/profile")
+def get_profile(request: Request, user_id: str = Depends(require_user)):
+    return {"profile": get_service(request).get_profile(user_id)}
+
+
 @router.get("/me/photos")
 def get_photos(request: Request, user_id: str = Depends(require_user)):
     svc = get_service(request)
@@ -178,6 +183,38 @@ def _verify_webhook_secret(request: Request) -> None:
     token = request.headers.get("X-Webhook-Secret", "")
     if not hmac.compare_digest(token, secret):
         raise HTTPException(status_code=403, detail="invalid_webhook_secret")
+
+
+# ──────────────────── favorites ──────────────────────────────────
+
+@router.post("/me/photos/{order_id}/favorite")
+def toggle_favorite(order_id: str, request: Request, user_id: str = Depends(require_user)):
+    svc = get_service(request)
+    try:
+        return svc.toggle_favorite(user_id, order_id)
+    except ValueError as exc:
+        code = str(exc)
+        status = 404 if "not_found" in code else 403
+        raise HTTPException(status_code=status, detail=code) from exc
+
+
+# ──────────────────── send photo to Telegram ─────────────────────
+
+@router.post("/me/photos/{order_id}/send")
+def send_photo_to_telegram(order_id: str, request: Request, user_id: str = Depends(require_user)):
+    svc = get_service(request)
+    try:
+        status = svc.order_status(order_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    order = status["order"]
+    if order["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="forbidden")
+    if not order.get("result_url"):
+        raise HTTPException(status_code=409, detail="photo_not_ready")
+    from app.services.tg_bot import send_photo_to_user
+    send_photo_to_user(user_id, order["result_url"])
+    return {"ok": True}
 
 
 # ──────────────────── Telegram bot webhook ────────────────────────

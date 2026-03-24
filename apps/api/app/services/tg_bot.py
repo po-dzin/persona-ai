@@ -103,6 +103,18 @@ def _resolve_package(payload: str, stars: int) -> str | None:
     return None
 
 
+def send_photo_to_user(chat_id: str, photo_url: str) -> dict[str, Any]:
+    """Send a generated photo back to the user via Telegram bot."""
+    return _tg_api(
+        "sendPhoto",
+        {
+            "chat_id": chat_id,
+            "photo": photo_url,
+            "caption": "Ваше фото из Persona ✨",
+        },
+    )
+
+
 def register_webhook(webhook_url: str, secret: str) -> dict[str, Any]:
     """Call once to register bot webhook with Telegram."""
     return _tg_api(

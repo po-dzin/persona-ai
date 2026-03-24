@@ -1,7 +1,20 @@
+import math
+
+from app.core.db import UserRow, get_session
 from app.services.vertical_slice import VerticalSliceService
 
-
 DEFAULT_MODEL = "nano-banana-v1"
+
+
+def _seed_user(user_id: str, *, paid_credits: int = 0, free_credit_available: bool = True) -> None:
+    """Directly set user balance via DB for test setup."""
+    with get_session() as db:
+        user = db.get(UserRow, user_id)
+        if user is None:
+            raise RuntimeError(f"User {user_id!r} not found — call svc.get_or_create_user first")
+        user.free_credit_available = free_credit_available
+        user.paid_credits = paid_credits
+        db.commit()
 
 
 def create_order(svc: VerticalSliceService, user_id: str = "u1", model_id: str = DEFAULT_MODEL) -> str:
@@ -30,46 +43,67 @@ def test_free_generation_is_one_time_per_user() -> None:
 
 def test_paid_credit_spend_and_technical_refund() -> None:
     svc = VerticalSliceService()
-    user = svc.get_or_create_user("u1")
-    user.free_credit_available = False
-    user.paid_credits = 30
+    svc.get_or_create_user("u1")
+    _seed_user("u1", paid_credits=20, free_credit_available=False)
 
-    order_id = create_order(svc, model_id="gpt-image-1.5")
+    order_id = create_order(svc, model_id="nano-banana-pro")
     started = svc.start_order(order_id)
     assert started["result"] == "enqueued"
     assert started["wallet"]["paid_credits"] == 0
 
     out = svc.ingest_webhook(
-        "openai_image",
+        "nano_banana",
         event_id="evt-tech-1",
         payload={"order_id": order_id, "event_type": "technical_failed"},
     )
     assert out["accepted"] is True
-    assert svc.users["u1"].paid_credits == 30
+    assert svc.get_balance("u1")["paid_credits"] == 20
 
 
 def test_policy_failure_no_auto_refund() -> None:
     svc = VerticalSliceService()
-    user = svc.get_or_create_user("u1")
-    user.free_credit_available = False
-    user.paid_credits = 30
+    svc.get_or_create_user("u1")
+    _seed_user("u1", paid_credits=20, free_credit_available=False)
 
-    order_id = create_order(svc, model_id="gpt-image-1.5")
+    order_id = create_order(svc, model_id="nano-banana-pro")
     started = svc.start_order(order_id)
     assert started["result"] == "enqueued"
 
     svc.ingest_webhook(
-        "openai_image",
+        "nano_banana",
         event_id="evt-policy-1",
         payload={"order_id": order_id, "event_type": "policy_failed"},
     )
 
-    assert svc.users["u1"].paid_credits == 0
-    assert svc.orders[order_id].fail_reason_code == "policy_failed"
+    assert svc.get_balance("u1")["paid_credits"] == 0
+    assert svc.order_status(order_id)["order"]["fail_reason_code"] == "policy_failed"
 
 
 def test_model_routing_is_deterministic() -> None:
     svc = VerticalSliceService()
-    order_id = create_order(svc, model_id="sd-3.5-turbo")
+    order_id = create_order(svc, model_id="nano-banana-pro")
     started = svc.start_order(order_id)
-    assert started["job"]["provider"] == "stable_diffusion"
+    assert started["job"]["provider"] == "nano_banana"
+
+
+def test_volume_bonus_credits_on_purchase() -> None:
+    """Purchasing a package with bonus_percent > 0 must credit base + bonus coins."""
+    svc = VerticalSliceService()
+    svc.get_or_create_user("u-bonus")
+
+    # BASIC: 350 base coins + 5% bonus = ceil(350 * 5 / 100) = 18 → 368 total
+    result = svc.purchase("u-bonus", "BASIC")
+    expected = 350 + math.ceil(350 * 5 / 100)
+    assert result["wallet"]["paid_credits"] == expected, (
+        f"Expected {expected} coins for BASIC+5%, got {result['wallet']['paid_credits']}"
+    )
+
+    # POPULAR: 800 base + 10% = ceil(800 * 10 / 100) = 80 → 880 total (cumulative)
+    result2 = svc.purchase("u-bonus", "POPULAR")
+    popular_bonus = math.ceil(800 * 10 // 100)
+    assert result2["wallet"]["paid_credits"] == expected + 800 + popular_bonus
+
+    # STARTER: 0% bonus — exactly 150 coins added
+    svc.get_or_create_user("u-starter")
+    res = svc.purchase("u-starter", "STARTER")
+    assert res["wallet"]["paid_credits"] == 150

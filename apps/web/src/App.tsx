@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
 import { Modal } from "./components/Modal";
 import { TabBar } from "./components/TabBar";
@@ -19,7 +19,7 @@ import { PurchaseScreen } from "./screens/PurchaseScreen";
 import { StylePreviewScreen } from "./screens/StylePreviewScreen";
 import type { PackageItem } from "./data/packages";
 import type { StyleItem } from "./data/styles";
-import type { GenerateResult, PhotoRecord } from "./utils/api";
+import { getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
 
 // Telegram WebApp integration
 declare global {
@@ -31,6 +31,9 @@ declare global {
         initDataUnsafe?: {
           user?: { id: number; first_name?: string; username?: string };
         };
+        safeAreaInset?: { top: number; bottom: number; left: number; right: number };
+        contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
+        onEvent?(event: string, callback: () => void): void;
       };
     };
   }
@@ -38,16 +41,49 @@ declare global {
 
 const tg = window.Telegram?.WebApp;
 const tgUser = tg?.initDataUnsafe?.user;
-const USER_ID = tgUser?.id ? String(tgUser.id) : "demo-user";
+function _getWebUserId(): string {
+  const key = "persona_web_user_id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = `web-${crypto.randomUUID()}`;
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
+const USER_ID = tgUser?.id ? String(tgUser.id) : _getWebUserId();
 
 export function App() {
   useEffect(() => {
     tg?.ready();
     tg?.expand();
+
+    // Apply Telegram safe area insets as CSS variables (Bot API 7.3+)
+    const applyInsets = () => {
+      const root = document.documentElement;
+      const safe = tg?.safeAreaInset;
+      const content = tg?.contentSafeAreaInset;
+      if (safe) {
+        root.style.setProperty("--tg-safe-area-inset-top", `${safe.top}px`);
+        root.style.setProperty("--tg-safe-area-inset-bottom", `${safe.bottom}px`);
+      }
+      if (content) {
+        root.style.setProperty("--tg-content-safe-area-inset-top", `${content.top}px`);
+        root.style.setProperty("--tg-content-safe-area-inset-bottom", `${content.bottom}px`);
+      }
+    };
+    applyInsets();
+    tg?.onEvent?.("safeAreaChanged", applyInsets);
+    tg?.onEvent?.("contentSafeAreaChanged", applyInsets);
   }, []);
 
   const { styles, models, packages } = useCatalog();
-  const { wallet, photos, refresh } = useWalletAndPhotos(USER_ID);
+  const { wallet, photos, setPhotos, refresh } = useWalletAndPhotos(USER_ID);
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  useEffect(() => {
+    getProfile().then(setProfile).catch(() => null);
+  }, [USER_ID]);
   const { isSubmitting, lastError, clearError, startGenerate, buyPackage } = useGenerateFlow();
 
   const {
@@ -70,7 +106,10 @@ export function App() {
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoRecord | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("Тренды");
   const [selectedPackage, setSelectedPackage] = useState<PackageItem | null>(null);
-  const [favoriteOrderIds, setFavoriteOrderIds] = useState<Set<string>>(new Set());
+  const favoriteOrderIds = useMemo(
+    () => new Set(photos.filter((p) => p.is_favorite).map((p) => p.order_id)),
+    [photos],
+  );
   const [flowInitialTab, setFlowInitialTab] = useState<"styles" | "custom">("styles");
   const [flowInitialCustomPrompt, setFlowInitialCustomPrompt] = useState("");
   const [flowInitialCustomModelId, setFlowInitialCustomModelId] = useState<string | undefined>(undefined);
@@ -160,14 +199,20 @@ export function App() {
     setViewerOpen(true);
   };
 
-  const toggleFavorite = (orderId: string) => {
-    setFavoriteOrderIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(orderId)) next.delete(orderId);
-      else next.add(orderId);
-      return next;
-    });
-  };
+  const handleToggleFavorite = useCallback(async (orderId: string) => {
+    // Optimistic update
+    setPhotos((prev) =>
+      prev.map((p) => (p.order_id === orderId ? { ...p, is_favorite: !p.is_favorite } : p)),
+    );
+    try {
+      await toggleFavorite(orderId);
+    } catch {
+      // Revert on error
+      setPhotos((prev) =>
+        prev.map((p) => (p.order_id === orderId ? { ...p, is_favorite: !p.is_favorite } : p)),
+      );
+    }
+  }, [setPhotos]);
 
   const handleDownloadPhoto = () => {
     if (!selectedPhoto?.result_url) return;
@@ -178,6 +223,16 @@ export function App() {
     link.click();
     link.remove();
   };
+
+  const handleSendToTelegram = useCallback(async () => {
+    if (!selectedPhoto) return;
+    try {
+      await sendPhotoToTelegram(selectedPhoto.order_id);
+      setTelegramModalOpen(true);
+    } catch {
+      setTelegramModalOpen(true); // show confirmation even if bot send fails (no bot token in dev)
+    }
+  }, [selectedPhoto]);
 
   const handleSharePhoto = async () => {
     if (!selectedPhoto?.result_url) return;
@@ -235,7 +290,15 @@ export function App() {
           onOpenModelsPricing={() => setModelsOpen(true)}
         />
       ) : null}
-      {activeScreen === "profile" ? <ProfileScreen credits={wallet.paid_credits} generations={photos.length} /> : null}
+      {activeScreen === "profile" ? (
+        <ProfileScreen
+          credits={wallet.paid_credits}
+          generations={profile?.generations_count ?? photos.length}
+          referrals={profile?.referrals_count ?? 0}
+          firstName={tgUser?.first_name}
+          username={tgUser?.username}
+        />
+      ) : null}
 
       <FlowStyleScreen
         isOpen={flowStyleOpen}
@@ -271,9 +334,9 @@ export function App() {
         style={selectedPhoto ? stylesById[selectedPhoto.style_code] : undefined}
         isFavorite={selectedPhoto ? favoriteOrderIds.has(selectedPhoto.order_id) : false}
         onClose={() => setViewerOpen(false)}
-        onSendToTelegram={() => setTelegramModalOpen(true)}
+        onSendToTelegram={() => { void handleSendToTelegram(); }}
         onToggleFavorite={() => {
-          if (selectedPhoto) toggleFavorite(selectedPhoto.order_id);
+          if (selectedPhoto) void handleToggleFavorite(selectedPhoto.order_id);
         }}
         onDownload={handleDownloadPhoto}
         onShare={() => {
@@ -310,8 +373,15 @@ export function App() {
 
       <TabBar
         activeScreen={activeScreen}
+        isCreateActive={flowStyleOpen || flowUploadOpen}
         photosBadge={photos.length}
-        onChange={setActiveScreen}
+        onChange={(screen) => {
+          setFlowStyleOpen(false);
+          setFlowUploadOpen(false);
+          setStylePreviewOpen(false);
+          setCategoryOpen(false);
+          setActiveScreen(screen);
+        }}
         onOpenCreate={openCreate}
       />
 
