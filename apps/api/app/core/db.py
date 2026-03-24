@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     create_engine,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -109,6 +110,35 @@ class PaymentRow(Base):
 def init_db() -> None:
     """Create all tables if they don't exist. Safe to call on every startup."""
     Base.metadata.create_all(bind=engine)
+    # Column-level migrations for existing databases.
+    # create_all() only creates missing tables; it never alters existing ones.
+    _run_column_migrations()
+
+
+def _run_column_migrations() -> None:
+    """Apply additive ALTER TABLE migrations idempotently."""
+    with engine.connect() as conn:
+        if _is_sqlite:
+            # SQLite: check pragma, add if missing
+            cols = {row[1] for row in conn.execute(
+                text("PRAGMA table_info(orders)")
+            )}
+            if "is_favorite" not in cols:
+                conn.execute(
+                    text(
+                        "ALTER TABLE orders ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0"
+                    )
+                )
+                conn.commit()
+        else:
+            # PostgreSQL: ADD COLUMN IF NOT EXISTS is idempotent
+            conn.execute(
+                text(
+                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS"
+                    " is_favorite BOOLEAN NOT NULL DEFAULT FALSE"
+                )
+            )
+            conn.commit()
 
 
 @contextmanager

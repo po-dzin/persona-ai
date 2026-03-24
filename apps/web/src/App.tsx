@@ -81,9 +81,12 @@ export function App() {
   const { wallet, photos, setPhotos, refresh } = useWalletAndPhotos(USER_ID);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  useEffect(() => {
+  const refreshProfile = useCallback(() => {
     getProfile().then(setProfile).catch(() => null);
-  }, [USER_ID]);
+  }, []);
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
   const { isSubmitting, lastError, clearError, startGenerate, buyPackage } = useGenerateFlow();
 
   const {
@@ -171,11 +174,13 @@ export function App() {
     setQueuedModalOpen(true);
     setActiveScreen("photos");
     await refresh();
+    refreshProfile();
   };
 
   const handlePurchase = async (pkg: PackageItem) => {
     await buyPackage(USER_ID, pkg.code);
     await refresh();
+    refreshProfile();
     setPurchaseSuccessOpen(true);
   };
 
