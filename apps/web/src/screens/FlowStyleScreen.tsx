@@ -79,22 +79,29 @@ export function FlowStyleScreen({
               <div key={block.category}>
                 <div className="section-header"><div className="section-title">{block.category}</div></div>
                 <div className="styles-scroll">
-                  {block.items.map((style) => (
-                    <button
-                      key={style.id}
-                      className="style-card"
-                      onClick={() => onSelectStyle(style)}
-                      style={selectedStyle?.id === style.id ? { boxShadow: "inset 0 0 0 3px #8B83D4" } : undefined}
-                    >
-                      <div className="style-preview" style={{ background: style.gradient }}>
-                        {style.is_trending ? <span className="style-tag fire">Hot</span> : null}
-                        {style.is_new ? <span className="style-tag new">New</span> : null}
-                        <div className="style-overlay">
-                          <div className="style-name">{style.name}</div>
+                  {block.items.map((style) => {
+                    const isSelected = selectedStyle?.id === style.id;
+                    return (
+                      <button
+                        key={style.id}
+                        className={"style-card" + (isSelected ? " selected" : "")}
+                        onClick={() => onSelectStyle(style)}
+                      >
+                        <div className="style-check">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                        <div className="style-preview" style={{ background: style.gradient }}>
+                          {style.is_trending ? <span className="style-tag fire">Hot</span> : null}
+                          {style.is_new ? <span className="style-tag new">New</span> : null}
+                          <div className="style-overlay">
+                            <div className="style-name">{style.name}</div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
