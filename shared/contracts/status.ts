@@ -17,11 +17,11 @@ export type JobStatus = (typeof JOB_STATUSES)[number];
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const PACKAGE_MATRIX = [
-  { code: "STARTER", title: "Starter", credits: 150, starsPrice: 199, sortOrder: 10 },
-  { code: "BASIC", title: "Basic", credits: 350, starsPrice: 399, sortOrder: 20 },
-  { code: "POPULAR", title: "Popular", credits: 800, starsPrice: 799, sortOrder: 30 },
-  { code: "PRO", title: "Pro", credits: 2000, starsPrice: 1599, sortOrder: 40 },
-  { code: "ULTRA", title: "Ultra", credits: 5000, starsPrice: 2999, sortOrder: 50 },
+  { code: "STARTER", title: "Starter", credits: 150, starsPrice: 199, bonusPercent: 0, sortOrder: 10 },
+  { code: "BASIC", title: "Basic", credits: 350, starsPrice: 399, bonusPercent: 5, sortOrder: 20 },
+  { code: "POPULAR", title: "Popular", credits: 800, starsPrice: 799, bonusPercent: 10, sortOrder: 30 },
+  { code: "PRO", title: "Pro", credits: 2000, starsPrice: 1599, bonusPercent: 18, sortOrder: 40 },
+  { code: "ULTRA", title: "Ultra", credits: 5000, starsPrice: 2999, bonusPercent: 25, sortOrder: 50 },
 ] as const;
 
 export const PACKAGE_CREDITS = Object.fromEntries(PACKAGE_MATRIX.map((p) => [p.code, p.credits])) as Record<
@@ -29,13 +29,7 @@ export const PACKAGE_CREDITS = Object.fromEntries(PACKAGE_MATRIX.map((p) => [p.c
   number
 >;
 
-export const PACKAGE_ALIASES = {
-  S: "STARTER",
-  M: "POPULAR",
-  L: "PRO",
-} as const;
-
-export const PROVIDER_IDS = ["nano_banana", "stable_diffusion", "flux", "openai_image", "recraft"] as const;
+export const PROVIDER_IDS = ["nano_banana"] as const;
 
 export const MODEL_CATALOG = [
   {
@@ -47,34 +41,10 @@ export const MODEL_CATALOG = [
     officialOnly: true,
   },
   {
-    id: "sd-3.5-turbo",
-    name: "Stable Diffusion 3.5 Turbo",
-    provider: "stable_diffusion",
-    coins: 15,
-    isActive: true,
-    officialOnly: true,
-  },
-  {
-    id: "recraft-v4",
-    name: "Recraft V4",
-    provider: "recraft",
-    coins: 25,
-    isActive: true,
-    officialOnly: true,
-  },
-  {
-    id: "gpt-image-1.5",
-    name: "OpenAI GPT-image-1.5",
-    provider: "openai_image",
-    coins: 30,
-    isActive: true,
-    officialOnly: true,
-  },
-  {
-    id: "flux-kontxt-pro",
-    name: "FLUX.1 Kontext [pro]",
-    provider: "flux",
-    coins: 40,
+    id: "nano-banana-pro",
+    name: "Nano Banana Pro",
+    provider: "nano_banana",
+    coins: 20,
     isActive: true,
     officialOnly: true,
   },

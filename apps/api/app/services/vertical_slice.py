@@ -7,10 +7,12 @@ from uuid import uuid4
 from app.adapters.provider_registry import build_provider_registry
 from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, get_session
 from app.core.settings import settings
+import math
+
 from shared.contracts.status import (
     MODEL_BY_ID,
     MODEL_CATALOG,
-    PACKAGE_ALIASES,
+    PACKAGE_BONUS_PERCENT,
     PACKAGE_CREDITS,
     PACKAGE_MATRIX,
     PACKAGE_STARS_PRICES,
@@ -185,6 +187,22 @@ class VerticalSliceService:
         user = self.get_or_create_user(user_id)
         return self._serialize_wallet(user)
 
+    def get_profile(self, user_id: str) -> dict[str, Any]:
+        user = self.get_or_create_user(user_id)
+        with get_session() as db:
+            generations_count = (
+                db.query(OrderRow)
+                .filter(OrderRow.user_id == user_id)
+                .count()
+            )
+        return {
+            "user_id": user_id,
+            "paid_credits": user.paid_credits,
+            "free_credit_available": user.free_credit_available,
+            "generations_count": generations_count,
+            "referrals_count": 0,
+        }
+
     # ---------------------------------------------------------------- catalog
 
     def list_styles(self) -> list[dict[str, Any]]:
@@ -211,6 +229,7 @@ class VerticalSliceService:
                 "title": pkg["title"],
                 "credits": pkg["credits"],
                 "price_stars": pkg["stars_price"],
+                "bonus_percent": pkg["bonus_percent"],
                 "provider": "telegram_stars",
                 "sort_order": pkg["sort_order"],
             }
@@ -420,11 +439,24 @@ class VerticalSliceService:
                     "status": o.status,
                     "prompt": o.prompt,
                     "result_url": o.result_url,
+                    "is_favorite": bool(o.is_favorite),
                     "created_at": o.created_at,
                     "updated_at": o.updated_at,
                 }
                 for o in orders
             ]
+
+    def toggle_favorite(self, user_id: str, order_id: str) -> dict[str, Any]:
+        with get_session() as db:
+            order = db.get(OrderRow, order_id)
+            if not order:
+                raise ValueError("order_not_found")
+            if order.user_id != user_id:
+                raise ValueError("forbidden")
+            order.is_favorite = not bool(order.is_favorite)
+            order.updated_at = now_iso()
+            db.commit()
+            return {"order_id": order_id, "is_favorite": order.is_favorite}
 
     # -------------------------------------------------------------- payments
 
@@ -518,7 +550,7 @@ class VerticalSliceService:
 
             # Payment webhook (Stars / Stripe)
             if provider in {"telegram", "stripe"}:
-                payment_id = str(payload.get("payment_id", uuid4()))
+                payment_id = event_id
                 user_id = payload.get("user_id")
                 package_code_raw = str(payload.get("package_code", ""))
                 package_code = self._normalize_package_code(package_code_raw)
@@ -554,7 +586,10 @@ class VerticalSliceService:
                             created_at=now_iso(),
                         )
                         db.add(user)
-                    user.paid_credits += PACKAGE_CREDITS[package_code]
+                    base_credits = PACKAGE_CREDITS[package_code]
+                    bonus_pct = PACKAGE_BONUS_PERCENT.get(package_code, 0)
+                    bonus_credits = math.ceil(base_credits * bonus_pct / 100) if bonus_pct else 0
+                    user.paid_credits += base_credits + bonus_credits
 
                 db.commit()
 
@@ -579,8 +614,7 @@ class VerticalSliceService:
 
     @staticmethod
     def _normalize_package_code(package_code: str) -> str:
-        normalized = package_code.strip().upper()
-        return PACKAGE_ALIASES.get(normalized, normalized)
+        return package_code.strip().upper()
 
     @staticmethod
     def _serialize_wallet(user: UserRow) -> dict[str, Any]:

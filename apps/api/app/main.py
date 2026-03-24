@@ -1,5 +1,7 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 import sys
+from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
@@ -30,13 +32,15 @@ def _register_tg_webhook() -> None:
         pass  # Non-fatal — can register manually
 
 
-def create_app() -> FastAPI:
-    app = FastAPI(title="Persona Photo API", version="0.2.0")
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    init_db()
+    _register_tg_webhook()
+    yield
 
-    @app.on_event("startup")
-    def on_startup() -> None:
-        init_db()
-        _register_tg_webhook()
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="Persona Photo API", version="0.2.0", lifespan=_lifespan)
 
     app.state.slice_service = VerticalSliceService()
     app.include_router(v1_router)

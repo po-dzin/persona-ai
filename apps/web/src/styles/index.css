@@ -28,7 +28,9 @@ button, input, select, textarea { font: inherit; }
 .screen {
   position: absolute;
   inset: 0;
-  bottom: 78px;
+  top: calc(var(--tg-content-safe-area-inset-top, 0px) + var(--tg-safe-area-inset-top, 0px));
+  bottom: calc(78px + var(--tg-safe-area-inset-bottom, 0px));
+  padding-top: 12px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -413,6 +415,7 @@ button, input, select, textarea { font: inherit; }
 .profile-row {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px; cursor: pointer; transition: background 0.15s;
+  text-decoration: none; color: inherit;
 }
 .profile-row:active { background: #222; }
 .profile-row + .profile-row { border-top: 0.5px solid rgba(255,255,255,0.04); }
@@ -569,12 +572,16 @@ button, input, select, textarea { font: inherit; }
   box-shadow: 0 0 20px rgba(124,58,237,0.55), 0 0 6px rgba(167,139,250,0.3);
 }
 .tab-ai:active { transform: scale(0.93); opacity: 0.9; }
+.tab-ai.active {
+  box-shadow: 0 0 0 2px rgba(167,139,250,0.6), 0 0 20px rgba(124,58,237,0.55), 0 0 6px rgba(167,139,250,0.3);
+}
 
 /* ─── Overlay screens (flows) ─── */
 .overlay-screen {
   position: fixed;
   inset: 0;
-  bottom: 78px;
+  top: calc(var(--tg-content-safe-area-inset-top, 0px) + var(--tg-safe-area-inset-top, 0px));
+  bottom: calc(78px + var(--tg-safe-area-inset-bottom, 0px));
   background: #111;
   z-index: 20;
   overflow-y: auto;

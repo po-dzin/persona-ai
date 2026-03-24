@@ -48,13 +48,13 @@
 
 ## 6) AI model pricing
 
-| Model | Price (🪙) |
-|-------|--------:|
-| Nano Banana | 10 |
-| Stable Diffusion XL | 15 |
-| Midjourney | 25 |
-| DALL·E 3 | 30 |
-| Flux Pro | 40 |
+| Model | ID | Provider | Price (🪙) |
+|-------|-------|----------|--------:|
+| Nano Banana | `nano-banana-v1` | nano_banana | 10 |
+| Stable Diffusion 3.5 Turbo | `sd-3.5-turbo` | stable_diffusion | 15 |
+| Recraft V4 | `recraft-v4` | recraft | 25 |
+| OpenAI GPT-image-1.5 | `gpt-image-1.5` | openai_image | 30 |
+| FLUX.1 Kontext [pro] | `flux-kontxt-pro` | flux | 40 |
 
 ## 7) Coin packages
 

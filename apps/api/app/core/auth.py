@@ -46,6 +46,7 @@ def _verify_init_data(init_data: str) -> dict | None:
 
 def require_user(
     x_telegram_init_data: str = Header(default=""),
+    x_dev_user_id: str = Header(default=""),
 ) -> str:
     """
     FastAPI dependency: validates Telegram initData, returns user_id str.
@@ -63,5 +64,8 @@ def require_user(
     # No init_data: allow only in non-prod
     if settings.env not in _DEV_MODES:
         raise HTTPException(status_code=401, detail="missing_telegram_init_data")
+
+    if dev_id := x_dev_user_id.strip():
+        return dev_id
 
     return "demo-user"

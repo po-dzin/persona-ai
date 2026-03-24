@@ -16,15 +16,26 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.settings import settings
 
-engine = create_engine(
-    settings.database_url,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
-    connect_args={"sslmode": "require"} if "render.com" in settings.database_url else {},
-)
+_is_sqlite = settings.database_url.startswith("sqlite")
 
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+if _is_sqlite:
+    from sqlalchemy.pool import StaticPool
+
+    engine = create_engine(
+        settings.database_url,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+else:
+    engine = create_engine(
+        settings.database_url,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
+        connect_args={"sslmode": "require"} if "render.com" in settings.database_url else {},
+    )
+
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
 
 
 class Base(DeclarativeBase):
@@ -60,6 +71,7 @@ class OrderRow(Base):
     is_free_credit_used = Column(Boolean, nullable=False, default=False)
     result_url = Column(Text, nullable=True)
     fail_reason_code = Column(String, nullable=True)
+    is_favorite = Column(Boolean, nullable=False, default=False)
     created_at = Column(String, nullable=False)
     updated_at = Column(String, nullable=False)
 
