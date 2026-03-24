@@ -29,7 +29,7 @@ button, input, select, textarea { font: inherit; }
   position: absolute;
   inset: 0;
   top: calc(var(--tg-content-safe-area-inset-top, 0px) + var(--tg-safe-area-inset-top, 0px));
-  bottom: calc(78px + var(--tg-safe-area-inset-bottom, 0px));
+  bottom: calc(62px + env(safe-area-inset-bottom, 0px));
   padding-top: 12px;
   overflow-y: auto;
   scrollbar-width: none;
@@ -161,13 +161,34 @@ button, input, select, textarea { font: inherit; }
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.15s;
+  transition: transform 0.15s, outline 0.1s;
   flex-shrink: 0;
   border: none;
   padding: 0;
   background: none;
+  outline: 2.5px solid transparent;
+  outline-offset: 2px;
+  position: relative;
 }
 .style-card:active { transform: scale(0.96); }
+.style-card.selected {
+  outline: 2.5px solid #A78BFA;
+  transform: scale(1.03);
+}
+.style-card.selected .style-check {
+  display: flex;
+}
+.style-check {
+  display: none;
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #A78BFA;
+  align-items: center; justify-content: center;
+  z-index: 3;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
 .style-preview { aspect-ratio: 3/4; position: relative; }
 .style-overlay {
   position: absolute;
@@ -511,15 +532,16 @@ button, input, select, textarea { font: inherit; }
 .tab-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  height: 78px;
+  height: calc(62px + env(safe-area-inset-bottom, 0px));
   background: rgba(17,17,17,0.97);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 0.5px solid rgba(255,255,255,0.08);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-around;
-  padding: 0 4px env(safe-area-inset-bottom, 10px);
+  padding: 6px 4px 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 40;
 }
 .tab-item {
@@ -581,7 +603,7 @@ button, input, select, textarea { font: inherit; }
   position: fixed;
   inset: 0;
   top: calc(var(--tg-content-safe-area-inset-top, 0px) + var(--tg-safe-area-inset-top, 0px));
-  bottom: calc(78px + var(--tg-safe-area-inset-bottom, 0px));
+  bottom: calc(62px + env(safe-area-inset-bottom, 0px));
   background: #111;
   z-index: 20;
   overflow-y: auto;
