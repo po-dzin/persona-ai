@@ -167,12 +167,19 @@ class VerticalSliceService:
 
     # ------------------------------------------------------------------ users
 
-    def get_or_create_user(self, user_id: str) -> UserRow:
+    def get_or_create_user(
+        self,
+        user_id: str,
+        first_name: str | None = None,
+        username: str | None = None,
+    ) -> UserRow:
         with get_session() as db:
             user = db.get(UserRow, user_id)
             if not user:
                 user = UserRow(
                     user_id=user_id,
+                    first_name=first_name,
+                    username=username,
                     free_credits_granted=True,
                     free_credit_available=True,
                     paid_credits=0,
@@ -181,14 +188,31 @@ class VerticalSliceService:
                 db.add(user)
                 db.commit()
                 db.refresh(user)
+            else:
+                # Update display info when TG provides it (names can change)
+                changed = False
+                if first_name and user.first_name != first_name:
+                    user.first_name = first_name
+                    changed = True
+                if username is not None and user.username != username:
+                    user.username = username
+                    changed = True
+                if changed:
+                    db.commit()
+                    db.refresh(user)
             return user
 
     def get_balance(self, user_id: str) -> dict[str, Any]:
         user = self.get_or_create_user(user_id)
         return self._serialize_wallet(user)
 
-    def get_profile(self, user_id: str) -> dict[str, Any]:
-        user = self.get_or_create_user(user_id)
+    def get_profile(
+        self,
+        user_id: str,
+        first_name: str | None = None,
+        username: str | None = None,
+    ) -> dict[str, Any]:
+        user = self.get_or_create_user(user_id, first_name=first_name, username=username)
         with get_session() as db:
             generations_count = (
                 db.query(OrderRow)
@@ -197,6 +221,8 @@ class VerticalSliceService:
             )
         return {
             "user_id": user_id,
+            "first_name": user.first_name,
+            "username": user.username,
             "paid_credits": user.paid_credits,
             "free_credit_available": user.free_credit_available,
             "generations_count": generations_count,

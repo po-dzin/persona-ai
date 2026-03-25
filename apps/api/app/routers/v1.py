@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from app.core.auth import require_user
+from app.core.auth import require_user, parse_tg_user
 from app.core.settings import settings
 from app.models.api_models import (
     CreateOrderRequest,
@@ -56,8 +56,17 @@ def get_balance(request: Request, user_id: str = Depends(require_user)):
 
 
 @router.get("/me/profile")
-def get_profile(request: Request, user_id: str = Depends(require_user)):
-    return {"profile": get_service(request).get_profile(user_id)}
+def get_profile(
+    request: Request,
+    user_id: str = Depends(require_user),
+    x_telegram_init_data: str = Header(default=""),
+):
+    tg_user = parse_tg_user(x_telegram_init_data)
+    return {"profile": get_service(request).get_profile(
+        user_id,
+        first_name=tg_user.get("first_name") if tg_user else None,
+        username=tg_user.get("username") if tg_user else None,
+    )}
 
 
 @router.get("/me/photos")

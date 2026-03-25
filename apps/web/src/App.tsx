@@ -316,8 +316,8 @@ export function App() {
           credits={wallet.paid_credits}
           generations={profile?.generations_count ?? photos.length}
           referrals={profile?.referrals_count ?? 0}
-          firstName={tgUser?.first_name}
-          username={tgUser?.username}
+          firstName={profile?.first_name ?? tgUser?.first_name}
+          username={profile?.username ?? tgUser?.username}
         />
       ) : null}
 
