@@ -28,9 +28,12 @@ declare global {
       WebApp: {
         ready(): void;
         expand(): void;
+        initData?: string;
         initDataUnsafe?: {
           user?: { id: number; first_name?: string; username?: string };
         };
+        viewportHeight?: number;
+        viewportStableHeight?: number;
         safeAreaInset?: { top: number; bottom: number; left: number; right: number };
         contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
         onEvent?(event: string, callback: () => void): void;
@@ -58,37 +61,32 @@ export function App() {
     tg?.ready();
     tg?.expand();
 
-    // Apply Telegram safe area insets as CSS variables (Bot API 7.3+)
-    // Falls back gracefully for older TG versions that don't expose these objects.
+    // Calculate top inset from TG's viewport metrics.
+    // --tg-top-inset = height occupied by TG's own floating buttons (X Close / ↓ ···).
+    // viewportStableHeight is reliable across all TG versions (≥ 6.1) and doesn't
+    // change when the keyboard appears, making it ideal for a stable top offset.
     const applyInsets = () => {
       const root = document.documentElement;
-      const safe = tg?.safeAreaInset;
-      const content = tg?.contentSafeAreaInset;
 
-      // Device notch / status-bar height.
-      // If TG doesn't provide it, use CSS env() so the browser handles it natively.
+      // Top inset: gap between window top and TG's usable viewport start.
+      const stableH = tg?.viewportStableHeight;
+      const topInset = tg
+        ? stableH && stableH < window.innerHeight
+          ? window.innerHeight - stableH
+          : 52          // safe fallback when TG doesn't report viewportStableHeight
+        : 0;            // plain browser — no TG chrome
+      root.style.setProperty("--tg-top-inset", `${topInset}px`);
+
+      // Bottom safe area (device home indicator).
+      const safe = tg?.safeAreaInset;
       root.style.setProperty(
-        "--tg-safe-area-inset-top",
-        safe != null ? `${safe.top}px` : "env(safe-area-inset-top, 0px)",
-      );
-      root.style.setProperty(
-        "--tg-safe-area-inset-bottom",
+        "--tg-bottom-inset",
         safe != null ? `${safe.bottom}px` : "env(safe-area-inset-bottom, 0px)",
       );
-
-      // TG's own floating controls height (X Close / ↓ ··· bar).
-      // Old TG versions (< Bot API 8.0) don't expose contentSafeAreaInset —
-      // use 52 px as a reliable fallback when running inside TG.
-      root.style.setProperty(
-        "--tg-content-safe-area-inset-top",
-        content != null ? `${content.top}px` : tg ? "52px" : "0px",
-      );
-      root.style.setProperty(
-        "--tg-content-safe-area-inset-bottom",
-        content != null ? `${content.bottom}px` : "0px",
-      );
     };
+
     applyInsets();
+    tg?.onEvent?.("viewportChanged", applyInsets);
     tg?.onEvent?.("safeAreaChanged", applyInsets);
     tg?.onEvent?.("contentSafeAreaChanged", applyInsets);
   }, []);
@@ -308,7 +306,6 @@ export function App() {
           credits={wallet.paid_credits}
           packages={packages}
           onSelectPackage={handleSelectPackage}
-          onOpenModelsPricing={() => setModelsOpen(true)}
         />
       ) : null}
       {activeScreen === "profile" ? (
@@ -401,6 +398,9 @@ export function App() {
           setFlowUploadOpen(false);
           setStylePreviewOpen(false);
           setCategoryOpen(false);
+          setPurchaseOpen(false);
+          setViewerOpen(false);
+          setModelsOpen(false);
           setActiveScreen(screen);
         }}
         onOpenCreate={openCreate}

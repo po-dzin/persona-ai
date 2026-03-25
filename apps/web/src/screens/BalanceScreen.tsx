@@ -4,7 +4,6 @@ interface BalanceScreenProps {
   credits: number;
   packages: PackageItem[];
   onSelectPackage: (pkg: PackageItem) => void;
-  onOpenModelsPricing: () => void;
 }
 
 const PACKAGE_ICONS: Record<string, string> = {
@@ -21,7 +20,7 @@ const PACKAGE_ICON_BG: Record<string, string> = {
   ULTRA: "rgba(74,222,128,0.12)",
 };
 
-export function BalanceScreen({ credits, packages, onSelectPackage, onOpenModelsPricing }: BalanceScreenProps) {
+export function BalanceScreen({ credits, packages, onSelectPackage }: BalanceScreenProps) {
   return (
     <section className="screen">
       <div className="balance-hero">
@@ -61,13 +60,6 @@ export function BalanceScreen({ credits, packages, onSelectPackage, onOpenModels
       <div className="balance-note">
         Монеты не имеют срока действия · Возврат не предусмотрен
       </div>
-
-      <button
-        style={{ display: "block", margin: "0 auto 20px", background: "transparent", border: "none", color: "#8B83D4", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-        onClick={onOpenModelsPricing}
-      >
-        Описание тарифов →
-      </button>
     </section>
   );
 }
