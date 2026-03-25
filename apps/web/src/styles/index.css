@@ -27,19 +27,15 @@ button, input, select, textarea { font: inherit; }
 /* ─── Screens ─── */
 /*
   TG Mini App safe area strategy:
-  --tg-viewport-height is auto-injected by Telegram (Bot API 6.0+).
-  top = 100vh − viewportHeight = exact height of TG's floating controls bar.
-  Falls back to 0 in a plain browser (100vh − 100vh = 0), which is correct.
-  --tg-safe-area-inset-top covers device notch when set by JS applyInsets().
+  --tg-top-inset is set by JS (App.tsx) as:
+    window.innerHeight - tg.viewportStableHeight   (exact TG controls height)
+  Falls back to 52px inside TG (conservative), 0px in plain browser.
 */
 .screen {
   position: absolute;
   inset: 0;
-  top: max(
-    calc(100vh - var(--tg-viewport-height, 100vh)),
-    var(--tg-safe-area-inset-top, 0px)
-  );
-  bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  top: var(--tg-top-inset, 0px);
+  bottom: calc(62px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
   padding-top: 12px;
   overflow-y: auto;
   scrollbar-width: none;
@@ -621,11 +617,8 @@ button, input, select, textarea { font: inherit; }
 .overlay-screen {
   position: fixed;
   inset: 0;
-  top: max(
-    calc(100vh - var(--tg-viewport-height, 100vh)),
-    var(--tg-safe-area-inset-top, 0px)
-  );
-  bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+  top: var(--tg-top-inset, 0px);
+  bottom: calc(62px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
   background: #111;
   z-index: 20;
   overflow-y: auto;
