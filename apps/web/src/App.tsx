@@ -84,10 +84,12 @@ export function App() {
       // Use Math.max(0, …) to clamp — in fullscreen mode stableH === innerHeight → 0px offset.
       // Fall back to 52px only when TG is present but hasn't reported stableHeight yet.
       const stableH = tg?.viewportStableHeight;
+      // stableH falsy (null, undefined, or 0) means TG hasn't settled metrics yet —
+      // treat as missing and use the safe 52px fallback to avoid pushing content off-screen.
       const topInset = tg
-        ? stableH != null
+        ? stableH
           ? Math.max(0, window.innerHeight - stableH)
-          : 52      // TG present but viewportStableHeight not reported
+          : 52      // TG present but stableHeight missing or transiently 0
         : 0;        // plain browser — no TG chrome
       root.style.setProperty("--tg-top-inset", `${topInset}px`);
 
