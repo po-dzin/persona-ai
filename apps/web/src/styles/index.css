@@ -588,16 +588,19 @@ button, input, select, textarea { font: inherit; }
 .tab-ai {
   width: 64px; height: 48px;
   border-radius: 16px;
-  background: linear-gradient(145deg, #A78BFA, #7C3AED);
+  background: linear-gradient(145deg, #7C5CBF, #5A2EA6);
   border: none;
   cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  transition: transform 0.15s, opacity 0.15s;
-  box-shadow: 0 0 20px rgba(124,58,237,0.55), 0 0 6px rgba(167,139,250,0.3);
+  transition: transform 0.15s, opacity 0.15s, background 0.2s, box-shadow 0.2s;
+  box-shadow: none;
+  opacity: 0.75;
 }
-.tab-ai:active { transform: scale(0.93); opacity: 0.9; }
+.tab-ai:active { transform: scale(0.93); }
 .tab-ai.active {
-  box-shadow: 0 0 0 2px rgba(167,139,250,0.6), 0 0 20px rgba(124,58,237,0.55), 0 0 6px rgba(167,139,250,0.3);
+  background: linear-gradient(145deg, #A78BFA, #7C3AED);
+  box-shadow: 0 0 0 2px rgba(167,139,250,0.5), 0 0 20px rgba(124,58,237,0.5), 0 0 6px rgba(167,139,250,0.25);
+  opacity: 1;
 }
 
 /* ─── Overlay screens (flows) ─── */

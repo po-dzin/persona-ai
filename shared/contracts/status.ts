@@ -24,10 +24,21 @@ export const PACKAGE_MATRIX = [
   { code: "ULTRA", title: "Ultra", credits: 5000, starsPrice: 2999, bonusPercent: 25, sortOrder: 50 },
 ] as const;
 
-export const PACKAGE_CREDITS = Object.fromEntries(PACKAGE_MATRIX.map((p) => [p.code, p.credits])) as Record<
-  (typeof PACKAGE_MATRIX)[number]["code"],
-  number
->;
+export const PACKAGE_CREDITS = Object.fromEntries(
+  PACKAGE_MATRIX.map((p) => [p.code, p.credits]),
+) as Record<(typeof PACKAGE_MATRIX)[number]["code"], number>;
+
+export const PACKAGE_STARS_PRICES = Object.fromEntries(
+  PACKAGE_MATRIX.map((p) => [p.code, p.starsPrice]),
+) as Record<(typeof PACKAGE_MATRIX)[number]["code"], number>;
+
+export const PACKAGE_TITLES = Object.fromEntries(
+  PACKAGE_MATRIX.map((p) => [p.code, p.title]),
+) as Record<(typeof PACKAGE_MATRIX)[number]["code"], string>;
+
+export const PACKAGE_BONUS_PERCENT = Object.fromEntries(
+  PACKAGE_MATRIX.map((p) => [p.code, p.bonusPercent]),
+) as Record<(typeof PACKAGE_MATRIX)[number]["code"], number>;
 
 export const PROVIDER_IDS = ["nano_banana"] as const;
 
