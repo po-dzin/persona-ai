@@ -89,7 +89,7 @@ export function ProfileScreen({ credits, generations, referrals, firstName, user
 
       <div className="profile-section-title">Мы в соцсетях</div>
       <div className="profile-card">
-        <a className="profile-row" href="https://instagram.com/persona.ai" target="_blank" rel="noreferrer">
+        <div className="profile-row">
           <div className="profile-row-icon" style={{ background: "rgba(225,48,108,0.12)" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <rect x="2" y="2" width="20" height="20" rx="5" stroke="#E1306C" strokeWidth="2"/>
@@ -104,8 +104,8 @@ export function ProfileScreen({ credits, generations, referrals, firstName, user
           <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
             <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
-        </a>
-        <a className="profile-row" href="https://t.me/persona_ai_channel" target="_blank" rel="noreferrer">
+        </div>
+        <div className="profile-row">
           <div className="profile-row-icon" style={{ background: "rgba(56,136,255,0.12)" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#3888FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -118,12 +118,12 @@ export function ProfileScreen({ credits, generations, referrals, firstName, user
           <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
             <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
-        </a>
+        </div>
       </div>
 
       <div className="profile-section-title">Помощь</div>
       <div className="profile-card">
-        <a className="profile-row" href="https://t.me/persona_ai_support" target="_blank" rel="noreferrer">
+        <div className="profile-row">
           <div className="profile-row-icon" style={{ background: "rgba(255,255,255,0.05)" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -136,7 +136,7 @@ export function ProfileScreen({ credits, generations, referrals, firstName, user
           <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none">
             <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
           </svg>
-        </a>
+        </div>
       </div>
 
       <div style={{ height: 20 }} />
