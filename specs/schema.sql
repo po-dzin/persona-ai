@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS orders (
     result_asset_id uuid,
     fail_reason_code text,
     fail_reason_message text,
+    is_favorite boolean NOT NULL DEFAULT false,
     idempotency_key text UNIQUE,
     requested_at timestamptz NOT NULL DEFAULT now(),
     queued_at timestamptz,

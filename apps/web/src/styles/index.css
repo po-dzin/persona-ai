@@ -25,10 +25,20 @@ button, input, select, textarea { font: inherit; }
 }
 
 /* ─── Screens ─── */
+/*
+  TG Mini App safe area strategy:
+  --tg-viewport-height is auto-injected by Telegram (Bot API 6.0+).
+  top = 100vh − viewportHeight = exact height of TG's floating controls bar.
+  Falls back to 0 in a plain browser (100vh − 100vh = 0), which is correct.
+  --tg-safe-area-inset-top covers device notch when set by JS applyInsets().
+*/
 .screen {
   position: absolute;
   inset: 0;
-  top: calc(var(--tg-content-safe-area-inset-top, 0px) + var(--tg-safe-area-inset-top, 0px));
+  top: max(
+    calc(100vh - var(--tg-viewport-height, 100vh)),
+    var(--tg-safe-area-inset-top, 0px)
+  );
   bottom: calc(62px + env(safe-area-inset-bottom, 0px));
   padding-top: 12px;
   overflow-y: auto;
@@ -137,14 +147,17 @@ button, input, select, textarea { font: inherit; }
 
 /* ─── Collapsible category body ─── */
 .category-body {
-  overflow: hidden;
+  overflow: hidden;   /* needed for max-height collapse animation */
   transition: max-height 0.28s ease, opacity 0.2s ease;
-  max-height: 400px;
+  max-height: 500px;  /* bumped from 400 → 500 to avoid clipping bottom row */
   opacity: 1;
+  /* Give extra vertical space so scale(1.03) on cards isn't clipped */
+  padding-top: 2px;
 }
 .category-body.collapsed {
   max-height: 0;
   opacity: 0;
+  padding-top: 0;
 }
 
 /* ─── Style cards (horizontal scroll) ─── */
@@ -152,7 +165,8 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   gap: 10px;
   overflow-x: auto;
-  padding: 0 20px 12px;
+  /* padding-top gives breathing room for scale(1.03) + box-shadow on selected card */
+  padding: 8px 20px 12px;
   scrollbar-width: none;
 }
 .styles-scroll::-webkit-scrollbar { display: none; }
@@ -588,23 +602,29 @@ button, input, select, textarea { font: inherit; }
 .tab-ai {
   width: 64px; height: 48px;
   border-radius: 16px;
-  background: linear-gradient(145deg, #A78BFA, #7C3AED);
+  background: linear-gradient(145deg, #7C5CBF, #5A2EA6);
   border: none;
   cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
-  transition: transform 0.15s, opacity 0.15s;
-  box-shadow: 0 0 20px rgba(124,58,237,0.55), 0 0 6px rgba(167,139,250,0.3);
+  transition: transform 0.15s, opacity 0.15s, background 0.2s, box-shadow 0.2s;
+  box-shadow: none;
+  opacity: 0.75;
 }
-.tab-ai:active { transform: scale(0.93); opacity: 0.9; }
+.tab-ai:active { transform: scale(0.93); }
 .tab-ai.active {
-  box-shadow: 0 0 0 2px rgba(167,139,250,0.6), 0 0 20px rgba(124,58,237,0.55), 0 0 6px rgba(167,139,250,0.3);
+  background: linear-gradient(145deg, #A78BFA, #7C3AED);
+  box-shadow: 0 0 0 2px rgba(167,139,250,0.5), 0 0 20px rgba(124,58,237,0.5), 0 0 6px rgba(167,139,250,0.25);
+  opacity: 1;
 }
 
 /* ─── Overlay screens (flows) ─── */
 .overlay-screen {
   position: fixed;
   inset: 0;
-  top: calc(var(--tg-content-safe-area-inset-top, 0px) + var(--tg-safe-area-inset-top, 0px));
+  top: max(
+    calc(100vh - var(--tg-viewport-height, 100vh)),
+    var(--tg-safe-area-inset-top, 0px)
+  );
   bottom: calc(62px + env(safe-area-inset-bottom, 0px));
   background: #111;
   z-index: 20;
