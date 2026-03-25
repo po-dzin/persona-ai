@@ -172,8 +172,10 @@ button, input, select, textarea { font: inherit; }
 }
 .style-card:active { transform: scale(0.96); }
 .style-card.selected {
-  outline: 2.5px solid #A78BFA;
+  outline: 3px solid #A78BFA;
+  outline-offset: 2px;
   transform: scale(1.03);
+  box-shadow: 0 0 0 3px rgba(167,139,250,0.25), 0 0 18px rgba(124,58,237,0.45);
 }
 .style-card.selected .style-check {
   display: flex;
@@ -182,12 +184,12 @@ button, input, select, textarea { font: inherit; }
   display: none;
   position: absolute;
   top: 8px; right: 8px;
-  width: 22px; height: 22px;
+  width: 26px; height: 26px;
   border-radius: 50%;
   background: #A78BFA;
   align-items: center; justify-content: center;
   z-index: 3;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 10px rgba(124,58,237,0.55), 0 0 0 2px rgba(255,255,255,0.15);
 }
 .style-preview { aspect-ratio: 3/4; position: relative; }
 .style-overlay {

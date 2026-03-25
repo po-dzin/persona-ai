@@ -59,18 +59,34 @@ export function App() {
     tg?.expand();
 
     // Apply Telegram safe area insets as CSS variables (Bot API 7.3+)
+    // Falls back gracefully for older TG versions that don't expose these objects.
     const applyInsets = () => {
       const root = document.documentElement;
       const safe = tg?.safeAreaInset;
       const content = tg?.contentSafeAreaInset;
-      if (safe) {
-        root.style.setProperty("--tg-safe-area-inset-top", `${safe.top}px`);
-        root.style.setProperty("--tg-safe-area-inset-bottom", `${safe.bottom}px`);
-      }
-      if (content) {
-        root.style.setProperty("--tg-content-safe-area-inset-top", `${content.top}px`);
-        root.style.setProperty("--tg-content-safe-area-inset-bottom", `${content.bottom}px`);
-      }
+
+      // Device notch / status-bar height.
+      // If TG doesn't provide it, use CSS env() so the browser handles it natively.
+      root.style.setProperty(
+        "--tg-safe-area-inset-top",
+        safe != null ? `${safe.top}px` : "env(safe-area-inset-top, 0px)",
+      );
+      root.style.setProperty(
+        "--tg-safe-area-inset-bottom",
+        safe != null ? `${safe.bottom}px` : "env(safe-area-inset-bottom, 0px)",
+      );
+
+      // TG's own floating controls height (X Close / ↓ ··· bar).
+      // Old TG versions (< Bot API 8.0) don't expose contentSafeAreaInset —
+      // use 52 px as a reliable fallback when running inside TG.
+      root.style.setProperty(
+        "--tg-content-safe-area-inset-top",
+        content != null ? `${content.top}px` : tg ? "52px" : "0px",
+      );
+      root.style.setProperty(
+        "--tg-content-safe-area-inset-bottom",
+        content != null ? `${content.bottom}px` : "0px",
+      );
     };
     applyInsets();
     tg?.onEvent?.("safeAreaChanged", applyInsets);
