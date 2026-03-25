@@ -7,7 +7,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 
 from app.core.auth import require_user, parse_tg_user
 from app.core.settings import settings
