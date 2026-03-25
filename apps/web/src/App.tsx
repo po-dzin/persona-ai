@@ -43,7 +43,10 @@ declare global {
 }
 
 const tg = window.Telegram?.WebApp;
-const tgUser = tg?.initDataUnsafe?.user;
+// USER_ID is stable for the session — read once at module level.
+// Display name (first_name/username) is read reactively inside App()
+// because initDataUnsafe may not be populated until after tg.ready().
+const _tgUserSnapshot = tg?.initDataUnsafe?.user;
 function _getWebUserId(): string {
   const key = "persona_web_user_id";
   let id = localStorage.getItem(key);
@@ -54,30 +57,41 @@ function _getWebUserId(): string {
   return id;
 }
 
-const USER_ID = tgUser?.id ? String(tgUser.id) : _getWebUserId();
+const USER_ID = _tgUserSnapshot?.id ? String(_tgUserSnapshot.id) : _getWebUserId();
 
 export function App() {
+  // Reactive TG user — initDataUnsafe may be empty before tg.ready() on some versions.
+  const [tgUser, setTgUser] = useState<{ first_name?: string; username?: string } | null>(
+    () => _tgUserSnapshot ?? null,
+  );
+
   useEffect(() => {
     tg?.ready();
     tg?.expand();
 
+    // Re-read initDataUnsafe after ready() in case it was populated lazily.
+    const u = tg?.initDataUnsafe?.user;
+    if (u) setTgUser(u);
+
     // Calculate top inset from TG's viewport metrics.
-    // --tg-top-inset = height occupied by TG's own floating buttons (X Close / ↓ ···).
-    // viewportStableHeight is reliable across all TG versions (≥ 6.1) and doesn't
-    // change when the keyboard appears, making it ideal for a stable top offset.
+    // --tg-top-inset = height of TG's own floating buttons (X Close / ↓ ···).
+    // viewportStableHeight is available on all TG versions ≥ 6.1 and is stable
+    // (doesn't change when the keyboard opens).
     const applyInsets = () => {
       const root = document.documentElement;
 
-      // Top inset: gap between window top and TG's usable viewport start.
+      // Top inset: gap between window top and TG's usable viewport.
+      // Use Math.max(0, …) to clamp — in fullscreen mode stableH === innerHeight → 0px offset.
+      // Fall back to 52px only when TG is present but hasn't reported stableHeight yet.
       const stableH = tg?.viewportStableHeight;
       const topInset = tg
-        ? stableH && stableH < window.innerHeight
-          ? window.innerHeight - stableH
-          : 52          // safe fallback when TG doesn't report viewportStableHeight
-        : 0;            // plain browser — no TG chrome
+        ? stableH != null
+          ? Math.max(0, window.innerHeight - stableH)
+          : 52      // TG present but viewportStableHeight not reported
+        : 0;        // plain browser — no TG chrome
       root.style.setProperty("--tg-top-inset", `${topInset}px`);
 
-      // Bottom safe area (device home indicator).
+      // Bottom inset (device home indicator).
       const safe = tg?.safeAreaInset;
       root.style.setProperty(
         "--tg-bottom-inset",
