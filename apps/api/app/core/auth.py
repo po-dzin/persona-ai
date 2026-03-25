@@ -12,6 +12,11 @@ from app.core.settings import settings
 _DEV_MODES = {"dev", "test", "local"}
 
 
+def parse_tg_user(init_data: str) -> dict | None:
+    """Public alias — parse and validate TG initData, return user dict or None."""
+    return _verify_init_data(init_data)
+
+
 def _verify_init_data(init_data: str) -> dict | None:
     """
     Validate Telegram WebApp initData string.

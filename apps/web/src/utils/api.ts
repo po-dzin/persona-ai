@@ -127,6 +127,8 @@ export async function purchasePackage(userId: string, packageCode: string) {
 
 export interface UserProfile {
   user_id: string;
+  first_name: string | null;
+  username: string | null;
   paid_credits: number;
   free_credit_available: boolean;
   generations_count: number;

@@ -47,6 +47,8 @@ class UserRow(Base):
     __tablename__ = "users"
 
     user_id = Column(String, primary_key=True)
+    first_name = Column(String, nullable=True)
+    username = Column(String, nullable=True)
     free_credits_granted = Column(Boolean, default=True, nullable=False)
     free_credit_available = Column(Boolean, default=True, nullable=False)
     paid_credits = Column(Integer, default=0, nullable=False)
@@ -120,24 +122,24 @@ def _run_column_migrations() -> None:
     with engine.connect() as conn:
         if _is_sqlite:
             # SQLite: check pragma, add if missing
-            cols = {row[1] for row in conn.execute(
-                text("PRAGMA table_info(orders)")
-            )}
-            if "is_favorite" not in cols:
-                conn.execute(
-                    text(
-                        "ALTER TABLE orders ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0"
-                    )
-                )
-                conn.commit()
+            order_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(orders)"))}
+            user_cols  = {row[1] for row in conn.execute(text("PRAGMA table_info(users)"))}
+            if "is_favorite" not in order_cols:
+                conn.execute(text(
+                    "ALTER TABLE orders ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0"
+                ))
+            if "first_name" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN first_name TEXT"))
+            if "username" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN username TEXT"))
+            conn.commit()
         else:
             # PostgreSQL: ADD COLUMN IF NOT EXISTS is idempotent
-            conn.execute(
-                text(
-                    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS"
-                    " is_favorite BOOLEAN NOT NULL DEFAULT FALSE"
-                )
-            )
+            conn.execute(text(
+                "ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT FALSE"
+            ))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT"))
             conn.commit()
 
 
