@@ -188,7 +188,7 @@ button, input, select, textarea { font: inherit; }
   gap: 18px;
   overflow-x: auto;
   white-space: nowrap;
-  padding: 6px 16px 2px;
+  padding: 6px 16px 6px;
   scrollbar-width: none;
 }
 .home-screen {
@@ -206,10 +206,10 @@ button, input, select, textarea { font: inherit; }
   border: none;
   background: none;
   color: #A0A0A0;
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1;
-  padding: 4px 0 10px;
+  padding: 4px 0 4px;
   border-bottom: 2px solid transparent;
   cursor: pointer;
 }
@@ -1233,6 +1233,11 @@ button, input, select, textarea { font: inherit; }
 
 @media (min-width: 768px) {
   .app-shell {
+    width: 430px;
+    height: min(900px, calc(100dvh - 32px));
+    max-height: min(900px, calc(100dvh - 32px));
+    margin: 16px auto;
+    border-radius: 30px;
     border-left: 1px solid rgba(255,255,255,0.08);
     border-right: 1px solid rgba(255,255,255,0.08);
     box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 20px 80px rgba(0,0,0,0.45);
