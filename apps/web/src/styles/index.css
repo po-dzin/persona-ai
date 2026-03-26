@@ -34,7 +34,7 @@ button, input, select, textarea { font: inherit; }
 .screen {
   position: absolute;
   inset: 0;
-  top: var(--tg-top-inset, 0px);
+  top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
   bottom: calc(62px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
   padding-top: 12px;
   overflow-y: auto;
@@ -617,7 +617,7 @@ button, input, select, textarea { font: inherit; }
 .overlay-screen {
   position: fixed;
   inset: 0;
-  top: var(--tg-top-inset, 0px);
+  top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
   bottom: calc(62px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
   background: #111;
   z-index: 20;
