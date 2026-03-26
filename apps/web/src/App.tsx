@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, type MouseEvent } from "react";
 
 import { Modal } from "./components/Modal";
 import { TabBar } from "./components/TabBar";
@@ -20,6 +20,7 @@ import { StylePreviewScreen } from "./screens/StylePreviewScreen";
 import type { PackageItem } from "./data/packages";
 import type { StyleItem } from "./data/styles";
 import { getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
+import { triggerHaptic } from "./utils/haptics";
 
 // Telegram WebApp integration
 declare global {
@@ -164,6 +165,8 @@ export function App() {
   const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v1");
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState("1:1");
+  const [selectedSourceTab, setSelectedSourceTab] = useState<"styles" | "custom">("styles");
+  const [prefilledUploadPhoto, setPrefilledUploadPhoto] = useState<File | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoRecord | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("Тренды");
   const [selectedPackage, setSelectedPackage] = useState<PackageItem | null>(null);
@@ -186,10 +189,10 @@ export function App() {
   const [purchaseOpen, setPurchaseOpen] = useState(false);
 
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
-  const selectedModel = useMemo(() => models.find((model) => model.id === selectedModelId) || null, [models, selectedModelId]);
 
   const openCreate = () => {
     setFlowInitialTab("styles");
+    setPrefilledUploadPhoto(null);
     setFlowInitialCustomPrompt("");
     setFlowInitialCustomModelId(undefined);
     setFlowStyleOpen(true);
@@ -205,6 +208,7 @@ export function App() {
 
   const handlePickStyleFromHome = (style: StyleItem) => {
     applyStyleSelection(style);
+    setSelectedSourceTab("styles");
     setStylePreviewBackToFlow(false);
     setCategoryOpen(false);
     setStylePreviewOpen(true);
@@ -212,15 +216,17 @@ export function App() {
 
   const handlePickStyleFromCreateTab = (style: StyleItem) => {
     applyStyleSelection(style);
+    setSelectedSourceTab("styles");
     setStylePreviewBackToFlow(true);
     setFlowStyleOpen(false);
     setStylePreviewOpen(true);
   };
 
-  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string; sourceTab: "styles" | "custom" }) => {
+  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string; sourceTab: "styles" | "custom"; photoFile?: File | null }) => {
     setSelectedModelId(payload.modelId);
     setSelectedPrompt(payload.prompt);
     setSelectedAspectRatio(payload.aspectRatio);
+    setSelectedSourceTab(payload.sourceTab);
 
     if (payload.sourceTab === "styles") {
       setStylePreviewBackToFlow(true);
@@ -229,6 +235,7 @@ export function App() {
       return;
     }
 
+    setPrefilledUploadPhoto(payload.photoFile || null);
     setFlowStyleOpen(false);
     setFlowUploadOpen(true);
   };
@@ -348,8 +355,17 @@ export function App() {
     setFlowStyleOpen(true);
   };
 
+  const handleUiTapHaptic = (event: MouseEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    const clickable = target.closest("button, a, [role=\"button\"]") as HTMLElement | null;
+    if (!clickable) return;
+    if ((clickable as HTMLButtonElement).disabled) return;
+    triggerHaptic("light");
+  };
+
   return (
-    <main className="app-shell">
+    <main className="app-shell" onClickCapture={handleUiTapHaptic}>
       {activeScreen === "home" ? (
         <HomeScreen
           styles={styles}
@@ -372,6 +388,7 @@ export function App() {
           credits={wallet.paid_credits}
           packages={packages}
           onSelectPackage={handleSelectPackage}
+          onOpenPricing={() => setModelsOpen(true)}
         />
       ) : null}
       {activeScreen === "profile" ? (
@@ -399,9 +416,10 @@ export function App() {
       <FlowUploadScreen
         isOpen={flowUploadOpen}
         selectedStyle={selectedStyle}
-        selectedModel={selectedModel}
         prompt={selectedPrompt}
         aspectRatio={selectedAspectRatio}
+        showPromptBlock={selectedSourceTab === "custom"}
+        initialPhotoFile={prefilledUploadPhoto}
         isSubmitting={isSubmitting}
         onBack={() => {
           setFlowUploadOpen(false);
@@ -428,7 +446,7 @@ export function App() {
         }}
         onUseAsReference={handleUseAsReference}
       />
-      <ModelsPricingScreen isOpen={modelsOpen} models={models} onClose={() => setModelsOpen(false)} />
+      <ModelsPricingScreen isOpen={modelsOpen} models={models} packages={packages} onClose={() => setModelsOpen(false)} />
       <StylePreviewScreen
         isOpen={stylePreviewOpen}
         style={selectedStyle}
@@ -461,11 +479,12 @@ export function App() {
 
       <TabBar
         activeScreen={activeScreen}
-        isCreateActive={flowStyleOpen || flowUploadOpen}
+        isCreateActive={flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)}
         photosBadge={photos.length}
         onChange={(screen) => {
           setFlowStyleOpen(false);
           setFlowUploadOpen(false);
+          setPrefilledUploadPhoto(null);
           setStylePreviewOpen(false);
           setCategoryOpen(false);
           setPurchaseOpen(false);

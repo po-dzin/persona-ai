@@ -1,22 +1,22 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import type { AIModel } from "../data/models";
 import type { StyleItem } from "../data/styles";
 
 interface FlowUploadScreenProps {
   isOpen: boolean;
   selectedStyle: StyleItem | null;
-  selectedModel: AIModel | null;
   prompt: string;
   aspectRatio: string;
   isSubmitting: boolean;
+  showPromptBlock?: boolean;
+  initialPhotoFile?: File | null;
   onGenerate: (photoFile: File | null) => void;
   onBack: () => void;
 }
 
 export function FlowUploadScreen({
-  isOpen, selectedStyle, selectedModel, prompt, aspectRatio,
-  isSubmitting, onGenerate, onBack,
+  isOpen, selectedStyle, prompt, aspectRatio,
+  isSubmitting, showPromptBlock = true, initialPhotoFile = null, onGenerate, onBack,
 }: FlowUploadScreenProps) {
   const MAX_FILE_SIZE_MB = 20;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -56,6 +56,20 @@ export function FlowUploadScreen({
     setPhotoUrl(URL.createObjectURL(file));
   };
 
+
+
+  useEffect(() => {
+    if (!isOpen || !initialPhotoFile) return;
+    const mime = (initialPhotoFile.type || "").toLowerCase();
+    if (!["image/jpeg", "image/png"].includes(mime)) return;
+    if (initialPhotoFile.size > MAX_FILE_SIZE_BYTES) return;
+
+    setValidationError(null);
+    setPhoto(initialPhotoFile);
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    setPhotoUrl(URL.createObjectURL(initialPhotoFile));
+  }, [isOpen, initialPhotoFile]);
+
   if (!isOpen) return null;
 
   return (
@@ -79,7 +93,7 @@ export function FlowUploadScreen({
         />
         <div>
           <div className="upload-style-name">{selectedStyle?.name || "Кастом"}</div>
-          <div className="upload-style-label">{selectedModel?.name || "Nano Banana"}</div>
+          <div className="upload-style-label">Выбранный стиль</div>
         </div>
       </div>
 
@@ -133,7 +147,7 @@ export function FlowUploadScreen({
       ) : null}
 
       {/* Prompt preview */}
-      {(prompt || selectedStyle?.prompt_template) ? (
+      {showPromptBlock && (prompt || selectedStyle?.prompt_template) ? (
         <div style={{ margin: "12px 20px 0", background: "#1A1A1A", borderRadius: 12, padding: "10px 14px" }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: "#555", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Промпт</div>
           <div style={{ fontSize: 12, color: "#AAA", lineHeight: 1.5 }}>
@@ -145,15 +159,8 @@ export function FlowUploadScreen({
         </div>
       ) : null}
 
-      <div style={{ margin: "10px 20px 0", fontSize: 11, color: "#666", lineHeight: 1.45 }}>
-        <div>Обычно 30–120 секунд</div>
-        <div>Лучше работают четкие портреты с хорошим освещением</div>
-        <div>Итог может немного отличаться от превью</div>
-        <div>Фото удаляется по политике хранения</div>
-      </div>
-
       {/* Generate button */}
-      <div className="flow-bottom-bar">
+      <div className="flow-bottom-bar flow-bottom-bar-with-note">
         <button
           className={"flow-btn " + (photo && !isSubmitting ? "purple" : "disabled")}
           disabled={!photo || isSubmitting || Boolean(validationError)}
@@ -166,8 +173,13 @@ export function FlowUploadScreen({
               </span>
               Генерация...
             </span>
-          ) : "Сгенерировать"}
+          ) : "Создать"}
         </button>
+        <div className="flow-helper-note">
+          <div>Лучше работают четкие портреты с хорошим освещением</div>
+          <div>Итог может немного отличаться от превью</div>
+          <div>Обычно 30–120 секунд</div>
+        </div>
       </div>
     </div>
   );
