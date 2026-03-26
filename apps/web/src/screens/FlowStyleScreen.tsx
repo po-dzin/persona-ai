@@ -12,7 +12,7 @@ interface FlowStyleScreenProps {
   initialCustomPrompt?: string;
   initialCustomModelId?: string;
   onSelectStyle: (style: StyleItem) => void;
-  onContinue: (payload: { modelId: string; prompt: string; aspectRatio: string }) => void;
+  onContinue: (payload: { modelId: string; prompt: string; aspectRatio: string; sourceTab: "styles" | "custom" }) => void;
   onClose: () => void;
 }
 
@@ -113,7 +113,7 @@ export function FlowStyleScreen({
             <button
               className={"flow-btn " + (canContinue ? "purple" : "disabled")}
               disabled={!canContinue}
-              onClick={() => onContinue({ modelId: "nano-banana-v1", prompt: selectedStyle?.prompt_template || "", aspectRatio: ratio })}
+              onClick={() => onContinue({ modelId: "nano-banana-v1", prompt: selectedStyle?.prompt_template || "", aspectRatio: ratio, sourceTab: "styles" })}
             >
               Дальше
             </button>
@@ -151,7 +151,7 @@ export function FlowStyleScreen({
             <button
               className={"flow-btn " + (canContinue ? "purple" : "disabled")}
               disabled={!canContinue}
-              onClick={() => onContinue({ modelId: customModel, prompt: customPrompt, aspectRatio: ratio })}
+              onClick={() => onContinue({ modelId: customModel, prompt: customPrompt, aspectRatio: ratio, sourceTab: "custom" })}
             >
               Дальше
             </button>

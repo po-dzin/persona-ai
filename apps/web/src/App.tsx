@@ -181,6 +181,7 @@ export function App() {
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   const [purchaseSuccessOpen, setPurchaseSuccessOpen] = useState(false);
   const [stylePreviewOpen, setStylePreviewOpen] = useState(false);
+  const [stylePreviewBackToFlow, setStylePreviewBackToFlow] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
 
@@ -195,18 +196,39 @@ export function App() {
     setFlowUploadOpen(false);
   };
 
-  const handlePickStyle = (style: StyleItem) => {
+  const applyStyleSelection = (style: StyleItem) => {
     setSelectedStyle(style);
     setSelectedPrompt(style.prompt_template);
     setSelectedModelId("nano-banana-v1");
+    setSelectedAspectRatio("1:1");
+  };
+
+  const handlePickStyleFromHome = (style: StyleItem) => {
+    applyStyleSelection(style);
+    setStylePreviewBackToFlow(false);
     setCategoryOpen(false);
     setStylePreviewOpen(true);
   };
 
-  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string }) => {
+  const handlePickStyleFromCreateTab = (style: StyleItem) => {
+    applyStyleSelection(style);
+    setStylePreviewBackToFlow(true);
+    setFlowStyleOpen(false);
+    setStylePreviewOpen(true);
+  };
+
+  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string; sourceTab: "styles" | "custom" }) => {
     setSelectedModelId(payload.modelId);
     setSelectedPrompt(payload.prompt);
     setSelectedAspectRatio(payload.aspectRatio);
+
+    if (payload.sourceTab === "styles") {
+      setStylePreviewBackToFlow(true);
+      setFlowStyleOpen(false);
+      setStylePreviewOpen(true);
+      return;
+    }
+
     setFlowStyleOpen(false);
     setFlowUploadOpen(true);
   };
@@ -331,7 +353,7 @@ export function App() {
       {activeScreen === "home" ? (
         <HomeScreen
           styles={styles}
-          onPreviewStyle={handlePickStyle}
+          onPreviewStyle={handlePickStyleFromHome}
           queueItem={photos.find(p => p.status === "queued" || p.status === "processing")
             ? { title: photos.find(p => p.status === "queued" || p.status === "processing")!.style_code, detail: "Генерация" }
             : null}
@@ -370,7 +392,7 @@ export function App() {
         initialTab={flowInitialTab}
         initialCustomPrompt={flowInitialCustomPrompt}
         initialCustomModelId={flowInitialCustomModelId}
-        onSelectStyle={setSelectedStyle}
+        onSelectStyle={handlePickStyleFromCreateTab}
         onContinue={handleFlowContinue}
         onClose={() => setFlowStyleOpen(false)}
       />
@@ -410,11 +432,15 @@ export function App() {
       <StylePreviewScreen
         isOpen={stylePreviewOpen}
         style={selectedStyle}
-        onClose={() => setStylePreviewOpen(false)}
+        onClose={() => {
+          setStylePreviewOpen(false);
+          if (stylePreviewBackToFlow) setFlowStyleOpen(true);
+        }}
         onCreate={() => {
           setStylePreviewOpen(false);
           setCategoryOpen(false);
-          openCreate();
+          setFlowStyleOpen(false);
+          setFlowUploadOpen(true);
         }}
       />
       <CategoryScreen
@@ -422,7 +448,7 @@ export function App() {
         category={selectedCategory}
         styles={styles}
         onClose={() => setCategoryOpen(false)}
-        onPreviewStyle={handlePickStyle}
+        onPreviewStyle={handlePickStyleFromHome}
       />
       <PurchaseScreen
         isOpen={purchaseOpen}
