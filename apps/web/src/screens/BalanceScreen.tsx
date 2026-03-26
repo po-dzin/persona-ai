@@ -4,14 +4,24 @@ interface BalanceScreenProps {
   credits: number;
   packages: PackageItem[];
   onSelectPackage: (pkg: PackageItem) => void;
+  onOpenPricing: () => void;
 }
 
 const PACKAGE_ICONS: Record<string, string> = {
-  STARTER: "🪙", BASIC: "💰", POPULAR: "⭐", PRO: "💎", ULTRA: "🏆",
+  STARTER: "🪙",
+  BASIC: "🪙",
+  POPULAR: "🪙",
+  PRO: "🪙",
+  ULTRA: "🪙",
 };
+
 const PACKAGE_BONUS: Record<string, string> = {
-  BASIC: "+5%", POPULAR: "+10%", PRO: "+18%", ULTRA: "+25%",
+  BASIC: "+5% бонус",
+  POPULAR: "+10% бонус",
+  PRO: "+18% бонус",
+  ULTRA: "+25% бонус",
 };
+
 const PACKAGE_ICON_BG: Record<string, string> = {
   STARTER: "rgba(255,214,102,0.1)",
   BASIC: "rgba(255,214,102,0.12)",
@@ -20,7 +30,7 @@ const PACKAGE_ICON_BG: Record<string, string> = {
   ULTRA: "rgba(74,222,128,0.12)",
 };
 
-export function BalanceScreen({ credits, packages, onSelectPackage }: BalanceScreenProps) {
+export function BalanceScreen({ credits, packages, onSelectPackage, onOpenPricing }: BalanceScreenProps) {
   return (
     <section className="screen">
       <div className="balance-hero">
@@ -57,9 +67,11 @@ export function BalanceScreen({ credits, packages, onSelectPackage }: BalanceScr
         })}
       </div>
 
-      <div className="balance-note">
-        Монеты не имеют срока действия · Возврат не предусмотрен
+      <div className="balance-footer-copy">
+        Оплата через Telegram Stars.<br />
+        Монеты начисляются мгновенно.
       </div>
+      <button className="balance-pricing-link" onClick={onOpenPricing}>Описание тарифов →</button>
     </section>
   );
 }
