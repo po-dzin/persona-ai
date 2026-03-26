@@ -43,10 +43,30 @@ declare global {
 }
 
 const tg = window.Telegram?.WebApp;
-// USER_ID is stable for the session — read once at module level.
-// Display name (first_name/username) is read reactively inside App()
-// because initDataUnsafe may not be populated until after tg.ready().
-const _tgUserSnapshot = tg?.initDataUnsafe?.user;
+type TgUser = { id: number; first_name?: string; username?: string };
+
+function parseTgUserFromInitData(initData?: string): TgUser | null {
+  if (!initData) return null;
+  try {
+    const params = new URLSearchParams(initData);
+    const raw = params.get("user");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<TgUser>;
+    if (typeof parsed?.id !== "number" || !Number.isFinite(parsed.id)) return null;
+    return { id: parsed.id, first_name: parsed.first_name, username: parsed.username };
+  } catch {
+    return null;
+  }
+}
+
+function readTelegramUser(): TgUser | null {
+  const unsafe = tg?.initDataUnsafe?.user;
+  if (unsafe?.id) return unsafe;
+  return parseTgUserFromInitData(tg?.initData);
+}
+
+const _tgUserSnapshot = readTelegramUser();
+
 function _getWebUserId(): string {
   const key = "persona_web_user_id";
   let id = localStorage.getItem(key);
@@ -57,47 +77,55 @@ function _getWebUserId(): string {
   return id;
 }
 
-const USER_ID = _tgUserSnapshot?.id ? String(_tgUserSnapshot.id) : _getWebUserId();
-
 export function App() {
   // Reactive TG user — initDataUnsafe may be empty before tg.ready() on some versions.
-  const [tgUser, setTgUser] = useState<{ first_name?: string; username?: string } | null>(
+  const [tgUser, setTgUser] = useState<TgUser | null>(
     () => _tgUserSnapshot ?? null,
+  );
+  const [userId, setUserId] = useState<string>(
+    () => (_tgUserSnapshot?.id ? String(_tgUserSnapshot.id) : _getWebUserId()),
   );
 
   useEffect(() => {
     tg?.ready();
     tg?.expand();
 
-    // Re-read initDataUnsafe after ready() in case it was populated lazily.
-    const u = tg?.initDataUnsafe?.user;
-    if (u) setTgUser(u);
+    // Re-read TG user after ready() in case it was populated lazily.
+    const u = readTelegramUser();
+    if (u) {
+      setTgUser(u);
+      setUserId(String(u.id));
+    }
 
-    // Calculate top inset from TG's viewport metrics.
-    // --tg-top-inset = height of TG's own floating buttons (X Close / ↓ ···).
-    // viewportStableHeight is available on all TG versions ≥ 6.1 and is stable
-    // (doesn't change when the keyboard opens).
+    // Calculate top/bottom insets from TG viewport and safe-area metrics.
     const applyInsets = () => {
       const root = document.documentElement;
 
-      // Top inset: gap between window top and TG's usable viewport.
-      // Use Math.max(0, …) to clamp — in fullscreen mode stableH === innerHeight → 0px offset.
-      // Fall back to 52px only when TG is present but hasn't reported stableHeight yet.
       const stableH = tg?.viewportStableHeight;
-      // stableH falsy (null, undefined, or 0) means TG hasn't settled metrics yet —
-      // treat as missing and use the safe 52px fallback to avoid pushing content off-screen.
+      const viewportH = tg?.viewportHeight;
+      const safeTop = tg?.safeAreaInset?.top ?? 0;
+      const contentSafeTop = tg?.contentSafeAreaInset?.top ?? 0;
+
       const topInset = tg
         ? stableH
-          ? Math.max(0, window.innerHeight - stableH)
-          : 52      // TG present but stableHeight missing or transiently 0
-        : 0;        // plain browser — no TG chrome
+          ? Math.max(
+              0,
+              window.innerHeight - stableH,
+              viewportH ? Math.max(0, window.innerHeight - viewportH) : 0,
+              safeTop,
+              contentSafeTop,
+              44,
+            )
+          : Math.max(52, safeTop, contentSafeTop)
+        : 0;
       root.style.setProperty("--tg-top-inset", `${topInset}px`);
 
-      // Bottom inset (device home indicator).
-      const safe = tg?.safeAreaInset;
+      const safeBottom = Math.max(0, tg?.safeAreaInset?.bottom ?? 0);
+      const contentSafeBottom = Math.max(0, tg?.contentSafeAreaInset?.bottom ?? 0);
+      const bottomInset = Math.max(safeBottom, contentSafeBottom);
       root.style.setProperty(
         "--tg-bottom-inset",
-        safe != null ? `${safe.bottom}px` : "env(safe-area-inset-bottom, 0px)",
+        bottomInset > 0 ? String(bottomInset) + "px" : "env(safe-area-inset-bottom, 0px)",
       );
     };
 
@@ -108,7 +136,7 @@ export function App() {
   }, []);
 
   const { styles, models, packages } = useCatalog();
-  const { wallet, photos, setPhotos, refresh } = useWalletAndPhotos(USER_ID);
+  const { wallet, photos, setPhotos, refresh } = useWalletAndPhotos(userId);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const refreshProfile = useCallback(() => {
@@ -116,7 +144,7 @@ export function App() {
   }, []);
   useEffect(() => {
     refreshProfile();
-  }, [refreshProfile]);
+  }, [refreshProfile, userId]);
   const { isSubmitting, lastError, clearError, startGenerate, buyPackage } = useGenerateFlow();
 
   const {
@@ -186,7 +214,7 @@ export function App() {
   const handleGenerate = async (photoFile?: File | null) => {
     if (!selectedModelId || !photoFile) return;
     const response: GenerateResult = await startGenerate({
-      userId: USER_ID,
+      userId,
       modelId: selectedModelId,
       styleCode: selectedStyle?.id || "hollywood",
       prompt: selectedPrompt,
@@ -208,7 +236,7 @@ export function App() {
   };
 
   const handlePurchase = async (pkg: PackageItem) => {
-    await buyPackage(USER_ID, pkg.code);
+    await buyPackage(userId, pkg.code);
     await refresh();
     refreshProfile();
     setPurchaseSuccessOpen(true);

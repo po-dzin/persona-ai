@@ -11,3 +11,5 @@ specs/Live Photo App.png
 .env
 .env.local
 .env.real
+
+dev.db
