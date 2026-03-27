@@ -16,16 +16,21 @@ export function StylePreviewScreen({ isOpen, style, onClose, onCreate }: StylePr
         <div className="style-preview-top">
           <button className="flow-back" onClick={onClose}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
+
         <div className="style-preview-bottom">
-          <div className="style-preview-name">{style.name}</div>
+          <div className="style-preview-title-row">
+            <div className="style-preview-name">{style.name}</div>
+            <button className="style-preview-go" onClick={onCreate} aria-label="Создать в этом стиле">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="style-preview-bar">
-        <button className="flow-btn purple" onClick={onCreate}>Создать в этом стиле</button>
       </div>
     </div>
   );

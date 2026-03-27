@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, type MouseEvent } from "react";
 
 import { Modal } from "./components/Modal";
 import { TabBar } from "./components/TabBar";
@@ -20,6 +20,7 @@ import { StylePreviewScreen } from "./screens/StylePreviewScreen";
 import type { PackageItem } from "./data/packages";
 import type { StyleItem } from "./data/styles";
 import { getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
+import { triggerHaptic } from "./utils/haptics";
 
 // Telegram WebApp integration
 declare global {
@@ -43,10 +44,30 @@ declare global {
 }
 
 const tg = window.Telegram?.WebApp;
-// USER_ID is stable for the session — read once at module level.
-// Display name (first_name/username) is read reactively inside App()
-// because initDataUnsafe may not be populated until after tg.ready().
-const _tgUserSnapshot = tg?.initDataUnsafe?.user;
+type TgUser = { id: number; first_name?: string; username?: string };
+
+function parseTgUserFromInitData(initData?: string): TgUser | null {
+  if (!initData) return null;
+  try {
+    const params = new URLSearchParams(initData);
+    const raw = params.get("user");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<TgUser>;
+    if (typeof parsed?.id !== "number" || !Number.isFinite(parsed.id)) return null;
+    return { id: parsed.id, first_name: parsed.first_name, username: parsed.username };
+  } catch {
+    return null;
+  }
+}
+
+function readTelegramUser(): TgUser | null {
+  const unsafe = tg?.initDataUnsafe?.user;
+  if (unsafe?.id) return unsafe;
+  return parseTgUserFromInitData(tg?.initData);
+}
+
+const _tgUserSnapshot = readTelegramUser();
+
 function _getWebUserId(): string {
   const key = "persona_web_user_id";
   let id = localStorage.getItem(key);
@@ -57,45 +78,59 @@ function _getWebUserId(): string {
   return id;
 }
 
-const USER_ID = _tgUserSnapshot?.id ? String(_tgUserSnapshot.id) : _getWebUserId();
-
 export function App() {
   // Reactive TG user — initDataUnsafe may be empty before tg.ready() on some versions.
-  const [tgUser, setTgUser] = useState<{ first_name?: string; username?: string } | null>(
+  const [tgUser, setTgUser] = useState<TgUser | null>(
     () => _tgUserSnapshot ?? null,
+  );
+  const [userId, setUserId] = useState<string>(
+    () => (_tgUserSnapshot?.id ? String(_tgUserSnapshot.id) : _getWebUserId()),
   );
 
   useEffect(() => {
     tg?.ready();
     tg?.expand();
 
-    // Re-read initDataUnsafe after ready() in case it was populated lazily.
-    const u = tg?.initDataUnsafe?.user;
-    if (u) setTgUser(u);
+    // Re-read TG user after ready() in case it was populated lazily.
+    const u = readTelegramUser();
+    if (u) {
+      setTgUser(u);
+      setUserId(String(u.id));
+    }
 
-    // Calculate top inset from TG's viewport metrics.
-    // --tg-top-inset = height of TG's own floating buttons (X Close / ↓ ···).
-    // viewportStableHeight is available on all TG versions ≥ 6.1 and is stable
-    // (doesn't change when the keyboard opens).
+    // Calculate top/bottom insets from TG viewport and safe-area metrics.
+    // Re-read window.Telegram?.WebApp dynamically — the module-scope `tg` may have
+    // been evaluated before Telegram injected its SDK into window.
     const applyInsets = () => {
+      const liveTg = window.Telegram?.WebApp ?? tg;
       const root = document.documentElement;
 
-      // Top inset: gap between window top and TG's usable viewport.
-      // Use Math.max(0, …) to clamp — in fullscreen mode stableH === innerHeight → 0px offset.
-      // Fall back to 52px only when TG is present but hasn't reported stableHeight yet.
-      const stableH = tg?.viewportStableHeight;
-      const topInset = tg
-        ? stableH != null
-          ? Math.max(0, window.innerHeight - stableH)
-          : 52      // TG present but viewportStableHeight not reported
-        : 0;        // plain browser — no TG chrome
+      const stableH = liveTg?.viewportStableHeight;
+      const viewportH = liveTg?.viewportHeight;
+      const safeTop = liveTg?.safeAreaInset?.top ?? 0;
+      const contentSafeTop = liveTg?.contentSafeAreaInset?.top ?? 0;
+      const isFullscreen = (liveTg as any)?.isFullscreen ?? false;
+
+      const topInset = liveTg
+        ? stableH
+          ? Math.max(
+              0,
+              window.innerHeight - stableH,
+              viewportH ? Math.max(0, window.innerHeight - viewportH) : 0,
+              safeTop,
+              contentSafeTop,
+              isFullscreen ? 96 : 84,
+            )
+          : Math.max(isFullscreen ? 96 : 92, safeTop, contentSafeTop)
+        : 0;
       root.style.setProperty("--tg-top-inset", `${topInset}px`);
 
-      // Bottom inset (device home indicator).
-      const safe = tg?.safeAreaInset;
+      const safeBottom = Math.max(0, liveTg?.safeAreaInset?.bottom ?? 0);
+      const contentSafeBottom = Math.max(0, liveTg?.contentSafeAreaInset?.bottom ?? 0);
+      const bottomInset = Math.max(safeBottom, contentSafeBottom);
       root.style.setProperty(
         "--tg-bottom-inset",
-        safe != null ? `${safe.bottom}px` : "env(safe-area-inset-bottom, 0px)",
+        bottomInset > 0 ? String(bottomInset) + "px" : "env(safe-area-inset-bottom, 0px)",
       );
     };
 
@@ -103,10 +138,11 @@ export function App() {
     tg?.onEvent?.("viewportChanged", applyInsets);
     tg?.onEvent?.("safeAreaChanged", applyInsets);
     tg?.onEvent?.("contentSafeAreaChanged", applyInsets);
+    tg?.onEvent?.("fullscreenChanged", applyInsets);
   }, []);
 
   const { styles, models, packages } = useCatalog();
-  const { wallet, photos, setPhotos, refresh } = useWalletAndPhotos(USER_ID);
+  const { wallet, photos, setPhotos, refresh } = useWalletAndPhotos(userId);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const refreshProfile = useCallback(() => {
@@ -114,7 +150,7 @@ export function App() {
   }, []);
   useEffect(() => {
     refreshProfile();
-  }, [refreshProfile]);
+  }, [refreshProfile, userId]);
   const { isSubmitting, lastError, clearError, startGenerate, buyPackage } = useGenerateFlow();
 
   const {
@@ -132,8 +168,11 @@ export function App() {
 
   const [selectedStyle, setSelectedStyle] = useState<StyleItem | null>(styles[0] || null);
   const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v1");
+  const selectedModelCost = models.find((m) => m.id === selectedModelId)?.coins ?? 10;
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState("1:1");
+  const [selectedSourceTab, setSelectedSourceTab] = useState<"styles" | "custom">("styles");
+  const [prefilledUploadPhoto, setPrefilledUploadPhoto] = useState<File | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoRecord | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("Тренды");
   const [selectedPackage, setSelectedPackage] = useState<PackageItem | null>(null);
@@ -151,32 +190,58 @@ export function App() {
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   const [purchaseSuccessOpen, setPurchaseSuccessOpen] = useState(false);
   const [stylePreviewOpen, setStylePreviewOpen] = useState(false);
+  const [stylePreviewBackToFlow, setStylePreviewBackToFlow] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
 
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
-  const selectedModel = useMemo(() => models.find((model) => model.id === selectedModelId) || null, [models, selectedModelId]);
 
   const openCreate = () => {
     setFlowInitialTab("styles");
+    setPrefilledUploadPhoto(null);
     setFlowInitialCustomPrompt("");
     setFlowInitialCustomModelId(undefined);
     setFlowStyleOpen(true);
     setFlowUploadOpen(false);
   };
 
-  const handlePickStyle = (style: StyleItem) => {
+  const applyStyleSelection = (style: StyleItem) => {
     setSelectedStyle(style);
     setSelectedPrompt(style.prompt_template);
     setSelectedModelId("nano-banana-v1");
+    setSelectedAspectRatio("1:1");
+  };
+
+  const handlePickStyleFromHome = (style: StyleItem) => {
+    applyStyleSelection(style);
+    setSelectedSourceTab("styles");
+    setStylePreviewBackToFlow(false);
     setCategoryOpen(false);
     setStylePreviewOpen(true);
   };
 
-  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string }) => {
+  const handlePickStyleFromCreateTab = (style: StyleItem) => {
+    applyStyleSelection(style);
+    setSelectedSourceTab("styles");
+    setStylePreviewBackToFlow(true);
+    setFlowStyleOpen(false);
+    setStylePreviewOpen(true);
+  };
+
+  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string; sourceTab: "styles" | "custom"; photoFile?: File | null }) => {
     setSelectedModelId(payload.modelId);
     setSelectedPrompt(payload.prompt);
     setSelectedAspectRatio(payload.aspectRatio);
+    setSelectedSourceTab(payload.sourceTab);
+
+    if (payload.sourceTab === "styles") {
+      setStylePreviewBackToFlow(true);
+      setFlowStyleOpen(false);
+      setStylePreviewOpen(true);
+      return;
+    }
+
+    setPrefilledUploadPhoto(payload.photoFile || null);
     setFlowStyleOpen(false);
     setFlowUploadOpen(true);
   };
@@ -184,7 +249,7 @@ export function App() {
   const handleGenerate = async (photoFile?: File | null) => {
     if (!selectedModelId || !photoFile) return;
     const response: GenerateResult = await startGenerate({
-      userId: USER_ID,
+      userId,
       modelId: selectedModelId,
       styleCode: selectedStyle?.id || "hollywood",
       prompt: selectedPrompt,
@@ -206,7 +271,7 @@ export function App() {
   };
 
   const handlePurchase = async (pkg: PackageItem) => {
-    await buyPackage(USER_ID, pkg.code);
+    await buyPackage(userId, pkg.code);
     await refresh();
     refreshProfile();
     setPurchaseSuccessOpen(true);
@@ -296,12 +361,21 @@ export function App() {
     setFlowStyleOpen(true);
   };
 
+  const handleUiTapHaptic = (event: MouseEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+    const clickable = target.closest("button, a, [role=\"button\"]") as HTMLElement | null;
+    if (!clickable) return;
+    if ((clickable as HTMLButtonElement).disabled) return;
+    triggerHaptic("light");
+  };
+
   return (
-    <main className="app-shell">
+    <main className="app-shell" onClickCapture={handleUiTapHaptic}>
       {activeScreen === "home" ? (
         <HomeScreen
           styles={styles}
-          onPreviewStyle={handlePickStyle}
+          onPreviewStyle={handlePickStyleFromHome}
           queueItem={photos.find(p => p.status === "queued" || p.status === "processing")
             ? { title: photos.find(p => p.status === "queued" || p.status === "processing")!.style_code, detail: "Генерация" }
             : null}
@@ -320,6 +394,7 @@ export function App() {
           credits={wallet.paid_credits}
           packages={packages}
           onSelectPackage={handleSelectPackage}
+          onOpenPricing={() => setModelsOpen(true)}
         />
       ) : null}
       {activeScreen === "profile" ? (
@@ -340,16 +415,18 @@ export function App() {
         initialTab={flowInitialTab}
         initialCustomPrompt={flowInitialCustomPrompt}
         initialCustomModelId={flowInitialCustomModelId}
-        onSelectStyle={setSelectedStyle}
+        onSelectStyle={handlePickStyleFromCreateTab}
         onContinue={handleFlowContinue}
         onClose={() => setFlowStyleOpen(false)}
       />
       <FlowUploadScreen
         isOpen={flowUploadOpen}
         selectedStyle={selectedStyle}
-        selectedModel={selectedModel}
         prompt={selectedPrompt}
         aspectRatio={selectedAspectRatio}
+        cost={selectedModelCost}
+        showPromptBlock={selectedSourceTab === "custom"}
+        initialPhotoFile={prefilledUploadPhoto}
         isSubmitting={isSubmitting}
         onBack={() => {
           setFlowUploadOpen(false);
@@ -376,15 +453,19 @@ export function App() {
         }}
         onUseAsReference={handleUseAsReference}
       />
-      <ModelsPricingScreen isOpen={modelsOpen} models={models} onClose={() => setModelsOpen(false)} />
+      <ModelsPricingScreen isOpen={modelsOpen} models={models} packages={packages} onClose={() => setModelsOpen(false)} />
       <StylePreviewScreen
         isOpen={stylePreviewOpen}
         style={selectedStyle}
-        onClose={() => setStylePreviewOpen(false)}
+        onClose={() => {
+          setStylePreviewOpen(false);
+          if (stylePreviewBackToFlow) setFlowStyleOpen(true);
+        }}
         onCreate={() => {
           setStylePreviewOpen(false);
           setCategoryOpen(false);
-          openCreate();
+          setFlowStyleOpen(false);
+          setFlowUploadOpen(true);
         }}
       />
       <CategoryScreen
@@ -392,7 +473,7 @@ export function App() {
         category={selectedCategory}
         styles={styles}
         onClose={() => setCategoryOpen(false)}
-        onPreviewStyle={handlePickStyle}
+        onPreviewStyle={handlePickStyleFromHome}
       />
       <PurchaseScreen
         isOpen={purchaseOpen}
@@ -405,11 +486,12 @@ export function App() {
 
       <TabBar
         activeScreen={activeScreen}
-        isCreateActive={flowStyleOpen || flowUploadOpen}
+        isCreateActive={flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)}
         photosBadge={photos.length}
         onChange={(screen) => {
           setFlowStyleOpen(false);
           setFlowUploadOpen(false);
+          setPrefilledUploadPhoto(null);
           setStylePreviewOpen(false);
           setCategoryOpen(false);
           setPurchaseOpen(false);
