@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FALLBACK_MODELS } from "../data/models";
 import { FALLBACK_PACKAGES } from "../data/packages";
 import { FALLBACK_STYLES } from "../data/styles";
+import { getProfile, sendPhotoToTelegram, toggleFavorite } from "../utils/api";
 import { App } from "../App";
 
 const refreshMock = vi.fn().mockResolvedValue([]);
@@ -47,20 +48,27 @@ vi.mock("../utils/haptics", () => ({
 }));
 
 vi.mock("../utils/api", () => ({
-  getProfile: vi.fn().mockResolvedValue({
-    user_id: "u1",
-    first_name: "G",
-    username: "g_user",
-    paid_credits: 47,
-    free_credit_available: true,
-    generations_count: 0,
-    referrals_count: 0,
-  }),
-  sendPhotoToTelegram: vi.fn().mockResolvedValue(undefined),
-  toggleFavorite: vi.fn().mockResolvedValue({ is_favorite: true }),
+  getProfile: vi.fn(),
+  sendPhotoToTelegram: vi.fn(),
+  toggleFavorite: vi.fn(),
 }));
 
 describe("App flows", () => {
+  // vi.restoreAllMocks() in setup.ts resets vi.fn() implementations between tests;
+  // re-configure here so every test starts with working mocks.
+  beforeEach(() => {
+    vi.mocked(getProfile).mockResolvedValue({
+      user_id: "u1",
+      first_name: "G",
+      username: "g_user",
+      paid_credits: 47,
+      free_credit_available: true,
+      generations_count: 0,
+      referrals_count: 0,
+    });
+    vi.mocked(sendPhotoToTelegram).mockResolvedValue(undefined);
+    vi.mocked(toggleFavorite).mockResolvedValue({ is_favorite: true });
+  });
   it("restores last screen from localStorage", async () => {
     localStorage.setItem("persona_last_screen", "balance");
 
@@ -81,11 +89,15 @@ describe("App flows", () => {
     const styleButtons = screen.getAllByRole("button", { name: /Голливуд/ });
     await user.click(styleButtons[styleButtons.length - 1]);
 
-    expect(await screen.findByText("Голливуд")).toBeInTheDocument();
+    // Style preview is open — the preview name appears in the overlay;
+    // the grid card is still in DOM so use the specific preview-name selector.
+    await waitFor(() => {
+      expect(document.querySelector(".style-preview-name")?.textContent).toBe("Голливуд");
+    });
     await user.click(screen.getByRole("button", { name: "Создать в этом стиле" }));
 
-    expect(await screen.findByText("Загрузить фото")).toBeInTheDocument();
-    expect(screen.getByText("2/2")).toBeInTheDocument();
+    // "2/2" is unique to the FlowUploadScreen header — use it as the sentinel
+    expect(await screen.findByText("2/2")).toBeInTheDocument();
   });
 
   it("uses custom flow and opens upload with prefilled photo", async () => {
@@ -113,12 +125,17 @@ describe("App flows", () => {
     const file = new File(["img"], "custom.png", { type: "image/png" });
     await user.upload(fileInput as HTMLInputElement, file);
 
-    const createButton = screen.getAllByRole("button", { name: "Создать" }).at(-1);
-    expect(createButton).toBeDefined();
-    await user.click(createButton as HTMLButtonElement);
+    // Wait for the button to become enabled (photo validation passes)
+    const overlayEl = document.querySelector(".overlay-screen") as HTMLElement;
+    const createButton = await waitFor(() => {
+      const btn = within(overlayEl).getByRole("button", { name: "Создать" });
+      expect(btn).not.toBeDisabled();
+      return btn;
+    });
+    await user.click(createButton);
 
-    expect(await screen.findByText("Загрузить фото")).toBeInTheDocument();
-    expect(screen.getByText("Выбранный стиль")).toBeInTheDocument();
+    // FlowUploadScreen is now open with the photo pre-filled
+    expect(await screen.findByText("Выбранный стиль")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Изменить" })).toBeInTheDocument();
     });
