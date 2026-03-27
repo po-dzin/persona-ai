@@ -135,10 +135,14 @@ export function App() {
     };
 
     applyInsets();
+    // Re-apply after short delay — TG SDK may report isFullscreen / safeAreaInset lazily
+    const t1 = setTimeout(applyInsets, 150);
+    const t2 = setTimeout(applyInsets, 600);
     tg?.onEvent?.("viewportChanged", applyInsets);
     tg?.onEvent?.("safeAreaChanged", applyInsets);
     tg?.onEvent?.("contentSafeAreaChanged", applyInsets);
     tg?.onEvent?.("fullscreenChanged", applyInsets);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   const { styles, models, packages } = useCatalog();
