@@ -61,9 +61,11 @@ function parseTgUserFromInitData(initData?: string): TgUser | null {
 }
 
 function readTelegramUser(): TgUser | null {
-  const unsafe = tg?.initDataUnsafe?.user;
+  // Always read live — module-scope `tg` may be stale if SDK injected after evaluation
+  const liveTg = window.Telegram?.WebApp ?? tg;
+  const unsafe = liveTg?.initDataUnsafe?.user;
   if (unsafe?.id) return unsafe;
-  return parseTgUserFromInitData(tg?.initData);
+  return parseTgUserFromInitData(liveTg?.initData);
 }
 
 const _tgUserSnapshot = readTelegramUser();
@@ -88,8 +90,9 @@ export function App() {
   );
 
   useEffect(() => {
-    tg?.ready();
-    tg?.expand();
+    const liveTgInit = window.Telegram?.WebApp ?? tg;
+    liveTgInit?.ready();
+    liveTgInit?.expand();
 
     // Re-read TG user after ready() in case it was populated lazily.
     const u = readTelegramUser();
@@ -97,6 +100,11 @@ export function App() {
       setTgUser(u);
       setUserId(String(u.id));
     }
+    // Retry once after 300ms — some TG versions populate initDataUnsafe after ready()
+    const tUser = setTimeout(() => {
+      const u2 = readTelegramUser();
+      if (u2?.id) { setTgUser(u2); setUserId(String(u2.id)); }
+    }, 300);
 
     // Calculate top/bottom insets from TG viewport and safe-area metrics.
     // Re-read window.Telegram?.WebApp dynamically — the module-scope `tg` may have
@@ -111,17 +119,18 @@ export function App() {
       const contentSafeTop = liveTg?.contentSafeAreaInset?.top ?? 0;
       const isFullscreen = (liveTg as any)?.isFullscreen ?? false;
 
+      // safeTop  = device notch/rounded corners (hardware layer)
+      // contentSafeTop = TG chrome on top (close button etc.) — must be ADDED, not maxed
+      const tgChromeTop = safeTop + contentSafeTop;
       const topInset = liveTg
         ? stableH
           ? Math.max(
-              0,
+              tgChromeTop,
               window.innerHeight - stableH,
               viewportH ? Math.max(0, window.innerHeight - viewportH) : 0,
-              safeTop,
-              contentSafeTop,
-              isFullscreen ? 96 : 84,
+              isFullscreen ? 60 : 0,
             )
-          : Math.max(isFullscreen ? 96 : 92, safeTop, contentSafeTop)
+          : Math.max(tgChromeTop, isFullscreen ? 96 : 0)
         : 0;
       root.style.setProperty("--tg-top-inset", `${topInset}px`);
 
@@ -142,7 +151,7 @@ export function App() {
     tg?.onEvent?.("safeAreaChanged", applyInsets);
     tg?.onEvent?.("contentSafeAreaChanged", applyInsets);
     tg?.onEvent?.("fullscreenChanged", applyInsets);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    return () => { clearTimeout(tUser); clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   const { styles, models, packages } = useCatalog();
