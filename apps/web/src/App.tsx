@@ -99,15 +99,19 @@ export function App() {
     }
 
     // Calculate top/bottom insets from TG viewport and safe-area metrics.
+    // Re-read window.Telegram?.WebApp dynamically — the module-scope `tg` may have
+    // been evaluated before Telegram injected its SDK into window.
     const applyInsets = () => {
+      const liveTg = window.Telegram?.WebApp ?? tg;
       const root = document.documentElement;
 
-      const stableH = tg?.viewportStableHeight;
-      const viewportH = tg?.viewportHeight;
-      const safeTop = tg?.safeAreaInset?.top ?? 0;
-      const contentSafeTop = tg?.contentSafeAreaInset?.top ?? 0;
+      const stableH = liveTg?.viewportStableHeight;
+      const viewportH = liveTg?.viewportHeight;
+      const safeTop = liveTg?.safeAreaInset?.top ?? 0;
+      const contentSafeTop = liveTg?.contentSafeAreaInset?.top ?? 0;
+      const isFullscreen = (liveTg as any)?.isFullscreen ?? false;
 
-      const topInset = tg
+      const topInset = liveTg
         ? stableH
           ? Math.max(
               0,
@@ -115,14 +119,14 @@ export function App() {
               viewportH ? Math.max(0, window.innerHeight - viewportH) : 0,
               safeTop,
               contentSafeTop,
-              84,
+              isFullscreen ? 96 : 84,
             )
-          : Math.max(92, safeTop, contentSafeTop)
+          : Math.max(isFullscreen ? 96 : 92, safeTop, contentSafeTop)
         : 0;
       root.style.setProperty("--tg-top-inset", `${topInset}px`);
 
-      const safeBottom = Math.max(0, tg?.safeAreaInset?.bottom ?? 0);
-      const contentSafeBottom = Math.max(0, tg?.contentSafeAreaInset?.bottom ?? 0);
+      const safeBottom = Math.max(0, liveTg?.safeAreaInset?.bottom ?? 0);
+      const contentSafeBottom = Math.max(0, liveTg?.contentSafeAreaInset?.bottom ?? 0);
       const bottomInset = Math.max(safeBottom, contentSafeBottom);
       root.style.setProperty(
         "--tg-bottom-inset",
@@ -134,6 +138,7 @@ export function App() {
     tg?.onEvent?.("viewportChanged", applyInsets);
     tg?.onEvent?.("safeAreaChanged", applyInsets);
     tg?.onEvent?.("contentSafeAreaChanged", applyInsets);
+    tg?.onEvent?.("fullscreenChanged", applyInsets);
   }, []);
 
   const { styles, models, packages } = useCatalog();
