@@ -20,7 +20,10 @@ export function useCatalog() {
         if (!active) return;
         if (remoteStyles.length > 0) setStyles(remoteStyles);
         if (remoteModels.length > 0) setModels(remoteModels);
-        if (remotePackages.length > 0) setPackages(remotePackages);
+        if (remotePackages.length > 0) {
+          const testPkg = FALLBACK_PACKAGES.find((p) => p.code === "TEST");
+          setPackages(testPkg ? [testPkg, ...remotePackages] : remotePackages);
+        }
         setCatalogError(null);
       })
       .catch((err: unknown) => {

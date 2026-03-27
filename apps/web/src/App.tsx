@@ -115,9 +115,9 @@ export function App() {
               viewportH ? Math.max(0, window.innerHeight - viewportH) : 0,
               safeTop,
               contentSafeTop,
-              44,
+              84,
             )
-          : Math.max(52, safeTop, contentSafeTop)
+          : Math.max(92, safeTop, contentSafeTop)
         : 0;
       root.style.setProperty("--tg-top-inset", `${topInset}px`);
 
@@ -163,6 +163,7 @@ export function App() {
 
   const [selectedStyle, setSelectedStyle] = useState<StyleItem | null>(styles[0] || null);
   const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v1");
+  const selectedModelCost = models.find((m) => m.id === selectedModelId)?.coins ?? 10;
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState("1:1");
   const [selectedSourceTab, setSelectedSourceTab] = useState<"styles" | "custom">("styles");
@@ -418,6 +419,7 @@ export function App() {
         selectedStyle={selectedStyle}
         prompt={selectedPrompt}
         aspectRatio={selectedAspectRatio}
+        cost={selectedModelCost}
         showPromptBlock={selectedSourceTab === "custom"}
         initialPhotoFile={prefilledUploadPhoto}
         isSubmitting={isSubmitting}
