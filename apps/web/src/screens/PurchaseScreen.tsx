@@ -9,12 +9,6 @@ interface PurchaseScreenProps {
   onConfirm: (pkg: PackageItem) => void;
 }
 
-const BONUS_BY_CODE: Record<string, string> = {
-  BASIC: "+5% бонус",
-  POPULAR: "+10% бонус",
-  PRO: "+18% бонус",
-  ULTRA: "+25% бонус",
-};
 
 type PaymentMethod = "tg_stars" | "stripe";
 
@@ -23,7 +17,9 @@ export function PurchaseScreen({ isOpen, selectedPackage, onClose, onConfirm }: 
 
   if (!isOpen || !selectedPackage) return null;
 
-  const bonus = BONUS_BY_CODE[selectedPackage.code];
+  const bonusCoins = selectedPackage.bonus_percent > 0
+    ? Math.round(selectedPackage.credits * selectedPackage.bonus_percent / 100)
+    : 0;
   const isStripeEnabled = false;
 
   return (
@@ -45,12 +41,15 @@ export function PurchaseScreen({ isOpen, selectedPackage, onClose, onConfirm }: 
         </div>
         <div className="purchase-row">
           <div className="purchase-row-label">Монет</div>
-          <div className="purchase-row-value">{selectedPackage.credits}</div>
+          <div className="purchase-row-value">
+            {selectedPackage.credits}
+            {bonusCoins > 0 && <span className="purchase-row-bonus-inline"> +{bonusCoins}</span>}
+          </div>
         </div>
-        {bonus ? (
+        {selectedPackage.bonus_percent > 0 ? (
           <div className="purchase-row">
             <div className="purchase-row-label">Бонус</div>
-            <div className="purchase-row-value bonus">{bonus}</div>
+            <div className="purchase-row-value bonus">+{selectedPackage.bonus_percent}%</div>
           </div>
         ) : null}
         <div className="purchase-total">

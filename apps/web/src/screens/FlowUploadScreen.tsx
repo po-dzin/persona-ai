@@ -8,6 +8,7 @@ interface FlowUploadScreenProps {
   prompt: string;
   aspectRatio: string;
   isSubmitting: boolean;
+  cost?: number;
   showPromptBlock?: boolean;
   initialPhotoFile?: File | null;
   onGenerate: (photoFile: File | null) => void;
@@ -16,7 +17,7 @@ interface FlowUploadScreenProps {
 
 export function FlowUploadScreen({
   isOpen, selectedStyle, prompt, aspectRatio,
-  isSubmitting, showPromptBlock = true, initialPhotoFile = null, onGenerate, onBack,
+  isSubmitting, cost = 10, showPromptBlock = true, initialPhotoFile = null, onGenerate, onBack,
 }: FlowUploadScreenProps) {
   const MAX_FILE_SIZE_MB = 20;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -161,6 +162,7 @@ export function FlowUploadScreen({
 
       {/* Generate button */}
       <div className="flow-bottom-bar flow-bottom-bar-with-note">
+        <div className="custom-cost">Стоимость: <strong>{cost} 🪙</strong></div>
         <button
           className={"flow-btn " + (photo && !isSubmitting ? "purple" : "disabled")}
           disabled={!photo || isSubmitting || Boolean(validationError)}
