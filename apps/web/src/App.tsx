@@ -89,6 +89,11 @@ export function App() {
     () => (_tgUserSnapshot?.id ? String(_tgUserSnapshot.id) : _getWebUserId()),
   );
 
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const refreshProfile = useCallback(() => {
+    getProfile().then(setProfile).catch(() => null);
+  }, []);
+
   useEffect(() => {
     const liveTgInit = window.Telegram?.WebApp ?? tg;
     liveTgInit?.ready();
@@ -166,10 +171,6 @@ export function App() {
   const { styles, models, packages } = useCatalog();
   const { wallet, photos, setPhotos, refresh } = useWalletAndPhotos(userId);
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const refreshProfile = useCallback(() => {
-    getProfile().then(setProfile).catch(() => null);
-  }, []);
   useEffect(() => {
     refreshProfile();
   }, [refreshProfile, userId]);
