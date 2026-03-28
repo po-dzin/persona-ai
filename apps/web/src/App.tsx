@@ -448,6 +448,7 @@ export function App() {
         onGenerate={(file) => {
           void handleGenerate(file);
         }}
+        onOpenPricing={() => setModelsOpen(true)}
       />
 
       <PhotoViewerScreen

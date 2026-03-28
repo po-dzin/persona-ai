@@ -49,7 +49,7 @@ button, input, select, textarea { font: inherit; }
   inset: 0;
   top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
   bottom: calc(62px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
-  padding-top: 12px;
+  padding-top: 88px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -57,7 +57,7 @@ button, input, select, textarea { font: inherit; }
 
 /* ─── Top bar ─── */
 .top-bar {
-  padding: 16px 20px 12px;
+  padding: 88px 20px 12px;
   text-align: center;
   border-bottom: 0.5px solid rgba(255,255,255,0.06);
   position: sticky;
@@ -194,11 +194,14 @@ button, input, select, textarea { font: inherit; }
 .home-screen {
   padding-top: 0;
 }
-.home-screen .category-tabs-row {
+.home-sticky-header {
   position: sticky;
   top: 0;
   z-index: 8;
   background: #111;
+  padding-top: 88px;
+}
+.home-sticky-header .category-tabs-row {
   padding-top: 14px;
   padding-bottom: 10px;
 }
@@ -207,7 +210,7 @@ button, input, select, textarea { font: inherit; }
   border: none;
   background: none;
   color: #A0A0A0;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1;
   padding: 6px 0 6px;
@@ -727,7 +730,7 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px 12px;
+  padding: 88px 20px 12px;
   position: sticky;
   top: 0;
   background: #111;
@@ -1066,7 +1069,7 @@ button, input, select, textarea { font: inherit; }
   overflow: hidden;
 }
 .style-preview-top {
-  padding: 16px 20px 0;
+  padding: 88px 20px 0;
 }
 .style-preview-top .flow-back {
   background: rgba(0,0,0,0.3);
