@@ -48,8 +48,8 @@ button, input, select, textarea { font: inherit; }
   position: absolute;
   inset: 0;
   top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
-  bottom: calc(62px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
-  padding-top: 88px;
+  bottom: calc(56px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
+  padding-top: 16px;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -57,7 +57,7 @@ button, input, select, textarea { font: inherit; }
 
 /* ─── Top bar ─── */
 .top-bar {
-  padding: 88px 20px 12px;
+  padding: 16px 20px 12px;
   text-align: center;
   border-bottom: 0.5px solid rgba(255,255,255,0.06);
   position: sticky;
@@ -199,7 +199,7 @@ button, input, select, textarea { font: inherit; }
   top: 0;
   z-index: 8;
   background: #111;
-  padding-top: 88px;
+  padding-top: 16px;
 }
 .home-sticky-header .category-tabs-row {
   padding-top: 14px;
@@ -639,16 +639,16 @@ button, input, select, textarea { font: inherit; }
 .tab-bar {
   position: absolute;
   bottom: var(--tab-bar-gap); left: 0; right: 0;
-  height: calc(54px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
+  height: calc(48px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
   background: rgba(17,17,17,0.97);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 0.5px solid rgba(255,255,255,0.08);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-around;
-  padding: 4px 8px 2px;
-  padding-bottom: calc(var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + 2px);
+  padding: 0 8px;
+  padding-bottom: var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px));
   z-index: 40;
 }
 .tab-item {
@@ -689,8 +689,8 @@ button, input, select, textarea { font: inherit; }
 }
 .tab-ai {
   width: 64px;
-  height: 44px;
-  border-radius: 14px;
+  height: 38px;
+  border-radius: 12px;
   background: linear-gradient(145deg, #8D6AF0, #7340E6);
   border: none;
   cursor: pointer;
@@ -718,7 +718,7 @@ button, input, select, textarea { font: inherit; }
   position: absolute;
   inset: 0;
   top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
-  bottom: calc(62px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
+  bottom: calc(56px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
   background: #111;
   z-index: 20;
   overflow-y: auto;
@@ -730,7 +730,7 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 88px 20px 12px;
+  padding: 16px 20px 12px;
   position: sticky;
   top: 0;
   background: #111;
@@ -1069,7 +1069,7 @@ button, input, select, textarea { font: inherit; }
   overflow: hidden;
 }
 .style-preview-top {
-  padding: 88px 20px 0;
+  padding: 16px 20px 0;
 }
 .style-preview-top .flow-back {
   background: rgba(0,0,0,0.3);
