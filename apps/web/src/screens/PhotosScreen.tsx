@@ -39,7 +39,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
   });
 
   return (
-    <section className="screen">
+    <section className="screen photos-screen">
       {queuedCount > 1 ? (
         <div className="queue-stack">
           <div className="stack-back-2" />
