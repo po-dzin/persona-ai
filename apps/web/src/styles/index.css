@@ -689,8 +689,8 @@ button, input, select, textarea { font: inherit; }
 }
 .tab-ai {
   width: 64px;
-  height: 44px;
-  border-radius: 14px;
+  height: 38px;
+  border-radius: 12px;
   background: linear-gradient(145deg, #8D6AF0, #7340E6);
   border: none;
   cursor: pointer;
