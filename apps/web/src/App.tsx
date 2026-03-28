@@ -100,11 +100,20 @@ export function App() {
       setTgUser(u);
       setUserId(String(u.id));
     }
-    // Retry once after 300ms — some TG versions populate initDataUnsafe after ready()
+    // Retry after 500ms — some TG versions populate initDataUnsafe/initData after ready().
+    // Always call refreshProfile even if userId didn't change: initData may now be available
+    // for auth even when initDataUnsafe.user is null.
     const tUser = setTimeout(() => {
       const u2 = readTelegramUser();
       if (u2?.id) { setTgUser(u2); setUserId(String(u2.id)); }
-    }, 300);
+      refreshProfile();
+    }, 500);
+    // Second retry at 1500ms for slow TG SDK environments
+    const tUser2 = setTimeout(() => {
+      const u3 = readTelegramUser();
+      if (u3?.id) { setTgUser(u3); setUserId(String(u3.id)); }
+      refreshProfile();
+    }, 1500);
 
     // Calculate top/bottom insets from TG viewport and safe-area metrics.
     // Re-read window.Telegram?.WebApp dynamically — the module-scope `tg` may have
@@ -151,8 +160,8 @@ export function App() {
     tg?.onEvent?.("safeAreaChanged", applyInsets);
     tg?.onEvent?.("contentSafeAreaChanged", applyInsets);
     tg?.onEvent?.("fullscreenChanged", applyInsets);
-    return () => { clearTimeout(tUser); clearTimeout(t1); clearTimeout(t2); };
-  }, []);
+    return () => { clearTimeout(tUser); clearTimeout(tUser2); clearTimeout(t1); clearTimeout(t2); };
+  }, [refreshProfile]);
 
   const { styles, models, packages } = useCatalog();
   const { wallet, photos, setPhotos, refresh } = useWalletAndPhotos(userId);
