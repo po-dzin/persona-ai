@@ -266,6 +266,12 @@ async def _handle_tg_update(update: dict[str, Any], svc: VerticalSliceService) -
     user_id = str(user.get("id")) if user.get("id") else None
 
     if text.startswith("/start") and chat_id:
+        if user_id:
+            svc.get_or_create_user(
+                user_id,
+                first_name=user.get("first_name"),
+                username=user.get("username"),
+            )
         await send_start_message(chat_id)
         return
 

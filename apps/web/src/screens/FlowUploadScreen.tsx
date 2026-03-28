@@ -13,11 +13,12 @@ interface FlowUploadScreenProps {
   initialPhotoFile?: File | null;
   onGenerate: (photoFile: File | null) => void;
   onBack: () => void;
+  onOpenPricing?: () => void;
 }
 
 export function FlowUploadScreen({
   isOpen, selectedStyle, prompt, aspectRatio,
-  isSubmitting, cost = 10, showPromptBlock = true, initialPhotoFile = null, onGenerate, onBack,
+  isSubmitting, cost = 10, showPromptBlock = true, initialPhotoFile = null, onGenerate, onBack, onOpenPricing,
 }: FlowUploadScreenProps) {
   const MAX_FILE_SIZE_MB = 20;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -109,11 +110,11 @@ export function FlowUploadScreen({
 
       {/* Upload area / photo preview */}
       {photoUrl ? (
-        <div className="upload-area" style={{ border: "none", padding: 0, margin: "16px 20px 0", borderRadius: 20, overflow: "hidden", position: "relative" }}>
+        <div className="upload-area" style={{ border: "none", padding: 0, margin: "16px 20px 0", borderRadius: 20, overflow: "hidden", position: "relative", background: "#000" }}>
           <img
             src={photoUrl}
             alt="preview"
-            style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", display: "block" }}
+            style={{ width: "100%", maxHeight: "65vh", objectFit: "contain", display: "block" }}
           />
           <button
             onClick={pickPhoto}
@@ -162,7 +163,12 @@ export function FlowUploadScreen({
 
       {/* Generate button */}
       <div className="flow-bottom-bar flow-bottom-bar-with-note">
-        <div className="custom-cost">Стоимость: <strong>{cost} 🪙</strong></div>
+        <div className="custom-cost">
+          Стоимость:{" "}
+          <button className="flow-pricing-link" onClick={onOpenPricing} disabled={!onOpenPricing}>
+            <strong>{cost} 🪙</strong>
+          </button>
+        </div>
         <button
           className={"flow-btn " + (photo && !isSubmitting ? "purple" : "disabled")}
           disabled={!photo || isSubmitting || Boolean(validationError)}

@@ -64,22 +64,24 @@ export function HomeScreen({ styles, queueItem, onPreviewStyle }: HomeScreenProp
         </div>
       ) : null}
 
-      <div className="category-tabs-row">
-        <button
-          className={"category-tab-link" + (activeCategory === "ВСЕ" ? " active" : "")}
-          onClick={() => setActiveCategory("ВСЕ")}
-        >
-          ВСЕ
-        </button>
-        {categories.map((category) => (
+      <div className="home-sticky-header">
+        <div className="category-tabs-row">
           <button
-            key={category}
-            className={"category-tab-link" + (activeCategory === category ? " active" : "")}
-            onClick={() => setActiveCategory(category)}
+            className={"category-tab-link" + (activeCategory === "ВСЕ" ? " active" : "")}
+            onClick={() => setActiveCategory("ВСЕ")}
           >
-            {category}
+            ВСЕ
           </button>
-        ))}
+          {categories.map((category) => (
+            <button
+              key={category}
+              className={"category-tab-link" + (activeCategory === category ? " active" : "")}
+              onClick={() => setActiveCategory(category)}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="styles-grid-2">
