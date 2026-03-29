@@ -3,8 +3,7 @@ import { useState } from "react";
 import {
   generate,
   purchasePackage,
-  uploadFileToSignedUrl,
-  uploadPhoto,
+  uploadFileDirect,
   type GenerateResult,
 } from "../utils/api";
 
@@ -27,12 +26,9 @@ export function useGenerateFlow() {
     setIsSubmitting(true);
     setLastError(null);
     try {
-      // Unique filename prevents concurrent uploads from overwriting each other
+      // Upload directly through API server — avoids browser CORS with R2 presigned URLs
       const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
-      const uploaded = await uploadPhoto(input.userId, uniqueName);
-      if (uploaded.signed_put_url) {
-        await uploadFileToSignedUrl(uploaded.signed_put_url, input.photoFile);
-      }
+      const uploaded = await uploadFileDirect(input.userId, uniqueName, input.photoFile);
       return await generate({
         user_id: input.userId,
         source_key: uploaded.source_key,

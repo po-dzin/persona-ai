@@ -185,6 +185,10 @@ export function FlowStyleScreen({
                 className="custom-textarea"
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
+                onFocus={(e) => {
+                  const el = e.currentTarget;
+                  setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+                }}
                 placeholder="Опишите желаемый стиль фотосессии..."
               />
             </div>

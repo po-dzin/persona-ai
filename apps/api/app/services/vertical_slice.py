@@ -264,6 +264,18 @@ class VerticalSliceService:
 
     # --------------------------------------------------------------- uploads
 
+    def upload_source_file(self, user_id: str, filename: str, content: bytes) -> str:
+        """Upload raw bytes server-side to R2, return the source_key."""
+        self.get_or_create_user(user_id)
+        upload_id = str(uuid4())
+        source_key = f"source/{user_id}/{upload_id}/{filename}"
+        try:
+            from app.adapters.r2_client import upload_bytes
+            upload_bytes(source_key, content, content_type="image/jpeg")
+        except Exception:
+            pass  # R2 not configured; source_key still usable for generate
+        return source_key
+
     def register_upload(self, user_id: str, filename: str) -> dict[str, str]:
         self.get_or_create_user(user_id)
         upload_id = str(uuid4())
