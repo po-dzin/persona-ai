@@ -48,7 +48,7 @@ button, input, select, textarea { font: inherit; }
   position: absolute;
   inset: 0;
   top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
-  bottom: calc(48px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
+  bottom: calc(52px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
   padding-top: 14px;
   overflow-y: auto;
   scrollbar-width: none;
@@ -644,7 +644,7 @@ button, input, select, textarea { font: inherit; }
 .tab-bar {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  height: calc(48px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
+  height: calc(52px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
   background: rgba(17,17,17,0.97);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -652,7 +652,7 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 8px;
+  padding: 4px 8px 0;
   padding-bottom: var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px));
   z-index: 40;
 }
@@ -723,7 +723,7 @@ button, input, select, textarea { font: inherit; }
   position: absolute;
   inset: 0;
   top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
-  bottom: calc(48px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
+  bottom: calc(52px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
   background: #111;
   z-index: 20;
   overflow-y: auto;
@@ -1116,7 +1116,7 @@ button, input, select, textarea { font: inherit; }
   padding: 0;
   background: #111;
   overflow: hidden;
-  bottom: calc(48px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
+  bottom: calc(52px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
 }
 .style-preview-hero {
   height: 100%;
