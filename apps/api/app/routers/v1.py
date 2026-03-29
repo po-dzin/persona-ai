@@ -186,12 +186,10 @@ async def generate(data: GenerateRequest, request: Request, user_id: str = Depen
 
 @router.post("/purchase/invoice")
 def purchase_invoice(data: PurchaseRequest, request: Request, user_id: str = Depends(require_user)):
-    """Create a Telegram Stars invoice link for the given package.
-    Returns demo=True when bot token is not configured (dev/demo mode).
-    """
+    """Create a Telegram Stars invoice link for the given package."""
     from app.services.tg_bot import create_invoice_link
-    if settings.free_demo_mode or not settings.telegram_bot_token:
-        # Demo mode: no bot token — credit directly without real Stars payment
+    if not settings.telegram_bot_token:
+        # No bot token: fallback to direct credit for local dev only.
         return get_service(request).purchase(user_id, data.package_code, provider="telegram")
     try:
         link = create_invoice_link(data.package_code)

@@ -17,6 +17,7 @@ function dateLabel(iso: string): string {
 
 export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosScreenProps) {
   const [filter, setFilter] = useState("Все");
+  const [imageErrorIds, setImageErrorIds] = useState<Set<string>>(new Set());
   const queuedCount = photos.filter((p) => p.status === "queued" || p.status === "processing").length;
   const styleByCode = useMemo(() => Object.fromEntries(styles.map((s) => [s.id, s])), [styles]);
   const filterItems = useMemo(() => ["Все", "Избранное", ...styles.map((s) => s.name)], [styles]);
@@ -107,6 +108,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
             const style = styleByCode[photo.style_code];
             const isLoading = photo.status === "queued" || photo.status === "processing";
             const bg = style?.gradient || "linear-gradient(145deg, #2A2A2A, #3A3A3A)";
+            const isImageBroken = imageErrorIds.has(photo.order_id);
             return (
               <div key={photo.order_id} style={{ display: "contents" }}>
                 {showDivider ? <div className="photo-date-divider">{dividerLabel}</div> : null}
@@ -115,12 +117,19 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                   onClick={() => onOpenPhoto(photo)}
                   disabled={isLoading}
                 >
-                  {photo.result_url && !isLoading ? (
+                  {photo.result_url && !isLoading && !isImageBroken ? (
                     <img
                       className="photo-bg"
                       src={photo.result_url}
                       alt={style?.name || photo.style_code}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={() => {
+                        setImageErrorIds((prev) => {
+                          const next = new Set(prev);
+                          next.add(photo.order_id);
+                          return next;
+                        });
+                      }}
                     />
                   ) : (
                     <div className="photo-bg" style={{ background: bg }} />

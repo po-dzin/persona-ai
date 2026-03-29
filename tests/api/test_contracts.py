@@ -110,10 +110,10 @@ def test_purchase_accepts_legacy_package_code() -> None:
     assert res.json()["wallet"]["paid_credits"] == 150
 
 
-def test_purchase_invoice_uses_demo_mode_even_with_bot_token(monkeypatch) -> None:
+def test_purchase_invoice_returns_invoice_link_even_in_demo_mode(monkeypatch) -> None:
     from dataclasses import replace as dc_replace
     import app.routers.v1 as v1_mod
-    import app.services.vertical_slice as vertical_slice_mod
+    import app.services.tg_bot as tg_bot_mod
 
     patched_settings = dc_replace(
         v1_mod.settings,
@@ -121,7 +121,8 @@ def test_purchase_invoice_uses_demo_mode_even_with_bot_token(monkeypatch) -> Non
         telegram_bot_token="demo-token-enabled",
     )
     monkeypatch.setattr(v1_mod, "settings", patched_settings)
-    monkeypatch.setattr(vertical_slice_mod, "settings", patched_settings)
+    monkeypatch.setattr(tg_bot_mod, "settings", patched_settings)
+    monkeypatch.setattr(tg_bot_mod, "create_invoice_link", lambda _package_code: "https://t.me/invoice/demo")
 
     client = _client()
     hdrs = _headers("u-demo-invoice")
@@ -133,8 +134,7 @@ def test_purchase_invoice_uses_demo_mode_even_with_bot_token(monkeypatch) -> Non
     )
     assert res.status_code == 200
     payload = res.json()
-    assert "invoice_link" not in payload
-    assert payload["wallet"]["paid_credits"] == 150
+    assert payload["invoice_link"] == "https://t.me/invoice/demo"
 
 
 def test_demo_mode_test_package_gives_1000_credits(monkeypatch) -> None:

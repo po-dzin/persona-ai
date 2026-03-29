@@ -165,7 +165,7 @@ export function App() {
   useEffect(() => {
     refreshProfile();
   }, [refreshProfile, userId]);
-  const { isSubmitting, lastError, clearError, startGenerate, buyPackage } = useGenerateFlow();
+  const { isSubmitting, lastError, clearError, startGenerate } = useGenerateFlow();
 
   const {
     activeScreen,
@@ -315,13 +315,6 @@ export function App() {
     refreshProfile();
   };
 
-  const handlePurchase = async (pkg: PackageItem) => {
-    await buyPackage(userId, pkg.code);
-    await refresh();
-    refreshProfile();
-    setPurchaseSuccessOpen(true);
-  };
-
   const handleOpenCategory = (category: string) => {
     setSelectedCategory(category);
     setCategoryOpen(true);
@@ -336,29 +329,18 @@ export function App() {
     const liveTg = window.Telegram?.WebApp;
     try {
       const result = await createPurchaseInvoice(userId, pkg.code);
-      // Demo mode: backend returned direct purchase result (no bot token configured)
-      if (!("invoice_link" in result)) {
-        setPurchaseOpen(false);
-        await refresh();
-        refreshProfile();
-        setPurchaseSuccessOpen(true);
-        return;
-      }
       // Real TG Stars: open native payment sheet
-      if (liveTg?.openInvoice) {
-        setPurchaseOpen(false);
-        liveTg.openInvoice(result.invoice_link as string, async (status: string) => {
-          if (status === "paid") {
-            await refresh();
-            refreshProfile();
-            setPurchaseSuccessOpen(true);
-          }
-        });
-      }
-    } catch {
-      // Last-resort fallback: direct credit (e.g. network error)
-      await handlePurchase(pkg);
+      if (!liveTg?.openInvoice || !("invoice_link" in result)) return;
       setPurchaseOpen(false);
+      liveTg.openInvoice(result.invoice_link as string, async (status: string) => {
+        if (status === "paid") {
+          await refresh();
+          refreshProfile();
+          setPurchaseSuccessOpen(true);
+        }
+      });
+    } catch {
+      // Do not auto-credit on errors: payment must go through transaction.
     }
   };
 

@@ -33,17 +33,26 @@ export function PhotoViewerScreen({
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
 
-  if (!isOpen || !photo) return null;
-
-  const url = photo.result_url || "";
-  const prompt = photo.prompt || "Промпт недоступен";
+  const url = photo?.result_url || "";
+  const prompt = photo?.prompt || "Промпт недоступен";
 
   const closeAll = () => { setShareOpen(false); setMenuOpen(false); };
 
   useEffect(() => {
-    if (!isOpen) setPromptCopied(false);
-  }, [isOpen, photo?.order_id]);
+    if (!isOpen) {
+      setPromptCopied(false);
+      setImageFailed(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    setPromptCopied(false);
+    setImageFailed(false);
+  }, [photo?.order_id]);
+
+  if (!isOpen || !photo) return null;
 
   const handleCopyPrompt = async () => {
     try { await navigator.clipboard.writeText(prompt); } catch { /* unavailable */ }
@@ -100,13 +109,19 @@ export function PhotoViewerScreen({
       </div>
 
       <div className="viewer-photo" style={{ background: style?.gradient || "linear-gradient(145deg, #2A2A2A, #3A3A3A)" }}>
-        {photo.result_url ? (
+        {photo.result_url && !imageFailed ? (
           <img
             src={photo.result_url}
             alt={style?.name || photo.style_code}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            onError={() => setImageFailed(true)}
           />
-        ) : null}
+        ) : (
+          <div className="viewer-photo-fallback">
+            <div className="viewer-photo-fallback-title">Фото недоступно</div>
+            <div className="viewer-photo-fallback-subtitle">Старая или битая генерация</div>
+          </div>
+        )}
         <button className="viewer-heart" onClick={onToggleFavorite}>
           {isFavorite ? "❤" : "♡"}
         </button>
