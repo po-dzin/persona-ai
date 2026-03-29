@@ -417,7 +417,10 @@ class VerticalSliceService:
             job.provider_task_id = submit.provider_task_id
             job.updated_at = now_iso()
 
-            if settings.free_demo_mode and submit.result_url:
+            # Save result immediately for synchronous providers (NanoBanana/Imagen 3, etc.)
+            # that return result_url inline. Async providers return status="submitted"
+            # and result arrives later via webhook.
+            if submit.result_url and submit.status == "done":
                 order.status = "done"
                 order.result_url = submit.result_url
                 job.status = "done"
