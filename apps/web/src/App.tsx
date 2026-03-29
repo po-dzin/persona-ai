@@ -264,9 +264,32 @@ export function App() {
       return;
     }
 
-    setPrefilledUploadPhoto(payload.photoFile || null);
+    // Custom: generate directly — no intermediate upload screen
+    if (!payload.photoFile) return;
     setFlowStyleOpen(false);
-    setFlowUploadOpen(true);
+    void (async () => {
+      try {
+        const response = await startGenerate({
+          userId,
+          modelId: payload.modelId,
+          styleCode: "custom",
+          prompt: payload.prompt,
+          aspectRatio: payload.aspectRatio,
+          photoFile: payload.photoFile!,
+        });
+        if (response.result === "paywall_required") {
+          setPaywallModalOpen(true);
+          return;
+        }
+        setLastChargedCoins(response.order.credit_cost);
+        setQueuedModalOpen(true);
+        setActiveScreen("photos");
+        await refresh();
+        refreshProfile();
+      } catch {
+        // error is shown via lastError modal from useGenerateFlow
+      }
+    })();
   };
 
   const handleGenerate = async (photoFile?: File | null) => {
