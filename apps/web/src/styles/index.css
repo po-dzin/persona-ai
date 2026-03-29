@@ -296,7 +296,7 @@ button, input, select, textarea { font: inherit; }
 .photos-filter {
   display: flex;
   gap: 6px;
-  padding: 88px 20px 12px;
+  padding: 32px 20px 12px;
   overflow-x: auto;
   scrollbar-width: none;
   position: sticky;
@@ -735,7 +735,7 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 88px 20px 12px;
+  padding: 32px 20px 12px;
   position: sticky;
   top: 0;
   background: #111;
@@ -818,7 +818,7 @@ button, input, select, textarea { font: inherit; }
   border: 0.5px solid rgba(255,255,255,0.06);
   border-radius: 12px;
   color: #F0F0F0;
-  font-family: inherit; font-size: 14px; font-weight: 500;
+  font-family: inherit; font-size: 16px; font-weight: 500;
   appearance: none; cursor: pointer;
 }
 .custom-select:focus { outline: none; border-color: rgba(167,139,250,0.4); }
@@ -828,7 +828,7 @@ button, input, select, textarea { font: inherit; }
   border: 0.5px solid rgba(255,255,255,0.06);
   border-radius: 12px;
   color: #F0F0F0;
-  font-family: inherit; font-size: 14px;
+  font-family: inherit; font-size: 16px;
   resize: none; height: 90px; line-height: 1.5;
 }
 .custom-textarea::placeholder { color: #444; }
@@ -1082,7 +1082,7 @@ button, input, select, textarea { font: inherit; }
   overflow: hidden;
 }
 .style-preview-top {
-  padding: 48px 20px 0;
+  padding: 32px 20px 0;
 }
 .style-preview-top .flow-back {
   background: rgba(0,0,0,0.3);
