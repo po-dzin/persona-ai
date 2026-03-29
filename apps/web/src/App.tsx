@@ -198,6 +198,14 @@ export function App() {
   const [flowInitialCustomPrompt, setFlowInitialCustomPrompt] = useState("");
   const [flowInitialCustomModelId, setFlowInitialCustomModelId] = useState<string | undefined>(undefined);
 
+  const [seenPhotosCount, setSeenPhotosCount] = useState(0);
+  const donePhotosCount = photos.filter(p => p.status === "done").length;
+  const newPhotosCount = Math.max(0, donePhotosCount - seenPhotosCount);
+  // Auto-clear badge if user is already on the photos tab when a generation completes
+  useEffect(() => {
+    if (activeScreen === "photos") setSeenPhotosCount(donePhotosCount);
+  }, [activeScreen, donePhotosCount]);
+
   const [queuedModalOpen, setQueuedModalOpen] = useState(false);
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
   const [paywallModalOpen, setPaywallModalOpen] = useState(false);
@@ -545,8 +553,11 @@ export function App() {
       <TabBar
         activeScreen={activeScreen}
         isCreateActive={flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)}
-        photosBadge={photos.length}
+        photosBadge={activeScreen === "photos" ? 0 : newPhotosCount}
         onChange={(screen) => {
+          if (screen === "photos") {
+            setSeenPhotosCount(photos.filter(p => p.status === "done").length);
+          }
           setFlowStyleOpen(false);
           setFlowUploadOpen(false);
           setPrefilledUploadPhoto(null);
