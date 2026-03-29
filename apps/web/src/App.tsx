@@ -434,10 +434,8 @@ export function App() {
       {activeScreen === "home" ? (
         <HomeScreen
           styles={styles}
+          photos={photos}
           onPreviewStyle={handlePickStyleFromHome}
-          queueItem={photos.find(p => p.status === "queued" || p.status === "processing")
-            ? { title: photos.find(p => p.status === "queued" || p.status === "processing")!.style_code, detail: "Генерация" }
-            : null}
         />
       ) : null}
       {activeScreen === "photos" ? (

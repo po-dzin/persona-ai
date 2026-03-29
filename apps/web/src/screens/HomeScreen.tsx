@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
-
-interface QueueItem { title: string; detail: string; }
+import type { PhotoRecord } from "../utils/api";
 
 interface HomeScreenProps {
   styles: StyleItem[];
-  queueItem?: QueueItem | null;
+  photos: PhotoRecord[];
   onPreviewStyle: (style: StyleItem) => void;
 }
 
@@ -21,7 +20,13 @@ function CameraIcon() {
   );
 }
 
-export function HomeScreen({ styles, queueItem, onPreviewStyle }: HomeScreenProps) {
+export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) {
+  const styleByCode = useMemo(() => Object.fromEntries(styles.map((s) => [s.id, s])), [styles]);
+  const activePhotos = useMemo(
+    () => photos.filter((p) => p.status === "queued" || p.status === "processing"),
+    [photos],
+  );
+
   const byCategory = useMemo(() => styles.reduce<Record<string, StyleItem[]>>((acc, s) => {
     if (!acc[s.category]) acc[s.category] = [];
     acc[s.category].push(s);
@@ -53,12 +58,26 @@ export function HomeScreen({ styles, queueItem, onPreviewStyle }: HomeScreenProp
 
   return (
     <section className="screen home-screen">
-      {queueItem ? (
+      {activePhotos.length > 1 ? (
+        <div className="queue-stack">
+          <div className="stack-back-2" />
+          <div className="stack-back-1" />
+          <div className="stack-front">
+            <div className="stack-count">{activePhotos.length}</div>
+            <div className="queue-thumb"><CameraIcon /></div>
+            <div className="queue-info">
+              <div className="queue-title">В очереди</div>
+              <div className="queue-detail">{activePhotos.length} генерации</div>
+            </div>
+            <div className="queue-dots"><span /><span /><span /></div>
+          </div>
+        </div>
+      ) : activePhotos.length === 1 ? (
         <div className="queue-single">
           <div className="queue-thumb"><CameraIcon /></div>
           <div className="queue-info">
-            <div className="queue-title">{queueItem.title}</div>
-            <div className="queue-detail">{queueItem.detail}</div>
+            <div className="queue-title">{styleByCode[activePhotos[0].style_code]?.name || activePhotos[0].style_code}</div>
+            <div className="queue-detail">Генерация</div>
           </div>
           <div className="queue-dots"><span /><span /><span /></div>
         </div>
