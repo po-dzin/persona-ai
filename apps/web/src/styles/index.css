@@ -1152,7 +1152,7 @@ button, input, select, textarea { font: inherit; }
 }
 .style-preview-go-center {
   position: absolute;
-  top: 75%;
+  top: 80%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 72px;
