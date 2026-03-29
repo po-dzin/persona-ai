@@ -148,34 +148,36 @@ export function PhotoViewerScreen({
                 <button className="viewer-menu-item" onClick={handleCopyLink}>
                   <span className="vmi-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </span>
                   Копировать ссылку
                 </button>
                 <button className="viewer-menu-item" onClick={handleTgStories}>
-                  <span className="vmi-icon vmi-tg">
+                  <span className="vmi-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M21.05 3.26L2.3 10.5c-1.3.5-1.28 1.22-.24 1.54l4.76 1.49 11.05-6.97c.52-.32 1-.15.6.2L8.63 15.3l-.36 4.9c.52 0 .75-.24 1.04-.52l2.5-2.43 4.9 3.62c.9.5 1.55.24 1.77-.84l3.21-15.13c.33-1.32-.5-1.93-1.64-1.64z" fill="currentColor"/>
+                      <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" stroke="currentColor" strokeWidth="1.8"/>
+                      <path d="M12 8v4l3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </span>
                   TG Stories
                 </button>
                 <button className="viewer-menu-item" onClick={handleTgDM}>
-                  <span className="vmi-icon vmi-tg">
+                  <span className="vmi-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M21.05 3.26L2.3 10.5c-1.3.5-1.28 1.22-.24 1.54l4.76 1.49 11.05-6.97c.52-.32 1-.15.6.2L8.63 15.3l-.36 4.9c.52 0 .75-.24 1.04-.52l2.5-2.43 4.9 3.62c.9.5 1.55.24 1.77-.84l3.21-15.13c.33-1.32-.5-1.93-1.64-1.64z" fill="currentColor"/>
+                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </span>
-                  Личные сообщения TG
+                  Telegram
                 </button>
                 <button className="viewer-menu-item" onClick={handleInstagram}>
-                  <span className="vmi-icon vmi-ig">
+                  <span className="vmi-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                       <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.8"/>
                       <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8"/>
-                      <circle cx="17.5" cy="6.5" r="1" fill="currentColor"/>
+                      <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/>
                     </svg>
                   </span>
                   Instagram
@@ -183,7 +185,9 @@ export function PhotoViewerScreen({
                 <button className="viewer-menu-item" onClick={handleThreads}>
                   <span className="vmi-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" fill="currentColor"/>
+                      <path d="M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10z" stroke="currentColor" strokeWidth="1.8"/>
+                      <path d="M8 12a4 4 0 0 1 8 0c0 2.5-1.5 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      <path d="M12 16v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                     </svg>
                   </span>
                   Threads
@@ -191,9 +195,9 @@ export function PhotoViewerScreen({
                 <button className="viewer-menu-item" onClick={handleNativeShare}>
                   <span className="vmi-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <circle cx="5" cy="12" r="1.5" fill="currentColor"/>
-                      <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-                      <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
+                      <circle cx="6" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.8"/>
+                      <circle cx="12" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.8"/>
+                      <circle cx="18" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.8"/>
                     </svg>
                   </span>
                   Другие

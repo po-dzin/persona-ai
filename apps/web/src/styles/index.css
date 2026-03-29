@@ -1054,12 +1054,10 @@ button, input, select, textarea { font: inherit; }
 .viewer-menu-item:last-child { border-bottom: none; }
 .viewer-menu-item:active { background: #2A2A2A; }
 .vmi-icon {
-  width: 32px; height: 32px; border-radius: 8px; background: #333;
+  width: 32px; height: 32px; border-radius: 8px; background: #2A2A2A;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; color: #CCC;
 }
-.vmi-tg { background: #229ED9; color: #fff; }
-.vmi-ig { background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff; }
 .viewer-share-menu { min-width: 230px; }
 .viewer-icon-btn.active { background: #2A2A2A; color: #fff; }
 
