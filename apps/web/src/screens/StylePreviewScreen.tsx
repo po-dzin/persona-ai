@@ -25,8 +25,7 @@ export function StylePreviewScreen({ isOpen, style, onClose, onCreate }: StylePr
 
         <button className="style-preview-go-center" onClick={onCreate} aria-label="Создать в этом стиле">
           <svg width="58" height="58" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M5 12h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-            <path d="M13 6l6 6-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
 
