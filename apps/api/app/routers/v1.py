@@ -7,7 +7,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, Response, UploadFile
 
 from app.core.auth import require_user, parse_tg_user
 from app.core.settings import settings
@@ -84,6 +84,23 @@ def get_history(request: Request, user_id: str = Depends(require_user)):
 
 
 # ──────────────────────────── uploads ────────────────────────────
+
+@router.post("/uploads/file")
+async def upload_file_direct(
+    request: Request,
+    user_id: str = Depends(require_user),
+    file: UploadFile = File(...),
+    filename: str = Form(...),
+):
+    """Accept a file upload directly (avoids browser CORS with R2 presigned URLs)."""
+    allowed = {".jpg", ".jpeg", ".png", ".webp"}
+    suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if suffix not in allowed:
+        raise HTTPException(status_code=400, detail="invalid_file_type")
+    content = await file.read()
+    source_key = get_service(request).upload_source_file(user_id, filename, content)
+    return {"source_key": source_key}
+
 
 @router.post("/uploads")
 def create_upload(data: UploadRequest, request: Request, user_id: str = Depends(require_user)):

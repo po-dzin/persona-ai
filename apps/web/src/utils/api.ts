@@ -111,6 +111,19 @@ export async function uploadFileToSignedUrl(url: string, file: File): Promise<vo
   }
 }
 
+export async function uploadFileDirect(userId: string, filename: string, file: File): Promise<{ source_key: string }> {
+  const form = new FormData();
+  form.append("filename", filename);
+  form.append("file", file, filename);
+  const res = await fetch(`${API_BASE}/uploads/file`, {
+    method: "POST",
+    headers: { "X-Telegram-Init-Data": getTgInitData() },
+    body: form,
+  });
+  if (!res.ok) throw new Error(`upload_failed:${res.status}`);
+  return (await res.json()) as { source_key: string };
+}
+
 export async function generate(payload: GeneratePayload): Promise<GenerateResult> {
   return await request<GenerateResult>("/generate", {
     method: "POST",

@@ -127,25 +127,15 @@ export function App() {
       const liveTg = window.Telegram?.WebApp ?? tg;
       const root = document.documentElement;
 
-      const stableH = liveTg?.viewportStableHeight;
-      const viewportH = liveTg?.viewportHeight;
       const safeTop = liveTg?.safeAreaInset?.top ?? 0;
       const contentSafeTop = liveTg?.contentSafeAreaInset?.top ?? 0;
-      const isFullscreen = (liveTg as any)?.isFullscreen ?? false;
 
       // safeTop  = device notch/rounded corners (hardware layer)
       // contentSafeTop = TG chrome on top (close button etc.) — must be ADDED, not maxed
+      // Use only the TG-reported chrome heights; stableH/viewportH include keyboard
+      // reservation and would overestimate the top inset on many devices.
       const tgChromeTop = safeTop + contentSafeTop;
-      const topInset = liveTg
-        ? stableH
-          ? Math.max(
-              tgChromeTop,
-              window.innerHeight - stableH,
-              viewportH ? Math.max(0, window.innerHeight - viewportH) : 0,
-              isFullscreen ? 60 : 0,
-            )
-          : Math.max(tgChromeTop, isFullscreen ? 96 : 0)
-        : 0;
+      const topInset = liveTg ? tgChromeTop : 0;
       root.style.setProperty("--tg-top-inset", `${topInset}px`);
 
       const safeBottom = Math.max(0, liveTg?.safeAreaInset?.bottom ?? 0);
