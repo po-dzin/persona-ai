@@ -198,10 +198,9 @@ button, input, select, textarea { font: inherit; }
   top: 0;
   z-index: 8;
   background: #111;
-  padding-top: 14px;
 }
 .home-sticky-header .category-tabs-row {
-  padding-top: 14px;
+  padding-top: 10px;
   padding-bottom: 10px;
 }
 .category-tabs-row::-webkit-scrollbar { display: none; }
@@ -295,7 +294,7 @@ button, input, select, textarea { font: inherit; }
 .photos-filter {
   display: flex;
   gap: 6px;
-  padding: 28px 20px 10px;
+  padding: 10px 20px 10px;
   overflow-x: auto;
   scrollbar-width: none;
   position: sticky;
