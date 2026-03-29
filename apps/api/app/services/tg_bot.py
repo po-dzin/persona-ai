@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 
+from app.services.package_codes import normalize_package_code
 from app.core.settings import settings
 from shared.contracts.status import PACKAGE_CREDITS, PACKAGE_STARS_PRICES
 
@@ -60,6 +61,9 @@ async def answer_pre_checkout(pre_checkout_query_id: str) -> None:
 def create_invoice_link(package_code: str) -> str:
     """Create a Telegram Stars invoice link for the given package."""
     from shared.contracts.status import PACKAGE_CREDITS, PACKAGE_STARS_PRICES, PACKAGE_TITLES
+    package_code = normalize_package_code(package_code)
+    if package_code not in PACKAGE_CREDITS:
+        raise ValueError(f"package_not_found: {package_code}")
     stars = PACKAGE_STARS_PRICES[package_code]
     credits = PACKAGE_CREDITS[package_code]
     title = PACKAGE_TITLES.get(package_code, package_code)
@@ -76,11 +80,30 @@ def create_invoice_link(package_code: str) -> str:
     return resp.get("result", "")
 
 
+def refund_star_payment(*, user_id: str | int, telegram_payment_charge_id: str) -> bool:
+    """Refund Telegram Stars payment back to user."""
+    if not telegram_payment_charge_id:
+        return False
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return False
+    resp = _tg_api(
+        "refundStarPayment",
+        {
+            "user_id": uid,
+            "telegram_payment_charge_id": telegram_payment_charge_id,
+        },
+    )
+    return bool(resp.get("ok") and resp.get("result") is True)
+
+
 def handle_successful_payment(
     *,
     user_id: str,
     payload: str,
     stars: int,
+    telegram_payment_charge_id: str = "",
     svc: "VerticalSliceService",
 ) -> None:
     """
@@ -105,12 +128,18 @@ def handle_successful_payment(
             "amount": stars,
         },
     )
+    if settings.free_demo_mode and telegram_payment_charge_id:
+        # Demo transactions: credit coins, then refund Stars to user.
+        refund_star_payment(
+            user_id=user_id,
+            telegram_payment_charge_id=telegram_payment_charge_id,
+        )
 
 
 def _resolve_package(payload: str, stars: int) -> str | None:
     # Try payload first: expected format is "PACKAGE_STARTER" etc.
     if payload.startswith("PACKAGE_"):
-        code = payload.removeprefix("PACKAGE_")
+        code = normalize_package_code(payload)
         if code in PACKAGE_CREDITS:
             return code
 

@@ -19,7 +19,7 @@ import { PurchaseScreen } from "./screens/PurchaseScreen";
 import { StylePreviewScreen } from "./screens/StylePreviewScreen";
 import type { PackageItem } from "./data/packages";
 import type { StyleItem } from "./data/styles";
-import { createPurchaseInvoice, getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
+import { createPurchaseInvoice, deletePhoto, getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
 import { triggerHaptic } from "./utils/haptics";
 
 // Telegram WebApp integration
@@ -334,26 +334,29 @@ export function App() {
 
   const handleConfirmPurchase = async (pkg: PackageItem) => {
     const liveTg = window.Telegram?.WebApp;
-    if (liveTg?.openInvoice) {
-      // Real TG Stars payment: create invoice link then open native payment UI
-      try {
-        const { invoice_link } = await createPurchaseInvoice(userId, pkg.code);
+    try {
+      const result = await createPurchaseInvoice(userId, pkg.code);
+      // Demo mode: backend returned direct purchase result (no bot token configured)
+      if (!("invoice_link" in result)) {
         setPurchaseOpen(false);
-        liveTg.openInvoice(invoice_link, async (status: string) => {
+        await refresh();
+        refreshProfile();
+        setPurchaseSuccessOpen(true);
+        return;
+      }
+      // Real TG Stars: open native payment sheet
+      if (liveTg?.openInvoice) {
+        setPurchaseOpen(false);
+        liveTg.openInvoice(result.invoice_link as string, async (status: string) => {
           if (status === "paid") {
             await refresh();
             refreshProfile();
             setPurchaseSuccessOpen(true);
           }
-          // "cancelled" | "failed" | "pending" — do nothing
         });
-      } catch {
-        // Fallback to direct credit if invoice creation fails (e.g. no bot token in dev)
-        await handlePurchase(pkg);
-        setPurchaseOpen(false);
       }
-    } else {
-      // Fallback for non-TG environments (web preview / dev)
+    } catch {
+      // Last-resort fallback: direct credit (e.g. network error)
       await handlePurchase(pkg);
       setPurchaseOpen(false);
     }
@@ -427,6 +430,19 @@ export function App() {
     setSelectedPrompt(selectedPhoto.prompt || selectedPrompt || "");
     setFlowStyleOpen(true);
   };
+
+  const handleDeletePhoto = useCallback(async () => {
+    if (!selectedPhoto) return;
+    const orderId = selectedPhoto.order_id;
+    setViewerOpen(false);
+    setSelectedPhoto(null);
+    setPhotos((prev) => prev.filter((p) => p.order_id !== orderId));
+    try {
+      await deletePhoto(orderId);
+    } catch {
+      await refresh();
+    }
+  }, [selectedPhoto, refresh, setPhotos, setViewerOpen]);
 
   const handleUiTapHaptic = (event: MouseEvent<HTMLElement>) => {
     const target = event.target as HTMLElement | null;
@@ -522,6 +538,7 @@ export function App() {
           void handleSharePhoto();
         }}
         onUseAsReference={handleUseAsReference}
+        onDeletePhoto={() => { void handleDeletePhoto(); }}
       />
       <ModelsPricingScreen isOpen={modelsOpen} models={models} packages={packages} onClose={() => setModelsOpen(false)} />
       <StylePreviewScreen

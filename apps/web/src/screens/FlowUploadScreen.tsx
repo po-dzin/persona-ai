@@ -148,6 +148,10 @@ export function FlowUploadScreen({
         </div>
       ) : null}
 
+      <div className="flow-helper-note flow-helper-note-under-upload" style={{ marginLeft: 20, marginRight: 20 }}>
+        <div>Лучше работают четкие портреты с хорошим освещением</div>
+      </div>
+
       {/* Prompt preview */}
       {showPromptBlock && (prompt || selectedStyle?.prompt_template) ? (
         <div style={{ margin: "12px 20px 0", background: "#1A1A1A", borderRadius: 12, padding: "10px 14px" }}>
@@ -183,11 +187,6 @@ export function FlowUploadScreen({
             </span>
           ) : "Создать"}
         </button>
-        <div className="flow-helper-note">
-          <div>Лучше работают четкие портреты с хорошим освещением</div>
-          <div>Итог может немного отличаться от превью</div>
-          <div>Обычно 30–120 секунд</div>
-        </div>
       </div>
     </div>
   );

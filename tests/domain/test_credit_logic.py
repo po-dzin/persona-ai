@@ -1,6 +1,8 @@
 import math
+from dataclasses import replace as dc_replace
 
 from app.core.db import UserRow, get_session
+import app.services.vertical_slice as vertical_slice_mod
 from app.services.vertical_slice import VerticalSliceService
 
 DEFAULT_MODEL = "nano-banana-v1"
@@ -107,3 +109,43 @@ def test_volume_bonus_credits_on_purchase() -> None:
     svc.get_or_create_user("u-starter")
     res = svc.purchase("u-starter", "STARTER")
     assert res["wallet"]["paid_credits"] == 150
+
+
+def test_purchase_accepts_legacy_package_codes() -> None:
+    svc = VerticalSliceService()
+    svc.get_or_create_user("u-legacy")
+
+    res = svc.purchase("u-legacy", "STARTER_STARS")
+    assert res["wallet"]["paid_credits"] == 150
+
+
+def test_demo_mode_test_package_gives_1000_credits(monkeypatch) -> None:
+    patched_settings = dc_replace(vertical_slice_mod.settings, free_demo_mode=True)
+    monkeypatch.setattr(vertical_slice_mod, "settings", patched_settings)
+
+    svc = vertical_slice_mod.VerticalSliceService()
+    svc.get_or_create_user("u-demo-test-package")
+
+    res = svc.purchase("u-demo-test-package", "TEST")
+    assert res["wallet"]["paid_credits"] == 1000
+
+
+def test_demo_mode_auto_refunds_spent_paid_credits(monkeypatch) -> None:
+    patched_settings = dc_replace(vertical_slice_mod.settings, free_demo_mode=True)
+    monkeypatch.setattr(vertical_slice_mod, "settings", patched_settings)
+
+    svc = vertical_slice_mod.VerticalSliceService()
+    svc.get_or_create_user("u-demo-refund")
+    _seed_user("u-demo-refund", paid_credits=20, free_credit_available=False)
+
+    order_id = create_order(svc, user_id="u-demo-refund", model_id="nano-banana-pro")
+    started = svc.start_order(order_id)
+    assert started["result"] == "enqueued"
+    assert started["wallet"]["paid_credits"] == 20
+
+    svc.ingest_webhook(
+        "nano_banana",
+        event_id="evt-tech-demo-1",
+        payload={"order_id": order_id, "event_type": "technical_failed"},
+    )
+    assert svc.get_balance("u-demo-refund")["paid_credits"] == 20

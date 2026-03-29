@@ -172,3 +172,9 @@ export async function sendPhotoToTelegram(orderId: string): Promise<void> {
     method: "POST",
   });
 }
+
+export async function deletePhoto(orderId: string): Promise<void> {
+  await request<{ deleted: boolean }>(`/me/photos/${encodeURIComponent(orderId)}`, {
+    method: "DELETE",
+  });
+}
