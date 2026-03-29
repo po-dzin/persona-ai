@@ -49,7 +49,6 @@ button, input, select, textarea { font: inherit; }
   inset: 0;
   top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
   bottom: calc(52px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
-  padding-top: 14px;
   overflow-y: auto;
   scrollbar-width: none;
 }
