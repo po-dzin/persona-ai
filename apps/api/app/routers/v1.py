@@ -184,6 +184,19 @@ async def generate(data: GenerateRequest, request: Request, user_id: str = Depen
 
 # ──────────────────────────── purchase ───────────────────────────
 
+@router.post("/purchase/invoice")
+def purchase_invoice(data: PurchaseRequest, request: Request, user_id: str = Depends(require_user)):
+    """Create a Telegram Stars invoice link for the given package."""
+    from app.services.tg_bot import create_invoice_link
+    try:
+        link = create_invoice_link(data.package_code)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not link:
+        raise HTTPException(status_code=502, detail="invoice_creation_failed")
+    return {"invoice_link": link}
+
+
 @router.post("/purchase")
 def purchase(data: PurchaseRequest, request: Request, user_id: str = Depends(require_user)):
     svc = get_service(request)

@@ -19,7 +19,7 @@ import { PurchaseScreen } from "./screens/PurchaseScreen";
 import { StylePreviewScreen } from "./screens/StylePreviewScreen";
 import type { PackageItem } from "./data/packages";
 import type { StyleItem } from "./data/styles";
-import { getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
+import { createPurchaseInvoice, getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
 import { triggerHaptic } from "./utils/haptics";
 
 // Telegram WebApp integration
@@ -38,6 +38,7 @@ declare global {
         safeAreaInset?: { top: number; bottom: number; left: number; right: number };
         contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
         onEvent?(event: string, callback: () => void): void;
+        openInvoice?(url: string, callback?: (status: string) => void): void;
       };
     };
   }
@@ -324,8 +325,30 @@ export function App() {
   };
 
   const handleConfirmPurchase = async (pkg: PackageItem) => {
-    await handlePurchase(pkg);
-    setPurchaseOpen(false);
+    const liveTg = window.Telegram?.WebApp;
+    if (liveTg?.openInvoice) {
+      // Real TG Stars payment: create invoice link then open native payment UI
+      try {
+        const { invoice_link } = await createPurchaseInvoice(userId, pkg.code);
+        setPurchaseOpen(false);
+        liveTg.openInvoice(invoice_link, async (status: string) => {
+          if (status === "paid") {
+            await refresh();
+            refreshProfile();
+            setPurchaseSuccessOpen(true);
+          }
+          // "cancelled" | "failed" | "pending" — do nothing
+        });
+      } catch {
+        // Fallback to direct credit if invoice creation fails (e.g. no bot token in dev)
+        await handlePurchase(pkg);
+        setPurchaseOpen(false);
+      }
+    } else {
+      // Fallback for non-TG environments (web preview / dev)
+      await handlePurchase(pkg);
+      setPurchaseOpen(false);
+    }
   };
 
   const handleOpenPhoto = (photo: PhotoRecord) => {
@@ -411,10 +434,8 @@ export function App() {
       {activeScreen === "home" ? (
         <HomeScreen
           styles={styles}
+          photos={photos}
           onPreviewStyle={handlePickStyleFromHome}
-          queueItem={photos.find(p => p.status === "queued" || p.status === "processing")
-            ? { title: photos.find(p => p.status === "queued" || p.status === "processing")!.style_code, detail: "Генерация" }
-            : null}
         />
       ) : null}
       {activeScreen === "photos" ? (

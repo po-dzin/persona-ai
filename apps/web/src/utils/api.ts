@@ -138,6 +138,13 @@ export async function purchasePackage(userId: string, packageCode: string) {
   });
 }
 
+export async function createPurchaseInvoice(userId: string, packageCode: string): Promise<{ invoice_link: string }> {
+  return await request<{ invoice_link: string }>("/purchase/invoice", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, package_code: packageCode, provider: "telegram" }),
+  });
+}
+
 export interface UserProfile {
   user_id: string;
   first_name: string | null;

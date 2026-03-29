@@ -57,6 +57,25 @@ async def answer_pre_checkout(pre_checkout_query_id: str) -> None:
     )
 
 
+def create_invoice_link(package_code: str) -> str:
+    """Create a Telegram Stars invoice link for the given package."""
+    from shared.contracts.status import PACKAGE_CREDITS, PACKAGE_STARS_PRICES, PACKAGE_TITLES
+    stars = PACKAGE_STARS_PRICES[package_code]
+    credits = PACKAGE_CREDITS[package_code]
+    title = PACKAGE_TITLES.get(package_code, package_code)
+    resp = _tg_api(
+        "createInvoiceLink",
+        {
+            "title": f"{title} — {credits} монет",
+            "description": f"Пополнение баланса PersonAI на {credits} монет",
+            "payload": f"PACKAGE_{package_code}",
+            "currency": "XTR",
+            "prices": [{"label": "Монеты", "amount": stars}],
+        },
+    )
+    return resp.get("result", "")
+
+
 def handle_successful_payment(
     *,
     user_id: str,
