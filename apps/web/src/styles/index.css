@@ -1115,6 +1115,7 @@ button, input, select, textarea { font: inherit; }
   padding: 0;
   background: #111;
   overflow: hidden;
+  top: 0;
   bottom: calc(52px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
 }
 .style-preview-hero {
@@ -1129,6 +1130,7 @@ button, input, select, textarea { font: inherit; }
 }
 .style-preview-top {
   padding: 14px 20px 0;
+  padding-top: calc(14px + max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px)));
   display: flex;
   align-items: center;
   justify-content: space-between;
