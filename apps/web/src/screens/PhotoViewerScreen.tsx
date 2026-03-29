@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
@@ -14,6 +14,7 @@ interface PhotoViewerScreenProps {
   onDownload: () => void;
   onShare: () => void;
   onUseAsReference: () => void;
+  onDeletePhoto: () => void;
 }
 
 export function PhotoViewerScreen({
@@ -27,9 +28,11 @@ export function PhotoViewerScreen({
   onDownload,
   onShare,
   onUseAsReference,
+  onDeletePhoto,
 }: PhotoViewerScreenProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
 
   if (!isOpen || !photo) return null;
 
@@ -38,8 +41,14 @@ export function PhotoViewerScreen({
 
   const closeAll = () => { setShareOpen(false); setMenuOpen(false); };
 
+  useEffect(() => {
+    if (!isOpen) setPromptCopied(false);
+  }, [isOpen, photo?.order_id]);
+
   const handleCopyPrompt = async () => {
     try { await navigator.clipboard.writeText(prompt); } catch { /* unavailable */ }
+    setPromptCopied(true);
+    window.setTimeout(() => setPromptCopied(false), 1400);
   };
 
   const handleCopyLink = async () => {
@@ -108,11 +117,17 @@ export function PhotoViewerScreen({
         <div className="viewer-prompt-block">
           <div className="viewer-prompt-header">
             <div className="viewer-prompt-label">Запрос</div>
-            <button className="viewer-copy-btn" onClick={handleCopyPrompt} title="Копировать промпт">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.8"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-              </svg>
+            <button className={`viewer-copy-btn${promptCopied ? " copied" : ""}`} onClick={handleCopyPrompt} title="Копировать промпт">
+              {promptCopied ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.8"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+              )}
             </button>
           </div>
           <div className="viewer-prompt-text">{prompt}</div>
@@ -222,7 +237,26 @@ export function PhotoViewerScreen({
             {menuOpen ? (
               <div className="viewer-menu" onClick={(e) => e.stopPropagation()}>
                 <button className="viewer-menu-item" onClick={() => { onUseAsReference(); closeAll(); }}>
+                  <span className="vmi-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M14 4h6v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M10 14L20 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M20 14v6h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M4 20l10-10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </span>
                   Использовать как референс
+                </button>
+                <button className="viewer-menu-item viewer-menu-item-danger" onClick={() => { onDeletePhoto(); closeAll(); }}>
+                  <span className="vmi-icon vmi-icon-danger">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M3 6h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      <path d="M8 6V4h8v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      <path d="M7 6l1 14h8l1-14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M10 10v6M14 10v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                    </svg>
+                  </span>
+                  Удалить фото
                 </button>
               </div>
             ) : null}

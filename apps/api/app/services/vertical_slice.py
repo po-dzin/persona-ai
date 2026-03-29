@@ -8,6 +8,7 @@ from app.adapters.provider_registry import build_provider_registry
 from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, get_session
 from app.core.settings import settings
 import math
+from app.services.package_codes import normalize_package_code
 
 from shared.contracts.status import (
     MODEL_BY_ID,
@@ -157,6 +158,14 @@ GENERATION_PROVIDER_ALIASES = {
 }
 
 _VALID_ASPECT_RATIOS = frozenset({"1:1", "16:9", "9:16", "3:4", "4:3", "21:9", "5:4", "2:3"})
+_DEMO_TEST_PACKAGE = {
+    "code": "TEST",
+    "title": "Test",
+    "credits": 1000,
+    "stars_price": 1,
+    "bonus_percent": 0,
+    "sort_order": 1,
+}
 
 
 class VerticalSliceService:
@@ -249,6 +258,9 @@ class VerticalSliceService:
         ]
 
     def list_packages(self) -> list[dict[str, Any]]:
+        package_matrix = list(PACKAGE_MATRIX)
+        if settings.free_demo_mode:
+            package_matrix = [_DEMO_TEST_PACKAGE, *package_matrix]
         return [
             {
                 "code": pkg["code"],
@@ -259,7 +271,7 @@ class VerticalSliceService:
                 "provider": "telegram_stars",
                 "sort_order": pkg["sort_order"],
             }
-            for pkg in PACKAGE_MATRIX
+            for pkg in package_matrix
         ]
 
     # --------------------------------------------------------------- uploads
@@ -380,6 +392,9 @@ class VerticalSliceService:
                 order.is_free_credit_used = True
             elif user.paid_credits >= order.credit_cost:
                 user.paid_credits -= order.credit_cost
+                if settings.free_demo_mode:
+                    # Demo transactions: auto-refund spent paid credits after successful debit.
+                    user.paid_credits += order.credit_cost
             else:
                 order.status = "awaiting_credit_or_payment"
                 order.updated_at = now_iso()
@@ -499,12 +514,26 @@ class VerticalSliceService:
             db.commit()
             return {"order_id": order_id, "is_favorite": order.is_favorite}
 
+    def delete_photo(self, user_id: str, order_id: str) -> dict[str, Any]:
+        with get_session() as db:
+            order = db.get(OrderRow, order_id)
+            if not order:
+                raise ValueError("order_not_found")
+            if order.user_id != user_id:
+                raise ValueError("forbidden")
+
+            db.query(JobRow).filter(JobRow.order_id == order_id).delete()
+            db.delete(order)
+            db.commit()
+            return {"order_id": order_id, "deleted": True}
+
     # -------------------------------------------------------------- payments
 
     def purchase(self, user_id: str, package_code: str, provider: str = "telegram") -> dict[str, Any]:
         self.get_or_create_user(user_id)
         canonical_code = self._normalize_package_code(package_code)
-        if canonical_code not in PACKAGE_CREDITS:
+        package = self._resolve_package(canonical_code)
+        if package is None:
             raise ValueError("package_not_found")
 
         payment_id = str(uuid4())
@@ -514,7 +543,7 @@ class VerticalSliceService:
             "user_id": user_id,
             "package_code": canonical_code,
             "status": "paid",
-            "amount": PACKAGE_STARS_PRICES[canonical_code],
+            "amount": package["stars_price"],
         }
         result = self.ingest_webhook(provider, event_id, payload)
         with get_session() as db:
@@ -575,7 +604,7 @@ class VerticalSliceService:
                     if job:
                         job.status = "failed"
                         job.updated_at = now_iso()
-                    if not order.is_free_credit_used:
+                    if not order.is_free_credit_used and not settings.free_demo_mode:
                         user = db.get(UserRow, order.user_id)
                         if user:
                             user.paid_credits += order.credit_cost
@@ -596,7 +625,8 @@ class VerticalSliceService:
                 package_code_raw = str(payload.get("package_code", ""))
                 package_code = self._normalize_package_code(package_code_raw)
                 status = str(payload.get("status", "paid"))
-                amount = int(payload.get("amount", PACKAGE_STARS_PRICES.get(package_code, 0)))
+                package = self._resolve_package(package_code)
+                amount = int(payload.get("amount", package["stars_price"] if package else 0))
 
                 payment = PaymentRow(
                     payment_id=payment_id,
@@ -609,7 +639,7 @@ class VerticalSliceService:
                 )
                 db.add(payment)
 
-                if status == "paid" and user_id and package_code in PACKAGE_CREDITS:
+                if status == "paid" and user_id and package:
                     uid = str(user_id)
                     # SELECT FOR UPDATE prevents double-credit on duplicate webhooks
                     user = (
@@ -627,8 +657,8 @@ class VerticalSliceService:
                             created_at=now_iso(),
                         )
                         db.add(user)
-                    base_credits = PACKAGE_CREDITS[package_code]
-                    bonus_pct = PACKAGE_BONUS_PERCENT.get(package_code, 0)
+                    base_credits = package["credits"]
+                    bonus_pct = package["bonus_percent"]
                     bonus_credits = math.ceil(base_credits * bonus_pct / 100) if bonus_pct else 0
                     user.paid_credits += base_credits + bonus_credits
 
@@ -655,7 +685,25 @@ class VerticalSliceService:
 
     @staticmethod
     def _normalize_package_code(package_code: str) -> str:
-        return package_code.strip().upper()
+        return normalize_package_code(package_code)
+
+    @staticmethod
+    def _resolve_package(package_code: str) -> dict[str, Any] | None:
+        if package_code in PACKAGE_CREDITS:
+            return {
+                "code": package_code,
+                "credits": PACKAGE_CREDITS[package_code],
+                "stars_price": PACKAGE_STARS_PRICES[package_code],
+                "bonus_percent": PACKAGE_BONUS_PERCENT.get(package_code, 0),
+            }
+        if settings.free_demo_mode and package_code == "TEST":
+            return {
+                "code": "TEST",
+                "credits": _DEMO_TEST_PACKAGE["credits"],
+                "stars_price": _DEMO_TEST_PACKAGE["stars_price"],
+                "bonus_percent": _DEMO_TEST_PACKAGE["bonus_percent"],
+            }
+        return None
 
     @staticmethod
     def _serialize_wallet(user: UserRow) -> dict[str, Any]:

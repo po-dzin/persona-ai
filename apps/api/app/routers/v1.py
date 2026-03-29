@@ -186,12 +186,19 @@ async def generate(data: GenerateRequest, request: Request, user_id: str = Depen
 
 @router.post("/purchase/invoice")
 def purchase_invoice(data: PurchaseRequest, request: Request, user_id: str = Depends(require_user)):
-    """Create a Telegram Stars invoice link for the given package."""
+    """Create a Telegram Stars invoice link for the given package.
+    Returns demo=True when bot token is not configured (dev/demo mode).
+    """
     from app.services.tg_bot import create_invoice_link
+    if settings.free_demo_mode or not settings.telegram_bot_token:
+        # Demo mode: no bot token — credit directly without real Stars payment
+        return get_service(request).purchase(user_id, data.package_code, provider="telegram")
     try:
         link = create_invoice_link(data.package_code)
-    except Exception as exc:
+    except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="invoice_creation_failed") from exc
     if not link:
         raise HTTPException(status_code=502, detail="invoice_creation_failed")
     return {"invoice_link": link}
@@ -231,6 +238,17 @@ def toggle_favorite(order_id: str, request: Request, user_id: str = Depends(requ
     svc = get_service(request)
     try:
         return svc.toggle_favorite(user_id, order_id)
+    except ValueError as exc:
+        code = str(exc)
+        status = 404 if "not_found" in code else 403
+        raise HTTPException(status_code=status, detail=code) from exc
+
+
+@router.delete("/me/photos/{order_id}")
+def delete_photo(order_id: str, request: Request, user_id: str = Depends(require_user)):
+    svc = get_service(request)
+    try:
+        return svc.delete_photo(user_id, order_id)
     except ValueError as exc:
         code = str(exc)
         status = 404 if "not_found" in code else 403
@@ -316,5 +334,6 @@ async def _handle_tg_update(update: dict[str, Any], svc: VerticalSliceService) -
             user_id=user_id,
             payload=sp.get("invoice_payload", ""),
             stars=sp.get("total_amount", 0),
+            telegram_payment_charge_id=sp.get("telegram_payment_charge_id", ""),
             svc=svc,
         )

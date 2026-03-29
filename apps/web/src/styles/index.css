@@ -816,10 +816,16 @@ button, input, select, textarea { font: inherit; }
   border: 0.5px solid rgba(255,255,255,0.06);
   border-radius: 12px;
   color: #F0F0F0;
-  font-family: inherit; font-size: 16px; font-weight: 500;
+  font-family: inherit, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.35;
   appearance: none; cursor: pointer;
 }
 .custom-select:focus { outline: none; border-color: rgba(167,139,250,0.4); }
+.custom-select option {
+  line-height: 1.35;
+}
 .custom-textarea {
   width: 100%; padding: 12px 14px;
   background: #1A1A1A;
@@ -912,6 +918,9 @@ button, input, select, textarea { font: inherit; }
   font-size: 11px;
   color: #666;
   line-height: 1.45;
+}
+.flow-helper-note-under-upload {
+  margin-top: 10px;
 }
 
 /* ─── Modal overlay ─── */
@@ -1010,6 +1019,9 @@ button, input, select, textarea { font: inherit; }
   background: #2A2A2A; color: #888; cursor: pointer; flex-shrink: 0;
 }
 .viewer-copy-btn:active { opacity: 0.7; }
+.viewer-copy-btn.copied {
+  color: #4ADE80;
+}
 .viewer-prompt-text { font-size: 13px; color: #CCC; line-height: 1.5; }
 .viewer-actions-row {
   display: flex; gap: 8px; align-items: center;
@@ -1051,10 +1063,17 @@ button, input, select, textarea { font: inherit; }
 }
 .viewer-menu-item:last-child { border-bottom: none; }
 .viewer-menu-item:active { background: #2A2A2A; }
+.viewer-menu-item-danger {
+  color: #FF8A8A;
+}
 .vmi-icon {
   width: 32px; height: 32px; border-radius: 8px; background: #2A2A2A;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; color: #CCC;
+}
+.vmi-icon-danger {
+  color: #FF8A8A;
+  background: rgba(255, 90, 90, 0.12);
 }
 .viewer-share-menu { min-width: 230px; }
 .viewer-icon-btn.active { background: #2A2A2A; color: #fff; }
@@ -1152,7 +1171,7 @@ button, input, select, textarea { font: inherit; }
 }
 .style-preview-go-center {
   position: absolute;
-  top: 85%;
+  top: 75%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 72px;

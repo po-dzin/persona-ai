@@ -64,7 +64,6 @@ export function FlowStyleScreen({
   const [customPhotoError, setCustomPhotoError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const selectedModel = useMemo(() => models.find((m) => m.id === customModel), [customModel, models]);
   const stylesByCategory = useMemo(() => {
     const grouped: Record<string, StyleItem[]> = {};
     for (const style of styles) {
@@ -180,20 +179,6 @@ export function FlowStyleScreen({
             </div>
 
             <div className="custom-field">
-              <div className="custom-label">Описание стиля</div>
-              <textarea
-                className="custom-textarea"
-                value={customPrompt}
-                onChange={(e) => setCustomPrompt(e.target.value)}
-                onFocus={(e) => {
-                  const el = e.currentTarget;
-                  setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
-                }}
-                placeholder="Опишите желаемый стиль фотосессии..."
-              />
-            </div>
-
-            <div className="custom-field">
               <div className="custom-label">Фото</div>
               <input
                 ref={inputRef}
@@ -247,6 +232,24 @@ export function FlowStyleScreen({
               {customPhotoError ? (
                 <div style={{ marginTop: 8, fontSize: 12, color: "#E24B4A" }}>{customPhotoError}</div>
               ) : null}
+
+              <div className="flow-helper-note flow-helper-note-under-upload">
+                <div>Лучше работают четкие портреты с хорошим освещением</div>
+              </div>
+            </div>
+
+            <div className="custom-field">
+              <div className="custom-label">Описание стиля</div>
+              <textarea
+                className="custom-textarea"
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                onFocus={(e) => {
+                  const el = e.currentTarget;
+                  setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+                }}
+                placeholder="Опишите желаемый стиль фотосессии..."
+              />
             </div>
 
             <div className="custom-field">
@@ -263,8 +266,6 @@ export function FlowStyleScreen({
                 })}
               </div>
             </div>
-
-            <div className="custom-cost">Стоимость: <strong>{selectedModel?.coins || 10} 🪙</strong></div>
           </div>
 
           <div className="flow-bottom-bar flow-bottom-bar-inline flow-bottom-bar-with-note">
@@ -281,11 +282,6 @@ export function FlowStyleScreen({
             >
               Создать
             </button>
-            <div className="flow-helper-note">
-              <div>Лучше работают четкие портреты с хорошим освещением</div>
-              <div>Итог может немного отличаться от превью</div>
-              <div>Обычно 30–120 секунд</div>
-            </div>
           </div>
         </>
       )}

@@ -22,7 +22,8 @@ export function useCatalog() {
         if (remoteModels.length > 0) setModels(remoteModels);
         if (remotePackages.length > 0) {
           const testPkg = FALLBACK_PACKAGES.find((p) => p.code === "TEST");
-          setPackages(testPkg ? [testPkg, ...remotePackages] : remotePackages);
+          const withoutTest = remotePackages.filter((p) => p.code !== "TEST");
+          setPackages(testPkg ? [testPkg, ...withoutTest] : remotePackages);
         }
         setCatalogError(null);
       })
