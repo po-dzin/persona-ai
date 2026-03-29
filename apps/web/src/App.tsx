@@ -434,7 +434,11 @@ export function App() {
     const clickable = target.closest("button, a, [role=\"button\"]") as HTMLElement | null;
     if (!clickable) return;
     if ((clickable as HTMLButtonElement).disabled) return;
-    triggerHaptic("light");
+    // Medium haptic for primary action buttons (generate / style go)
+    const isMedium =
+      clickable.classList.contains("flow-btn") ||
+      clickable.classList.contains("style-preview-go-center");
+    triggerHaptic(isMedium ? "medium" : "light");
   };
 
   return (
