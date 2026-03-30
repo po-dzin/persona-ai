@@ -15,6 +15,7 @@ function _initials(name?: string): string {
 
 export function ProfileScreen({ credits, generations, referrals, firstName, username }: ProfileScreenProps) {
   const [copied, setCopied] = useState(false);
+  const [partnerOpen, setPartnerOpen] = useState(false);
   const displayName = firstName || username || "Пользователь";
   const displayUsername = username ? `@${username}` : null;
   const referralLink = username ? `persona.app/ref/${username}` : "persona.app/ref/—";
@@ -53,39 +54,50 @@ export function ProfileScreen({ credits, generations, referrals, firstName, user
         </div>
       </div>
 
-      <div className="profile-section-title">Партнёрская программа</div>
-      <div className="partner-block">
-        <div className="partner-metrics-row">
-          <div className="partner-metric">
-            <div className="partner-metric-value">—</div>
-            <div className="partner-metric-label">Переходы</div>
-          </div>
-          <div className="partner-metric">
-            <div className="partner-metric-value">{referrals}</div>
-            <div className="partner-metric-label">Оплат</div>
-          </div>
-          <div className="partner-metric">
-            <div className="partner-metric-value green">$0.00</div>
-            <div className="partner-metric-label">Заработано</div>
-          </div>
-        </div>
+      <button className="partner-collapse-header" onClick={() => setPartnerOpen((v) => !v)}>
+        <span className="profile-section-title-inline">Партнёрская программа</span>
+        <svg
+          className={"partner-collapse-arrow" + (partnerOpen ? " open" : "")}
+          width="16" height="16" viewBox="0 0 24 24" fill="none"
+        >
+          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
 
-        <div className="partner-link-row">
-          <div className="partner-link-text">{referralLink}</div>
-          <button className="partner-copy-btn" onClick={handleCopy} disabled={!username}>
-            {copied ? "Готово!" : "Копировать"}
-          </button>
-        </div>
+      {partnerOpen && (
+        <div className="partner-block">
+          <div className="partner-metrics-row">
+            <div className="partner-metric">
+              <div className="partner-metric-value">—</div>
+              <div className="partner-metric-label">Переходы</div>
+            </div>
+            <div className="partner-metric">
+              <div className="partner-metric-value">{referrals}</div>
+              <div className="partner-metric-label">Оплат</div>
+            </div>
+            <div className="partner-metric">
+              <div className="partner-metric-value green">$0.00</div>
+              <div className="partner-metric-label">Заработано</div>
+            </div>
+          </div>
 
-        <div className="partner-tier-row">
-          <div className="partner-tier-label">Бонус с покупок</div>
-          <div className="partner-tier-value">10%</div>
+          <div className="partner-link-row">
+            <div className="partner-link-text">{referralLink}</div>
+            <button className="partner-copy-btn" onClick={handleCopy} disabled={!username}>
+              {copied ? "Готово!" : "Копировать"}
+            </button>
+          </div>
+
+          <div className="partner-tier-row">
+            <div className="partner-tier-label">Бонус с покупок</div>
+            <div className="partner-tier-value">10%</div>
+          </div>
+          <div className="partner-progress">
+            <div className="partner-progress-bar" style={{ width: `${Math.min(referrals * 10, 100)}%` }} />
+          </div>
+          <div className="partner-tier-hint">Партнёрская программа — скоро</div>
         </div>
-        <div className="partner-progress">
-          <div className="partner-progress-bar" style={{ width: `${Math.min(referrals * 10, 100)}%` }} />
-        </div>
-        <div className="partner-tier-hint">Партнёрская программа — скоро</div>
-      </div>
+      )}
 
       <div className="profile-section-title">Мы в соцсетях</div>
       <div className="profile-card">

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+from app.adapters.http_client import ProviderHTTPError
 from app.adapters.provider_registry import build_provider_registry
 from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, get_session
 from app.core.settings import settings
@@ -419,20 +420,34 @@ class VerticalSliceService:
             )
             db.add(job)
 
-            submit = provider.submit(
-                order_id=order.order_id,
-                model_id=order.model_id,
-                source_key=order.source_key,
-                source_image_url=self._build_source_image_url(order.source_key),
-                prompt=order.prompt,
-                aspect_ratio=order.aspect_ratio,
-            )
+            try:
+                submit = provider.submit(
+                    order_id=order.order_id,
+                    model_id=order.model_id,
+                    source_key=order.source_key,
+                    source_image_url=self._build_source_image_url(order.source_key),
+                    prompt=order.prompt,
+                    aspect_ratio=order.aspect_ratio,
+                )
+            except ProviderHTTPError as exc:
+                job.status = "failed"
+                job.updated_at = now_iso()
+                order.status = "failed"
+                order.fail_reason_code = "technical_failed"
+                order.updated_at = now_iso()
+                # Refund credits
+                if order.is_free_credit_used:
+                    user.free_credit_available = True
+                else:
+                    user.paid_credits += order.credit_cost
+                db.commit()
+                raise ValueError(f"provider_error: {exc}") from exc
 
             job.status = "submitted"
             job.provider_task_id = submit.provider_task_id
             job.updated_at = now_iso()
 
-            # Save result immediately for synchronous providers (NanoBanana/Imagen 3, etc.)
+            # Save result immediately for synchronous providers (NanoBanana/Imagen 4, etc.)
             # that return result_url inline. Async providers return status="submitted"
             # and result arrives later via webhook.
             if submit.result_url and submit.status == "done":

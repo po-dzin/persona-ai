@@ -38,7 +38,7 @@ def test_catalog_endpoints_styles_and_models() -> None:
     assert styles.status_code == 200
     assert models.status_code == 200
     assert len(styles.json()["styles"]) >= 3
-    assert len(models.json()["models"]) == 2
+    assert len(models.json()["models"]) == 3
 
 
 def test_paywall_then_purchase_then_resume() -> None:
