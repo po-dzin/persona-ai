@@ -219,12 +219,18 @@ export function App() {
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
 
   const openCreate = () => {
+    // Reset all create-flow state so each session starts clean
     setFlowInitialTab("styles");
     setPrefilledUploadPhoto(null);
     setFlowInitialCustomPrompt("");
     setFlowInitialCustomModelId(undefined);
-    setFlowStyleOpen(true);
+    setSelectedStyle(styles[0] || null);
+    setSelectedPrompt("");
+    setSelectedModelId(models[0]?.id || "nano-banana-v1");
+    setSelectedAspectRatio("1:1");
+    setSelectedSourceTab("styles");
     setFlowUploadOpen(false);
+    setFlowStyleOpen(true);
   };
 
   const applyStyleSelection = (style: StyleItem) => {
