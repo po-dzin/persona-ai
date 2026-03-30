@@ -219,12 +219,18 @@ export function App() {
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
 
   const openCreate = () => {
+    // Reset all create-flow state so each session starts clean
     setFlowInitialTab("styles");
     setPrefilledUploadPhoto(null);
     setFlowInitialCustomPrompt("");
     setFlowInitialCustomModelId(undefined);
-    setFlowStyleOpen(true);
+    setSelectedStyle(styles[0] || null);
+    setSelectedPrompt("");
+    setSelectedModelId(models[0]?.id || "nano-banana-v1");
+    setSelectedAspectRatio("1:1");
+    setSelectedSourceTab("styles");
     setFlowUploadOpen(false);
+    setFlowStyleOpen(true);
   };
 
   const applyStyleSelection = (style: StyleItem) => {
@@ -266,6 +272,7 @@ export function App() {
     // Custom: generate directly — no intermediate upload screen
     if (!payload.photoFile) return;
     setFlowStyleOpen(false);
+    setActiveScreen("photos"); // navigate away immediately so balance/home don't flash
     void (async () => {
       try {
         const response = await startGenerate({
@@ -282,7 +289,6 @@ export function App() {
         }
         setLastChargedCoins(response.order.credit_cost);
         setQueuedModalOpen(true);
-        setActiveScreen("photos");
         await refresh();
         refreshProfile();
       } catch {
@@ -293,6 +299,7 @@ export function App() {
 
   const handleGenerate = async (photoFile?: File | null) => {
     if (!selectedModelId || !photoFile) return;
+    setActiveScreen("photos"); // navigate optimistically — prevents flashing back to balance/home
     const response: GenerateResult = await startGenerate({
       userId,
       modelId: selectedModelId,
@@ -303,6 +310,7 @@ export function App() {
     });
 
     if (response.result === "paywall_required") {
+      setFlowUploadOpen(false);
       setPaywallModalOpen(true);
       return;
     }
@@ -310,7 +318,6 @@ export function App() {
     setLastChargedCoins(response.order.credit_cost);
     setFlowUploadOpen(false);
     setQueuedModalOpen(true);
-    setActiveScreen("photos");
     await refresh();
     refreshProfile();
   };
@@ -364,14 +371,33 @@ export function App() {
     }
   }, [setPhotos]);
 
-  const handleDownloadPhoto = () => {
+  const handleDownloadPhoto = async () => {
     if (!selectedPhoto?.result_url) return;
-    const link = document.createElement("a");
-    link.href = selectedPhoto.result_url;
-    link.download = `${selectedPhoto.order_id}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const url = selectedPhoto.result_url;
+    const filename = `persona-${selectedPhoto.order_id}.jpg`;
+
+    // Telegram WebApp native download (Bot API 7.10+)
+    const liveTg = window.Telegram?.WebApp as { downloadFile?: (opts: { url: string; file_name: string }) => void } | undefined;
+    if (liveTg?.downloadFile) {
+      liveTg.downloadFile({ url, file_name: filename });
+      return;
+    }
+
+    // Fetch as blob → object URL → anchor click (works cross-origin in TWA)
+    try {
+      const blob = await fetch(url).then((r) => r.blob());
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      // Fallback: open in new tab
+      window.open(url, "_blank");
+    }
   };
 
   const handleSendToTelegram = useCallback(async () => {
@@ -502,7 +528,6 @@ export function App() {
         onGenerate={(file) => {
           void handleGenerate(file);
         }}
-        onOpenPricing={() => setModelsOpen(true)}
       />
 
       <PhotoViewerScreen

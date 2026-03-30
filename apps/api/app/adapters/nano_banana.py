@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 
-from app.adapters.http_client import ProviderHTTPError, post_json
+from app.adapters.http_client import ProviderHTTPError, fetch_bytes, post_json
 from app.adapters.mock_provider import MockPhotoProvider
 from app.adapters.provider_base import ProviderSubmitResult
 
@@ -20,6 +20,18 @@ _DEFAULT_MODEL = "gemini-2.5-flash-image"
 # Accepted aspect ratios (superset supported by all models)
 _VALID_AR = {"1:1", "3:4", "4:3", "9:16", "16:9"}
 
+# Instruction prefix prepended to every style prompt so Gemini applies the
+# style TO the person in the photo rather than generating from scratch.
+_PHOTO_INSTRUCTION = (
+    "You are a professional portrait retoucher. "
+    "The attached image shows a real person. "
+    "Apply the following visual style to this person's photo, "
+    "preserving their face, identity, skin tone, and likeness exactly. "
+    "Only change the lighting, color grading, background, and overall aesthetic. "
+    "Do not alter the person's facial features, age, or body proportions. "
+    "Style to apply: "
+)
+
 
 class NanoBananaAdapter(MockPhotoProvider):
     """
@@ -29,7 +41,8 @@ class NanoBananaAdapter(MockPhotoProvider):
     nano-banana-v2  → gemini-3.1-flash-image-preview  (fast v2,  20 coins)
     nano-banana-pro → gemini-3-pro-image-preview       (pro,      50 coins)
 
-    Text-to-image. Source photo is ignored; style is conveyed via prompt.
+    Image-to-image: source photo is included as inlineData so the model
+    applies the requested style TO the person rather than generating from scratch.
     Result: base64 PNG → stored in R2.
     """
 
@@ -71,13 +84,30 @@ class NanoBananaAdapter(MockPhotoProvider):
         ar = aspect_ratio if aspect_ratio in _VALID_AR else "1:1"
         url = f"{_GEMINI_BASE}/{gemini_model}:generateContent"
 
+        # Build multimodal content: source photo + style instruction
+        parts: list[dict] = []
+
+        source_b64, source_mime = _load_source_image(source_image_url, self.timeout_seconds)
+        if source_b64:
+            parts.append({
+                "inlineData": {
+                    "mimeType": source_mime,
+                    "data": source_b64,
+                }
+            })
+            full_prompt = _PHOTO_INSTRUCTION + prompt
+        else:
+            # Fallback: no source image available (dev/misconfigured R2)
+            full_prompt = prompt
+
+        parts.append({"text": full_prompt})
+
         payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [{"parts": parts}],
             "generationConfig": {
                 "responseModalities": ["TEXT", "IMAGE"],
                 "imageConfig": {
                     "aspectRatio": ar,
-                    "imageSize": "1K",
                 },
             },
         }
@@ -112,6 +142,23 @@ class NanoBananaAdapter(MockPhotoProvider):
             and self.real_calls_enabled
             and bool(self.api_key)
         )
+
+
+def _load_source_image(url: str, timeout: int) -> tuple[str, str]:
+    """
+    Download source photo and return (base64_string, mime_type).
+    Returns ("", "image/jpeg") if the URL looks like a placeholder / not reachable.
+    """
+    if not url or "r2.example" in url or url.startswith("https://r2.example"):
+        return "", "image/jpeg"
+    try:
+        raw = fetch_bytes(url, timeout_seconds=min(timeout, 30))
+        # Detect JPEG vs PNG by magic bytes
+        mime = "image/png" if raw[:4] == b"\x89PNG" else "image/jpeg"
+        return base64.b64encode(raw).decode("ascii"), mime
+    except ProviderHTTPError:
+        # If source image can't be fetched, proceed text-only
+        return "", "image/jpeg"
 
 
 def _extract_image(resp: dict) -> tuple[bytes, str]:

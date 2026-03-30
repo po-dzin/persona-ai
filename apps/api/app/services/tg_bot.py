@@ -62,11 +62,20 @@ def create_invoice_link(package_code: str) -> str:
     """Create a Telegram Stars invoice link for the given package."""
     from shared.contracts.status import PACKAGE_CREDITS, PACKAGE_STARS_PRICES, PACKAGE_TITLES
     package_code = normalize_package_code(package_code)
-    if package_code not in PACKAGE_CREDITS:
+
+    if package_code in PACKAGE_CREDITS:
+        stars = PACKAGE_STARS_PRICES[package_code]
+        credits = PACKAGE_CREDITS[package_code]
+        title = PACKAGE_TITLES.get(package_code, package_code)
+    elif settings.free_demo_mode and package_code == "TEST":
+        # Demo/test package: 1 Star, credited then refunded automatically
+        from app.services.vertical_slice import _DEMO_TEST_PACKAGE
+        stars = _DEMO_TEST_PACKAGE["stars_price"]      # 1 Star
+        credits = _DEMO_TEST_PACKAGE["credits"]
+        title = "Тест"
+    else:
         raise ValueError(f"package_not_found: {package_code}")
-    stars = PACKAGE_STARS_PRICES[package_code]
-    credits = PACKAGE_CREDITS[package_code]
-    title = PACKAGE_TITLES.get(package_code, package_code)
+
     resp = _tg_api(
         "createInvoiceLink",
         {
