@@ -14,7 +14,7 @@ import json
 
 import pytest
 
-from app.adapters.nano_banana import NanoBananaAdapter, _extract_image, _MODEL_MAP
+from app.adapters.nano_banana import NanoBananaAdapter, _extract_image, _load_source_image, _MODEL_MAP, _PHOTO_INSTRUCTION
 from app.adapters.provider_base import ProviderSubmitResult
 from app.adapters.http_client import ProviderHTTPError
 
@@ -123,6 +123,42 @@ def test_extract_image_picks_first_image_part() -> None:
     assert img_bytes == raw1
 
 
+# ─────────────────── _load_source_image ─────────────────────────
+
+def test_load_source_image_placeholder_url_returns_empty() -> None:
+    b64, mime = _load_source_image("https://r2.example/source/u1/img.jpg", timeout=10)
+    assert b64 == ""
+    assert mime == "image/jpeg"
+
+
+def test_load_source_image_empty_url_returns_empty() -> None:
+    b64, mime = _load_source_image("", timeout=10)
+    assert b64 == ""
+
+
+def test_load_source_image_detects_jpeg(monkeypatch) -> None:
+    import app.adapters.nano_banana as nb_mod
+    monkeypatch.setattr(nb_mod, "fetch_bytes", lambda url, timeout_seconds: b"\xff\xd8\xff fake jpeg")
+    b64, mime = _load_source_image("https://cdn.real.com/photo.jpg", timeout=10)
+    assert mime == "image/jpeg"
+    assert base64.b64decode(b64) == b"\xff\xd8\xff fake jpeg"
+
+
+def test_load_source_image_detects_png(monkeypatch) -> None:
+    import app.adapters.nano_banana as nb_mod
+    monkeypatch.setattr(nb_mod, "fetch_bytes", lambda url, timeout_seconds: b"\x89PNG fake png")
+    b64, mime = _load_source_image("https://cdn.real.com/photo.png", timeout=10)
+    assert mime == "image/png"
+
+
+def test_load_source_image_returns_empty_on_fetch_error(monkeypatch) -> None:
+    import app.adapters.nano_banana as nb_mod
+    def fail(*a, **kw): raise ProviderHTTPError("fetch_failed")
+    monkeypatch.setattr(nb_mod, "fetch_bytes", fail)
+    b64, mime = _load_source_image("https://cdn.real.com/photo.jpg", timeout=10)
+    assert b64 == ""
+
+
 # ──────────────────── adapter mock mode ──────────────────────────
 
 def test_mock_mode_returns_submitted_status() -> None:
@@ -158,7 +194,7 @@ def test_real_mode_is_real_when_all_conditions_met() -> None:
 # ──────────────────── adapter real mode ──────────────────────────
 
 def test_real_mode_calls_correct_gemini_endpoint(monkeypatch) -> None:
-    """Verify the URL and headers sent to the Gemini API."""
+    """Verify URL, headers, and text-only payload when source URL is a placeholder."""
     captured = {}
 
     def fake_post_json(*, url, headers, payload, timeout_seconds):
@@ -188,6 +224,7 @@ def test_real_mode_calls_correct_gemini_endpoint(monkeypatch) -> None:
         real_calls_enabled=True,
         api_key="test-key-123",
     )
+    # r2.example placeholder → no image fetched, plain text-only payload
     result = adapter.submit(
         order_id="ord-real",
         model_id="nano-banana-v1",
@@ -199,11 +236,57 @@ def test_real_mode_calls_correct_gemini_endpoint(monkeypatch) -> None:
 
     assert "gemini-2.5-flash-image:generateContent" in captured["url"]
     assert captured["headers"]["x-goog-api-key"] == "test-key-123"
-    assert captured["payload"]["contents"][0]["parts"][0]["text"] == "cyberpunk portrait"
+    parts = captured["payload"]["contents"][0]["parts"]
+    # text-only: first (and only) part is the raw prompt (no photo instruction prefix)
+    assert parts[0]["text"] == "cyberpunk portrait"
+    assert len(parts) == 1
     assert captured["payload"]["generationConfig"]["responseModalities"] == ["TEXT", "IMAGE"]
     assert captured["payload"]["generationConfig"]["imageConfig"]["aspectRatio"] == "1:1"
     assert result.status == "done"
     assert result.result_url.endswith(".png")
+
+
+def test_real_mode_includes_source_photo_when_url_is_real(monkeypatch) -> None:
+    """When source_image_url is a real CDN URL, image is sent as inlineData part."""
+    captured = {}
+    fake_jpeg = b"\xff\xd8\xff fake jpeg bytes"
+
+    def fake_fetch_bytes(url, timeout_seconds):
+        return fake_jpeg
+
+    def fake_post_json(*, url, headers, payload, timeout_seconds):
+        captured["payload"] = payload
+        raw = b"\x89PNG result"
+        b64 = base64.b64encode(raw).decode()
+        return {"candidates": [{"content": {"parts": [
+            {"inlineData": {"mimeType": "image/png", "data": b64}}
+        ]}}]}
+
+    def fake_upload(key, data, content_type):
+        return f"https://cdn/{key}"
+
+    import app.adapters.nano_banana as nb_mod
+    import app.adapters.r2_client as r2_mod
+    monkeypatch.setattr(nb_mod, "fetch_bytes", fake_fetch_bytes)
+    monkeypatch.setattr(nb_mod, "post_json", fake_post_json)
+    monkeypatch.setattr(r2_mod, "upload_bytes", fake_upload)
+
+    adapter = NanoBananaAdapter(integration_mode="real", real_calls_enabled=True, api_key="k")
+    adapter.submit(
+        order_id="ord-photo",
+        model_id="nano-banana-v1",
+        source_key="source/u1/img.jpg",
+        source_image_url="https://cdn.real.com/source/u1/img.jpg",
+        prompt="Hollywood portrait",
+        aspect_ratio="1:1",
+    )
+
+    parts = captured["payload"]["contents"][0]["parts"]
+    # parts[0] = inlineData (source photo), parts[1] = text with instruction prefix
+    assert parts[0]["inlineData"]["mimeType"] == "image/jpeg"
+    assert base64.b64decode(parts[0]["inlineData"]["data"]) == fake_jpeg
+    assert parts[1]["text"].startswith(_PHOTO_INSTRUCTION)
+    assert "Hollywood portrait" in parts[1]["text"]
 
 
 def test_real_mode_uses_correct_model_per_model_id(monkeypatch) -> None:
