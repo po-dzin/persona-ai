@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
@@ -40,6 +40,10 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   }, [byCategory]);
 
   const [activeCategory, setActiveCategory] = useState("ВСЕ");
+  const allCategories = useMemo(() => ["ВСЕ", ...categories], [categories]);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   useEffect(() => {
     if (!categories.length) {
@@ -51,6 +55,35 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
       setActiveCategory("ВСЕ");
     }
   }, [categories, activeCategory]);
+
+  // Scroll active tab into view when changed by swipe
+  useEffect(() => {
+    if (!tabsRef.current) return;
+    const active = tabsRef.current.querySelector(".category-tab-link.active") as HTMLElement | null;
+    active?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [activeCategory]);
+
+  const switchCategory = (dir: "prev" | "next") => {
+    const idx = allCategories.indexOf(activeCategory);
+    const next = dir === "next" ? allCategories[idx + 1] : allCategories[idx - 1];
+    if (next) setActiveCategory(next);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+    // Only trigger on dominant horizontal swipe > 50px
+    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+    switchCategory(dx < 0 ? "next" : "prev");
+  };
 
   const activeStyles = activeCategory === "ВСЕ"
     ? styles
@@ -84,7 +117,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
       ) : null}
 
       <div className="home-sticky-header">
-        <div className="category-tabs-row">
+        <div className="category-tabs-row" ref={tabsRef}>
           <button
             className={"category-tab-link" + (activeCategory === "ВСЕ" ? " active" : "")}
             onClick={() => setActiveCategory("ВСЕ")}
@@ -103,7 +136,12 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
         </div>
       </div>
 
-      <div className="styles-grid-2">
+      <div
+        className="styles-grid-2"
+        key={activeCategory}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         {activeStyles.map((style) => (
           <button key={style.id} className="style-card style-card-grid" onClick={() => onPreviewStyle(style)}>
             <div className="style-preview" style={{ background: style.gradient }}>

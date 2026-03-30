@@ -6,6 +6,7 @@ interface ProfileScreenProps {
   referrals: number;
   firstName?: string;
   username?: string;
+  avatarUrl?: string;
 }
 
 function _initials(name?: string): string {
@@ -13,7 +14,7 @@ function _initials(name?: string): string {
   return name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
-export function ProfileScreen({ credits, generations, referrals, firstName, username }: ProfileScreenProps) {
+export function ProfileScreen({ credits, generations, referrals, firstName, username, avatarUrl }: ProfileScreenProps) {
   const [copied, setCopied] = useState(false);
   const [partnerOpen, setPartnerOpen] = useState(false);
   const displayName = firstName || username || "Пользователь";
@@ -34,7 +35,12 @@ export function ProfileScreen({ credits, generations, referrals, firstName, user
   return (
     <section className="screen">
       <div className="profile-header">
-        <div className="profile-avatar">{_initials(displayName)}</div>
+        <div className="profile-avatar">
+          {avatarUrl
+            ? <img src={avatarUrl} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+            : _initials(displayName)
+          }
+        </div>
         <div className="profile-name">{displayName}</div>
         {displayUsername ? <div className="profile-username">{displayUsername}</div> : null}
       </div>

@@ -4,12 +4,16 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+import logging
+
 from app.adapters.http_client import ProviderHTTPError
 from app.adapters.provider_registry import build_provider_registry
 from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, get_session
 from app.core.settings import settings
 import math
 from app.services.package_codes import normalize_package_code
+
+logger = logging.getLogger(__name__)
 
 from shared.contracts.status import (
     MODEL_BY_ID,
@@ -676,6 +680,15 @@ class VerticalSliceService:
                     bonus_pct = package["bonus_percent"]
                     bonus_credits = math.ceil(base_credits * bonus_pct / 100) if bonus_pct else 0
                     user.paid_credits += base_credits + bonus_credits
+                    logger.info(
+                        "payment_credited user_id=%s package=%s credits=%d+%d total_now=%d",
+                        uid, package_code, base_credits, bonus_credits, user.paid_credits,
+                    )
+                else:
+                    logger.warning(
+                        "payment_skipped_credit status=%s user_id=%s package=%s",
+                        status, user_id, package_code,
+                    )
 
                 db.commit()
 
