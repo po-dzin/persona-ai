@@ -46,7 +46,7 @@ def test_free_generation_is_one_time_per_user() -> None:
 def test_paid_credit_spend_and_technical_refund() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u1")
-    _seed_user("u1", paid_credits=20, free_credit_available=False)
+    _seed_user("u1", paid_credits=50, free_credit_available=False)
 
     order_id = create_order(svc, model_id="nano-banana-pro")
     started = svc.start_order(order_id)
@@ -59,13 +59,13 @@ def test_paid_credit_spend_and_technical_refund() -> None:
         payload={"order_id": order_id, "event_type": "technical_failed"},
     )
     assert out["accepted"] is True
-    assert svc.get_balance("u1")["paid_credits"] == 20
+    assert svc.get_balance("u1")["paid_credits"] == 50
 
 
 def test_policy_failure_no_auto_refund() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u1")
-    _seed_user("u1", paid_credits=20, free_credit_available=False)
+    _seed_user("u1", paid_credits=50, free_credit_available=False)
 
     order_id = create_order(svc, model_id="nano-banana-pro")
     started = svc.start_order(order_id)
@@ -136,16 +136,16 @@ def test_demo_mode_auto_refunds_spent_paid_credits(monkeypatch) -> None:
 
     svc = vertical_slice_mod.VerticalSliceService()
     svc.get_or_create_user("u-demo-refund")
-    _seed_user("u-demo-refund", paid_credits=20, free_credit_available=False)
+    _seed_user("u-demo-refund", paid_credits=50, free_credit_available=False)
 
     order_id = create_order(svc, user_id="u-demo-refund", model_id="nano-banana-pro")
     started = svc.start_order(order_id)
     assert started["result"] == "enqueued"
-    assert started["wallet"]["paid_credits"] == 20
+    assert started["wallet"]["paid_credits"] == 50
 
     svc.ingest_webhook(
         "nano_banana",
         event_id="evt-tech-demo-1",
         payload={"order_id": order_id, "event_type": "technical_failed"},
     )
-    assert svc.get_balance("u-demo-refund")["paid_credits"] == 20
+    assert svc.get_balance("u-demo-refund")["paid_credits"] == 50
