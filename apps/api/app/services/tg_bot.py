@@ -6,9 +6,12 @@ All Telegram API calls use plain urllib (no SDK dependency).
 """
 
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 from urllib.request import Request, urlopen
 from urllib.error import URLError
+
+logger = logging.getLogger(__name__)
 
 from app.services.package_codes import normalize_package_code
 from app.core.settings import settings
@@ -122,10 +125,12 @@ def handle_successful_payment(
     """
     package_code = _resolve_package(payload, stars)
     if not package_code:
+        logger.error("payment_package_not_resolved user_id=%s payload=%s stars=%s", user_id, payload, stars)
         return
 
     from uuid import uuid4
     event_id = f"tg-stars-{user_id}-{stars}-{uuid4()}"
+    logger.info("payment_crediting user_id=%s package=%s stars=%s event_id=%s", user_id, package_code, stars, event_id)
     svc.ingest_webhook(
         "telegram",
         event_id,
@@ -151,6 +156,9 @@ def _resolve_package(payload: str, stars: int) -> str | None:
         code = normalize_package_code(payload)
         if code in PACKAGE_CREDITS:
             return code
+        # Demo TEST package lives outside PACKAGE_CREDITS
+        if settings.free_demo_mode and code == "TEST":
+            return "TEST"
 
     # Fallback: match by stars price (nearest)
     best = min(PACKAGE_STARS_PRICES.items(), key=lambda kv: abs(kv[1] - stars), default=None)

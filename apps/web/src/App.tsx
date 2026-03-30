@@ -45,7 +45,7 @@ declare global {
 }
 
 const tg = window.Telegram?.WebApp;
-type TgUser = { id: number; first_name?: string; username?: string };
+type TgUser = { id: number; first_name?: string; username?: string; photo_url?: string };
 
 function parseTgUserFromInitData(initData?: string): TgUser | null {
   if (!initData) return null;
@@ -219,6 +219,9 @@ export function App() {
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
 
   const openCreate = () => {
+    // If already in create flow, don't reset — user stays where they are
+    if (flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)) return;
+
     // Reset all create-flow state so each session starts clean
     setFlowInitialTab("styles");
     setPrefilledUploadPhoto(null);
@@ -271,8 +274,6 @@ export function App() {
 
     // Custom: generate directly — no intermediate upload screen
     if (!payload.photoFile) return;
-    setFlowStyleOpen(false);
-    setActiveScreen("photos"); // navigate away immediately so balance/home don't flash
     void (async () => {
       try {
         const response = await startGenerate({
@@ -284,22 +285,24 @@ export function App() {
           photoFile: payload.photoFile!,
         });
         if (response.result === "paywall_required") {
+          setFlowStyleOpen(false);
           setPaywallModalOpen(true);
           return;
         }
         setLastChargedCoins(response.order.credit_cost);
+        setFlowStyleOpen(false);
         setQueuedModalOpen(true);
+        setActiveScreen("photos");
         await refresh();
         refreshProfile();
       } catch {
-        // error is shown via lastError modal from useGenerateFlow
+        setFlowStyleOpen(false);
       }
     })();
   };
 
   const handleGenerate = async (photoFile?: File | null) => {
     if (!selectedModelId || !photoFile) return;
-    setActiveScreen("photos"); // navigate optimistically — prevents flashing back to balance/home
     const response: GenerateResult = await startGenerate({
       userId,
       modelId: selectedModelId,
@@ -318,6 +321,7 @@ export function App() {
     setLastChargedCoins(response.order.credit_cost);
     setFlowUploadOpen(false);
     setQueuedModalOpen(true);
+    setActiveScreen("photos");
     await refresh();
     refreshProfile();
   };
@@ -341,6 +345,15 @@ export function App() {
       setPurchaseOpen(false);
       liveTg.openInvoice(result.invoice_link as string, async (status: string) => {
         if (status === "paid") {
+          // Webhook may arrive with a slight delay — poll a few times
+          const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+          await wait(800);
+          await refresh();
+          refreshProfile();
+          await wait(1500);
+          await refresh();
+          refreshProfile();
+          await wait(2500);
           await refresh();
           refreshProfile();
           setPurchaseSuccessOpen(true);
@@ -497,6 +510,7 @@ export function App() {
           referrals={profile?.referrals_count ?? 0}
           firstName={profile?.first_name ?? tgUser?.first_name}
           username={profile?.username ?? tgUser?.username}
+          avatarUrl={tgUser?.photo_url}
         />
       ) : null}
 
