@@ -13,12 +13,11 @@ interface FlowUploadScreenProps {
   initialPhotoFile?: File | null;
   onGenerate: (photoFile: File | null) => void;
   onBack: () => void;
-  onOpenPricing?: () => void;
 }
 
 export function FlowUploadScreen({
   isOpen, selectedStyle, prompt, aspectRatio,
-  isSubmitting, cost = 10, showPromptBlock = true, initialPhotoFile = null, onGenerate, onBack, onOpenPricing,
+  isSubmitting, cost = 10, showPromptBlock = true, initialPhotoFile = null, onGenerate, onBack,
 }: FlowUploadScreenProps) {
   const MAX_FILE_SIZE_MB = 20;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -168,10 +167,7 @@ export function FlowUploadScreen({
       {/* Generate button */}
       <div className="flow-bottom-bar flow-bottom-bar-with-note">
         <div className="custom-cost">
-          Стоимость:{" "}
-          <button className="flow-pricing-link" onClick={onOpenPricing} disabled={!onOpenPricing}>
-            <strong>{cost} 🪙</strong>
-          </button>
+          Стоимость: <strong>{cost} 🪙</strong>
         </div>
         <button
           className={"flow-btn " + (photo && !isSubmitting ? "purple" : "disabled")}
