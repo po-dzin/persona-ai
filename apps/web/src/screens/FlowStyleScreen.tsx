@@ -56,7 +56,7 @@ export function FlowStyleScreen({
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
   const [tab, setTab] = useState<"styles" | "custom">(initialTab);
-  const [customModel, setCustomModel] = useState(initialCustomModelId ?? "nano-banana-v2");
+  const [customModel, setCustomModel] = useState(initialCustomModelId ?? "nano-banana-v1");
   const [customPrompt, setCustomPrompt] = useState(initialCustomPrompt);
   const [ratio, setRatio] = useState("1:1");
   const [customPhoto, setCustomPhoto] = useState<File | null>(null);
@@ -82,7 +82,7 @@ export function FlowStyleScreen({
     if (!isOpen) return;
     setTab(initialTab);
     setCustomPrompt(initialCustomPrompt);
-    setCustomModel(initialCustomModelId ?? "nano-banana-v2");
+    setCustomModel(initialCustomModelId ?? "nano-banana-v1");
     setCustomPhoto(null);
     setCustomPhotoError(null);
     if (customPhotoUrl) {
