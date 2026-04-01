@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
 
 import { Modal } from "./components/Modal";
 import { TabBar } from "./components/TabBar";
@@ -165,7 +165,7 @@ export function App() {
   useEffect(() => {
     refreshProfile();
   }, [refreshProfile, userId]);
-  const { isSubmitting, lastError, clearError, startGenerate } = useGenerateFlow();
+  const { isSubmitting, lastError, clearError, uploadPhoto, runGenerateBackground } = useGenerateFlow();
 
   const {
     activeScreen,
@@ -181,7 +181,7 @@ export function App() {
   } = useScreen();
 
   const [selectedStyle, setSelectedStyle] = useState<StyleItem | null>(styles[0] || null);
-  const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v1");
+  const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v2");
   const selectedModelCost = models.find((m) => m.id === selectedModelId)?.coins ?? 10;
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState("1:1");
@@ -201,7 +201,15 @@ export function App() {
   const [seenPhotosCount, setSeenPhotosCount] = useState(0);
   const donePhotosCount = photos.filter(p => p.status === "done").length;
   const newPhotosCount = Math.max(0, donePhotosCount - seenPhotosCount);
-  // Auto-clear badge if user is already on the photos tab when a generation completes
+  const photosSeedRef = useRef(false);
+  // Seed baseline on first load so existing photos don't appear as "new"
+  useEffect(() => {
+    if (!photosSeedRef.current && donePhotosCount > 0) {
+      setSeenPhotosCount(donePhotosCount);
+      photosSeedRef.current = true;
+    }
+  }, [donePhotosCount]);
+  // Reset badge when user visits photos tab
   useEffect(() => {
     if (activeScreen === "photos") setSeenPhotosCount(donePhotosCount);
   }, [activeScreen, donePhotosCount]);
@@ -210,7 +218,7 @@ export function App() {
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
   const [paywallModalOpen, setPaywallModalOpen] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
-  const [purchaseSuccessOpen, setPurchaseSuccessOpen] = useState(false);
+  // purchaseSuccessOpen removed — Telegram's native openInvoice already shows payment success UI
   const [stylePreviewOpen, setStylePreviewOpen] = useState(false);
   const [stylePreviewBackToFlow, setStylePreviewBackToFlow] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -229,17 +237,18 @@ export function App() {
     setFlowInitialCustomModelId(undefined);
     setSelectedStyle(styles[0] || null);
     setSelectedPrompt("");
-    setSelectedModelId(models[0]?.id || "nano-banana-v1");
+    setSelectedModelId(models[0]?.id || "nano-banana-v2");
     setSelectedAspectRatio("1:1");
     setSelectedSourceTab("styles");
     setFlowUploadOpen(false);
+    setModelsOpen(false);
     setFlowStyleOpen(true);
   };
 
   const applyStyleSelection = (style: StyleItem) => {
     setSelectedStyle(style);
     setSelectedPrompt(style.prompt_template);
-    setSelectedModelId("nano-banana-v1");
+    setSelectedModelId("nano-banana-v2");
     setSelectedAspectRatio("1:1");
   };
 
@@ -272,59 +281,80 @@ export function App() {
       return;
     }
 
-    // Custom: generate directly — no intermediate upload screen
+    // Custom: upload first, then fire generate in the background
     if (!payload.photoFile) return;
     void (async () => {
+      let sourceKey: string;
       try {
-        const response = await startGenerate({
-          userId,
-          modelId: payload.modelId,
-          styleCode: "custom",
-          prompt: payload.prompt,
-          aspectRatio: payload.aspectRatio,
-          photoFile: payload.photoFile!,
-        });
-        if (response.result === "paywall_required") {
-          setFlowStyleOpen(false);
-          setPaywallModalOpen(true);
-          return;
-        }
-        setLastChargedCoins(response.order.credit_cost);
-        setFlowStyleOpen(false);
-        setQueuedModalOpen(true);
-        setActiveScreen("photos");
-        await refresh();
-        refreshProfile();
+        sourceKey = await uploadPhoto(userId, payload.photoFile!);
       } catch {
-        setFlowStyleOpen(false);
+        // upload error is already set in lastError
+        return;
       }
+      // Navigate immediately — don't wait for generation
+      setFlowStyleOpen(false);
+      setActiveScreen("photos");
+      await refresh();
+
+      runGenerateBackground(
+        { userId, sourceKey, modelId: payload.modelId, styleCode: "custom",
+          prompt: payload.prompt, aspectRatio: payload.aspectRatio },
+        async (response) => {
+          if (response.result === "paywall_required") {
+            setPaywallModalOpen(true);
+            return;
+          }
+          setLastChargedCoins(response.order.credit_cost);
+          setQueuedModalOpen(true);
+          await refresh();
+          refreshProfile();
+        },
+        async () => { await refresh(); },
+      );
     })();
   };
 
   const handleGenerate = async (photoFile?: File | null) => {
     if (!selectedModelId || !photoFile) return;
-    const response: GenerateResult = await startGenerate({
-      userId,
-      modelId: selectedModelId,
-      styleCode: selectedStyle?.id || "hollywood",
-      prompt: selectedPrompt,
-      aspectRatio: selectedAspectRatio,
-      photoFile,
-    });
 
-    if (response.result === "paywall_required") {
-      setFlowUploadOpen(false);
-      setPaywallModalOpen(true);
+    // Step 1: Upload (~1-2s) — button shows "Загрузка..."
+    let sourceKey: string;
+    try {
+      sourceKey = await uploadPhoto(userId, photoFile);
+    } catch {
+      // upload error already in lastError
       return;
     }
 
-    setLastChargedCoins(response.order.credit_cost);
+    // Step 2: Immediately close upload screen + navigate to photos
     setFlowUploadOpen(false);
-    setQueuedModalOpen(true);
     setActiveScreen("photos");
     await refresh();
-    refreshProfile();
+
+    // Step 3: Generate in background — UI is free, photos screen shows polling state
+    runGenerateBackground(
+      {
+        userId,
+        sourceKey,
+        modelId: selectedModelId,
+        styleCode: selectedStyle?.id || "hollywood",
+        prompt: selectedPrompt,
+        aspectRatio: selectedAspectRatio,
+      },
+      async (response) => {
+        if (response.result === "paywall_required") {
+          setPaywallModalOpen(true);
+          return;
+        }
+        setLastChargedCoins(response.order.credit_cost);
+        setQueuedModalOpen(true);
+        await refresh();
+        refreshProfile();
+      },
+      async () => { await refresh(); },
+    );
   };
+
 
   const handleOpenCategory = (category: string) => {
     setSelectedCategory(category);
@@ -642,17 +672,11 @@ export function App() {
       />
 
       <Modal
-        isOpen={purchaseSuccessOpen}
-        title="Баланс пополнен!"
-        description={`Текущий баланс: ${wallet.paid_credits} монет 🪙`}
-        onClose={() => setPurchaseSuccessOpen(false)}
-      />
-
-      <Modal
         isOpen={Boolean(lastError)}
         title="Ошибка"
         description={lastError || undefined}
         onClose={clearError}
+        isError={true}
       />
     </main>
   );
