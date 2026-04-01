@@ -5,7 +5,7 @@ import hmac
 import json
 from urllib.parse import parse_qsl
 
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request
 
 from app.core.settings import settings
 
@@ -50,11 +50,13 @@ def _verify_init_data(init_data: str) -> dict | None:
 
 
 def require_user(
+    request: Request,
     x_telegram_init_data: str = Header(default=""),
     x_dev_user_id: str = Header(default=""),
 ) -> str:
     """
     FastAPI dependency: validates Telegram initData, returns user_id str.
+    Also sets request.state.user_id so rate limiters can key by user.
 
     In dev/test mode accepts any non-empty user_id from header
     X-Dev-User-Id as fallback (no auth check).
@@ -62,7 +64,9 @@ def require_user(
     if init_data := x_telegram_init_data.strip():
         user = _verify_init_data(init_data)
         if user and user.get("id"):
-            return str(user["id"])
+            user_id = str(user["id"])
+            request.state.user_id = user_id
+            return user_id
         # Invalid data provided — always reject regardless of env
         raise HTTPException(status_code=401, detail="invalid_telegram_init_data")
 
@@ -71,6 +75,8 @@ def require_user(
         raise HTTPException(status_code=401, detail="missing_telegram_init_data")
 
     if dev_id := x_dev_user_id.strip():
+        request.state.user_id = dev_id
         return dev_id
 
+    request.state.user_id = "demo-user"
     return "demo-user"
