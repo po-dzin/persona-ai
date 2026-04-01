@@ -165,7 +165,7 @@ export function App() {
   useEffect(() => {
     refreshProfile();
   }, [refreshProfile, userId]);
-  const { isSubmitting, lastError, clearError, startGenerate } = useGenerateFlow();
+  const { isSubmitting, lastError, clearError, uploadPhoto, runGenerateBackground } = useGenerateFlow();
 
   const {
     activeScreen,
@@ -210,7 +210,7 @@ export function App() {
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
   const [paywallModalOpen, setPaywallModalOpen] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
-  const [purchaseSuccessOpen, setPurchaseSuccessOpen] = useState(false);
+  // purchaseSuccessOpen removed — Telegram's native openInvoice already shows payment success UI
   const [stylePreviewOpen, setStylePreviewOpen] = useState(false);
   const [stylePreviewBackToFlow, setStylePreviewBackToFlow] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -272,59 +272,80 @@ export function App() {
       return;
     }
 
-    // Custom: generate directly — no intermediate upload screen
+    // Custom: upload first, then fire generate in the background
     if (!payload.photoFile) return;
     void (async () => {
+      let sourceKey: string;
       try {
-        const response = await startGenerate({
-          userId,
-          modelId: payload.modelId,
-          styleCode: "custom",
-          prompt: payload.prompt,
-          aspectRatio: payload.aspectRatio,
-          photoFile: payload.photoFile!,
-        });
-        if (response.result === "paywall_required") {
-          setFlowStyleOpen(false);
-          setPaywallModalOpen(true);
-          return;
-        }
-        setLastChargedCoins(response.order.credit_cost);
-        setFlowStyleOpen(false);
-        setQueuedModalOpen(true);
-        setActiveScreen("photos");
-        await refresh();
-        refreshProfile();
+        sourceKey = await uploadPhoto(userId, payload.photoFile!);
       } catch {
-        setFlowStyleOpen(false);
+        // upload error is already set in lastError
+        return;
       }
+      // Navigate immediately — don't wait for generation
+      setFlowStyleOpen(false);
+      setActiveScreen("photos");
+      await refresh();
+
+      runGenerateBackground(
+        { userId, sourceKey, modelId: payload.modelId, styleCode: "custom",
+          prompt: payload.prompt, aspectRatio: payload.aspectRatio },
+        async (response) => {
+          if (response.result === "paywall_required") {
+            setPaywallModalOpen(true);
+            return;
+          }
+          setLastChargedCoins(response.order.credit_cost);
+          setQueuedModalOpen(true);
+          await refresh();
+          refreshProfile();
+        },
+        async () => { await refresh(); },
+      );
     })();
   };
 
   const handleGenerate = async (photoFile?: File | null) => {
     if (!selectedModelId || !photoFile) return;
-    const response: GenerateResult = await startGenerate({
-      userId,
-      modelId: selectedModelId,
-      styleCode: selectedStyle?.id || "hollywood",
-      prompt: selectedPrompt,
-      aspectRatio: selectedAspectRatio,
-      photoFile,
-    });
 
-    if (response.result === "paywall_required") {
-      setFlowUploadOpen(false);
-      setPaywallModalOpen(true);
+    // Step 1: Upload (~1-2s) — button shows "Загрузка..."
+    let sourceKey: string;
+    try {
+      sourceKey = await uploadPhoto(userId, photoFile);
+    } catch {
+      // upload error already in lastError
       return;
     }
 
-    setLastChargedCoins(response.order.credit_cost);
+    // Step 2: Immediately close upload screen + navigate to photos
     setFlowUploadOpen(false);
-    setQueuedModalOpen(true);
     setActiveScreen("photos");
     await refresh();
-    refreshProfile();
+
+    // Step 3: Generate in background — UI is free, photos screen shows polling state
+    runGenerateBackground(
+      {
+        userId,
+        sourceKey,
+        modelId: selectedModelId,
+        styleCode: selectedStyle?.id || "hollywood",
+        prompt: selectedPrompt,
+        aspectRatio: selectedAspectRatio,
+      },
+      async (response) => {
+        if (response.result === "paywall_required") {
+          setPaywallModalOpen(true);
+          return;
+        }
+        setLastChargedCoins(response.order.credit_cost);
+        setQueuedModalOpen(true);
+        await refresh();
+        refreshProfile();
+      },
+      async () => { await refresh(); },
+    );
   };
+
 
   const handleOpenCategory = (category: string) => {
     setSelectedCategory(category);
@@ -642,17 +663,11 @@ export function App() {
       />
 
       <Modal
-        isOpen={purchaseSuccessOpen}
-        title="Баланс пополнен!"
-        description={`Текущий баланс: ${wallet.paid_credits} монет 🪙`}
-        onClose={() => setPurchaseSuccessOpen(false)}
-      />
-
-      <Modal
         isOpen={Boolean(lastError)}
         title="Ошибка"
         description={lastError || undefined}
         onClose={clearError}
+        isError={true}
       />
     </main>
   );

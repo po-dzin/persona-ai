@@ -6,6 +6,7 @@ from typing import Generator
 from sqlalchemy import (
     Boolean,
     Column,
+    DateTime,
     Index,
     Integer,
     String,
@@ -52,13 +53,14 @@ class UserRow(Base):
     free_credits_granted = Column(Boolean, default=True, nullable=False)
     free_credit_available = Column(Boolean, default=True, nullable=False)
     paid_credits = Column(Integer, default=0, nullable=False)
-    created_at = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
 
 
 class OrderRow(Base):
     __tablename__ = "orders"
     __table_args__ = (
         Index("idx_orders_user_created", "user_id", "created_at"),
+        Index("idx_orders_user_status", "user_id", "status"),
         Index("idx_orders_status", "status"),
     )
 
@@ -75,8 +77,8 @@ class OrderRow(Base):
     result_url = Column(Text, nullable=True)
     fail_reason_code = Column(String, nullable=True)
     is_favorite = Column(Boolean, nullable=False, default=False)
-    created_at = Column(String, nullable=False)
-    updated_at = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
 
 
 class JobRow(Base):
@@ -91,13 +93,14 @@ class JobRow(Base):
     status = Column(String, nullable=False, default="queued")
     provider_task_id = Column(String, nullable=True)
     attempts = Column(Integer, nullable=False, default=0)
-    updated_at = Column(String, nullable=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False)
 
 
 class PaymentRow(Base):
     __tablename__ = "payments"
     __table_args__ = (
         Index("idx_payments_user", "user_id"),
+        Index("idx_payments_user_created", "user_id", "created_at"),
     )
 
     payment_id = Column(String, primary_key=True)
@@ -106,7 +109,7 @@ class PaymentRow(Base):
     package_code = Column(String, nullable=False)
     user_id = Column(String, nullable=True)
     amount = Column(Integer, nullable=False, default=0)
-    created_at = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
 
 
 def init_db() -> None:
@@ -115,6 +118,15 @@ def init_db() -> None:
     # Column-level migrations for existing databases.
     # create_all() only creates missing tables; it never alters existing ones.
     _run_column_migrations()
+
+
+_VALID_ORDER_STATUSES = (
+    "draft",
+    "awaiting_credit_or_payment",
+    "processing",
+    "done",
+    "failed",
+)
 
 
 def _run_column_migrations() -> None:
@@ -140,6 +152,60 @@ def _run_column_migrations() -> None:
             ))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT"))
+
+            # ── TIMESTAMP migration (VARCHAR → TIMESTAMPTZ) ──────────────────
+            # Safe: USING clause parses ISO-8601 strings stored by now_iso().
+            for tbl, col in [
+                ("orders", "created_at"),
+                ("orders", "updated_at"),
+                ("users", "created_at"),
+                ("payments", "created_at"),
+                ("jobs", "updated_at"),
+            ]:
+                result = conn.execute(text(
+                    f"SELECT data_type FROM information_schema.columns "
+                    f"WHERE table_name='{tbl}' AND column_name='{col}'"
+                )).fetchone()
+                if result and result[0].lower() in ("character varying", "text", "varchar"):
+                    conn.execute(text(
+                        f"ALTER TABLE {tbl} "
+                        f"ALTER COLUMN {col} TYPE TIMESTAMPTZ "
+                        f"USING {col}::TIMESTAMPTZ"
+                    ))
+
+            # ── FK constraints ────────────────────────────────────────────────
+            fk_exists = conn.execute(text(
+                "SELECT 1 FROM information_schema.table_constraints "
+                "WHERE constraint_name='fk_orders_user_id' AND table_name='orders'"
+            )).fetchone()
+            if not fk_exists:
+                conn.execute(text(
+                    "ALTER TABLE orders ADD CONSTRAINT fk_orders_user_id "
+                    "FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE"
+                ))
+
+            fk_pay_exists = conn.execute(text(
+                "SELECT 1 FROM information_schema.table_constraints "
+                "WHERE constraint_name='fk_payments_user_id' AND table_name='payments'"
+            )).fetchone()
+            if not fk_pay_exists:
+                conn.execute(text(
+                    "ALTER TABLE payments ADD CONSTRAINT fk_payments_user_id "
+                    "FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL"
+                ))
+
+            # ── CHECK constraint on orders.status ────────────────────────────
+            check_exists = conn.execute(text(
+                "SELECT 1 FROM information_schema.table_constraints "
+                "WHERE constraint_name='chk_orders_status' AND table_name='orders'"
+            )).fetchone()
+            if not check_exists:
+                valid = ", ".join(f"'{s}'" for s in _VALID_ORDER_STATUSES)
+                conn.execute(text(
+                    f"ALTER TABLE orders ADD CONSTRAINT chk_orders_status "
+                    f"CHECK (status IN ({valid}))"
+                ))
+
             conn.commit()
 
 

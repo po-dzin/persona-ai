@@ -179,7 +179,7 @@ export function FlowUploadScreen({
               <span className="queue-dots" style={{ display: "inline-flex", gap: 4 }}>
                 <span /><span /><span />
               </span>
-              Генерация...
+              Загрузка...
             </span>
           ) : "Создать"}
         </button>
