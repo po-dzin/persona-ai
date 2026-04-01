@@ -1,12 +1,8 @@
-export const ORDER_STATUSES = [
-  "draft",
-  "awaiting_credit_or_payment",
-  "queued",
-  "processing",
-  "done",
-  "failed",
-  "canceled",
-] as const;
+// AUTO-GENERATED — do not edit manually.
+// Source of truth: shared/contracts/status.py
+// Regenerate: python shared/contracts/generate_ts.py
+
+export const ORDER_STATUSES = ["draft", "awaiting_credit_or_payment", "queued", "processing", "done", "failed", "canceled"] as const;
 
 export const JOB_STATUSES = ["queued", "submitted", "processing", "done", "failed", "timeout"] as const;
 

@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "Web (Vite)",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/opt/homebrew/Cellar/node/25.2.1/bin/node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js"],
       "cwd": "apps/web",
       "port": 3000,
       "autoPort": true

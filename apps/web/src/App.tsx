@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, type MouseEvent } from "react";
 
 import { Modal } from "./components/Modal";
 import { TabBar } from "./components/TabBar";
@@ -181,7 +181,7 @@ export function App() {
   } = useScreen();
 
   const [selectedStyle, setSelectedStyle] = useState<StyleItem | null>(styles[0] || null);
-  const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v1");
+  const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v2");
   const selectedModelCost = models.find((m) => m.id === selectedModelId)?.coins ?? 10;
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState("1:1");
@@ -201,7 +201,15 @@ export function App() {
   const [seenPhotosCount, setSeenPhotosCount] = useState(0);
   const donePhotosCount = photos.filter(p => p.status === "done").length;
   const newPhotosCount = Math.max(0, donePhotosCount - seenPhotosCount);
-  // Auto-clear badge if user is already on the photos tab when a generation completes
+  const photosSeedRef = useRef(false);
+  // Seed baseline on first load so existing photos don't appear as "new"
+  useEffect(() => {
+    if (!photosSeedRef.current && donePhotosCount > 0) {
+      setSeenPhotosCount(donePhotosCount);
+      photosSeedRef.current = true;
+    }
+  }, [donePhotosCount]);
+  // Reset badge when user visits photos tab
   useEffect(() => {
     if (activeScreen === "photos") setSeenPhotosCount(donePhotosCount);
   }, [activeScreen, donePhotosCount]);
@@ -229,17 +237,18 @@ export function App() {
     setFlowInitialCustomModelId(undefined);
     setSelectedStyle(styles[0] || null);
     setSelectedPrompt("");
-    setSelectedModelId(models[0]?.id || "nano-banana-v1");
+    setSelectedModelId(models[0]?.id || "nano-banana-v2");
     setSelectedAspectRatio("1:1");
     setSelectedSourceTab("styles");
     setFlowUploadOpen(false);
+    setModelsOpen(false);
     setFlowStyleOpen(true);
   };
 
   const applyStyleSelection = (style: StyleItem) => {
     setSelectedStyle(style);
     setSelectedPrompt(style.prompt_template);
-    setSelectedModelId("nano-banana-v1");
+    setSelectedModelId("nano-banana-v2");
     setSelectedAspectRatio("1:1");
   };
 

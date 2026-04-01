@@ -56,12 +56,13 @@ export function FlowStyleScreen({
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
   const [tab, setTab] = useState<"styles" | "custom">(initialTab);
-  const [customModel, setCustomModel] = useState(initialCustomModelId || models[0]?.id || "nano-banana-v1");
+  const [customModel, setCustomModel] = useState(initialCustomModelId ?? "nano-banana-v2");
   const [customPrompt, setCustomPrompt] = useState(initialCustomPrompt);
   const [ratio, setRatio] = useState("1:1");
   const [customPhoto, setCustomPhoto] = useState<File | null>(null);
   const [customPhotoUrl, setCustomPhotoUrl] = useState<string | null>(null);
   const [customPhotoError, setCustomPhotoError] = useState<string | null>(null);
+  const [modelDropOpen, setModelDropOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const stylesByCategory = useMemo(() => {
@@ -81,7 +82,7 @@ export function FlowStyleScreen({
     if (!isOpen) return;
     setTab(initialTab);
     setCustomPrompt(initialCustomPrompt);
-    setCustomModel(initialCustomModelId || models[0]?.id || "nano-banana-v1");
+    setCustomModel(initialCustomModelId ?? "nano-banana-v2");
     setCustomPhoto(null);
     setCustomPhotoError(null);
     if (customPhotoUrl) {
@@ -136,8 +137,8 @@ export function FlowStyleScreen({
       </div>
 
       <div className="flow-tabs">
-        <button className={"flow-tab" + (tab === "styles" ? " active" : "")} onClick={() => setTab("styles")}>Стили</button>
-        <button className={"flow-tab" + (tab === "custom" ? " active" : "")} onClick={() => setTab("custom")}>Кастом</button>
+        <button className={"flow-tab" + (tab === "styles" ? " active" : "")} onClick={() => setTab("styles")} aria-pressed={tab === "styles"}>Стили</button>
+        <button className={"flow-tab" + (tab === "custom" ? " active" : "")} onClick={() => setTab("custom")} aria-pressed={tab === "custom"}>Кастом</button>
       </div>
 
       {tab === "styles" ? (
@@ -151,6 +152,8 @@ export function FlowStyleScreen({
                     key={style.id}
                     className={"style-card" + (selectedStyle?.id === style.id ? " selected" : "")}
                     onClick={() => onSelectStyle(style)}
+                    aria-label={style.name}
+                    aria-pressed={selectedStyle?.id === style.id}
                   >
                     <div className="style-preview" style={{ background: style.gradient }}>
                       {style.is_trending ? <span className="style-tag fire">Hot</span> : null}
@@ -169,13 +172,39 @@ export function FlowStyleScreen({
       ) : (
         <>
           <div className="custom-content">
-            <div className="custom-field">
+            <div className="custom-field" style={{ position: "relative" }}>
               <div className="custom-label">Модель</div>
-              <select className="custom-select" value={customModel} onChange={(e) => setCustomModel(e.target.value)}>
-                {models.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name} — {m.coins} 🪙</option>
-                ))}
-              </select>
+              <button
+                className="model-trigger"
+                onClick={() => setModelDropOpen((v) => !v)}
+                aria-haspopup="listbox"
+                aria-expanded={modelDropOpen}
+              >
+                <span>{models.find((m) => m.id === customModel)?.name ?? customModel} — {models.find((m) => m.id === customModel)?.coins ?? 10} 🪙</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transform: modelDropOpen ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }}>
+                  <path d="M6 9l6 6 6-6" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+              {modelDropOpen && (
+                <div className="model-dropdown" role="listbox">
+                  {models.map((m) => (
+                    <button
+                      key={m.id}
+                      className={"model-dropdown-item" + (m.id === customModel ? " selected" : "")}
+                      role="option"
+                      aria-selected={m.id === customModel}
+                      onClick={() => { setCustomModel(m.id); setModelDropOpen(false); }}
+                    >
+                      <span>{m.name} — {m.coins} 🪙</span>
+                      {m.id === customModel ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M5 13l4 4L19 7" stroke="#A78BFA" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="custom-field">
@@ -218,7 +247,7 @@ export function FlowStyleScreen({
               ) : (
                 <div className="upload-area custom-upload-area" style={{ margin: 0, padding: "28px 16px" }} onClick={pickPhoto}>
                   <div className="upload-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
                       <polyline points="17 8 12 3 7 8" stroke="#666" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                       <line x1="12" y1="3" x2="12" y2="15" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
