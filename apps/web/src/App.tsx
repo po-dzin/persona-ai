@@ -181,7 +181,7 @@ export function App() {
   } = useScreen();
 
   const [selectedStyle, setSelectedStyle] = useState<StyleItem | null>(styles[0] || null);
-  const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v2");
+  const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v1");
   const selectedModelCost = models.find((m) => m.id === selectedModelId)?.coins ?? 10;
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState("1:1");
@@ -237,7 +237,7 @@ export function App() {
     setFlowInitialCustomModelId(undefined);
     setSelectedStyle(styles[0] || null);
     setSelectedPrompt("");
-    setSelectedModelId(models[0]?.id || "nano-banana-v2");
+    setSelectedModelId(models[0]?.id || "nano-banana-v1");
     setSelectedAspectRatio("1:1");
     setSelectedSourceTab("styles");
     setFlowUploadOpen(false);
@@ -248,7 +248,7 @@ export function App() {
   const applyStyleSelection = (style: StyleItem) => {
     setSelectedStyle(style);
     setSelectedPrompt(style.prompt_template);
-    setSelectedModelId("nano-banana-v2");
+    setSelectedModelId("nano-banana-v1");
     setSelectedAspectRatio("1:1");
   };
 
@@ -386,7 +386,6 @@ export function App() {
           await wait(2500);
           await refresh();
           refreshProfile();
-          setPurchaseSuccessOpen(true);
         }
       });
     } catch {

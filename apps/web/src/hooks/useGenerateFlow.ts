@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   generate,
   purchasePackage,
+  type GeneratePayload,
   uploadFileDirect,
   type GenerateResult,
 } from "../utils/api";
@@ -15,6 +16,9 @@ interface StartGenerateInput {
   aspectRatio: string;
   photoFile: File;
 }
+
+type GenerateDoneHandler = (result: GenerateResult) => void | Promise<void>;
+type GenerateFinallyHandler = () => void | Promise<void>;
 
 export function useGenerateFlow() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,11 +62,46 @@ export function useGenerateFlow() {
     }
   };
 
+  const uploadPhoto = async (userId: string, photoFile: File): Promise<string> => {
+    setIsSubmitting(true);
+    setLastError(null);
+    try {
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+      const uploaded = await uploadFileDirect(userId, uniqueName, photoFile);
+      return uploaded.source_key;
+    } catch (error) {
+      setLastError(String(error));
+      throw error;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const runGenerateBackground = (
+    payload: GeneratePayload,
+    onDone?: GenerateDoneHandler,
+    onFinally?: GenerateFinallyHandler,
+  ) => {
+    void (async () => {
+      setLastError(null);
+      try {
+        const response = await generate(payload);
+        if (onDone) await onDone(response);
+      } catch (error) {
+        setLastError(String(error));
+      } finally {
+        if (onFinally) await onFinally();
+      }
+    })();
+  };
+
   return {
     isSubmitting,
     lastError,
     clearError,
     startGenerate,
     buyPackage,
+    uploadPhoto,
+    runGenerateBackground,
   };
 }
