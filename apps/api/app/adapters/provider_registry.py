@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from app.adapters.flux import FluxAdapter
 from app.adapters.nano_banana import NanoBananaAdapter
-from app.adapters.openai_image import OpenAIImageAdapter
 from app.adapters.provider_base import ImageProviderAdapter
-from app.adapters.recraft import RecraftAdapter
 from app.adapters.stable_diffusion import StableDiffusionAdapter
 from app.core.settings import settings
 
@@ -31,7 +29,5 @@ def build_provider_registry() -> dict[str, ImageProviderAdapter]:
             api_base_url=settings.bfl_api_base_url,
             timeout_seconds=settings.provider_request_timeout_seconds,
         ),
-        OpenAIImageAdapter(),
-        RecraftAdapter(),
     ]
     return {provider.provider_id: provider for provider in providers}

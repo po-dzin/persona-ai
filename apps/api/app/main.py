@@ -1,7 +1,12 @@
 from contextlib import asynccontextmanager
+import logging
 from pathlib import Path
 import sys
 from typing import AsyncGenerator
+
+from app.core.logging_config import configure_logging
+
+configure_logging()  # must be first, before any logger is created
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, RedirectResponse
@@ -16,6 +21,24 @@ from app.core.db import init_db
 from app.core.settings import settings
 from app.routers.v1 import router as v1_router
 from app.services.vertical_slice import VerticalSliceService
+
+
+_logger = logging.getLogger(__name__)
+
+
+def _warn_missing_secrets() -> None:
+    """Log warnings for security-critical settings that are not configured."""
+    from app.core.settings import settings
+
+    if not settings.telegram_webhook_secret:
+        _logger.warning(
+            "TELEGRAM_WEBHOOK_SECRET is not set — Telegram webhook endpoint is unauthenticated. "
+            "Set this env var in production."
+        )
+    if not settings.provider_webhook_secret or settings.provider_webhook_secret == "replace":
+        _logger.warning(
+            "PROVIDER_WEBHOOK_SECRET is not set or is placeholder — provider webhook is unauthenticated."
+        )
 
 
 def _register_tg_webhook() -> None:
@@ -35,6 +58,7 @@ def _register_tg_webhook() -> None:
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_db()
+    _warn_missing_secrets()
     _register_tg_webhook()
     yield
 

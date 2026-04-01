@@ -19,8 +19,21 @@ from shared.contracts.status import (
 )
 
 
-def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+# Backward-compat alias used internally — returns datetime object now
+now_iso = now_utc
+
+
+def _to_iso(val: Any) -> str:
+    """Convert datetime or ISO string to ISO-8601 string."""
+    if val is None:
+        return ""
+    if isinstance(val, datetime):
+        return val.isoformat()
+    return str(val)
 
 
 STYLE_CATALOG: tuple[dict[str, Any], ...] = (
@@ -466,8 +479,8 @@ class VerticalSliceService:
                     "prompt": o.prompt,
                     "result_url": o.result_url,
                     "is_favorite": bool(o.is_favorite),
-                    "created_at": o.created_at,
-                    "updated_at": o.updated_at,
+                    "created_at": _to_iso(o.created_at),
+                    "updated_at": _to_iso(o.updated_at),
                 }
                 for o in orders
             ]
@@ -664,8 +677,8 @@ class VerticalSliceService:
             "is_free_credit_used": order.is_free_credit_used,
             "result_url": order.result_url,
             "fail_reason_code": order.fail_reason_code,
-            "created_at": order.created_at,
-            "updated_at": order.updated_at,
+            "created_at": _to_iso(order.created_at),
+            "updated_at": _to_iso(order.updated_at),
         }
 
     @staticmethod
@@ -677,5 +690,5 @@ class VerticalSliceService:
             "status": job.status,
             "attempts": job.attempts,
             "provider_task_id": job.provider_task_id,
-            "updated_at": job.updated_at,
+            "updated_at": _to_iso(job.updated_at),
         }

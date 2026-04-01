@@ -22,8 +22,15 @@ html, body, #root {
 
 button, input, select, textarea { font: inherit; }
 
+/* UUPM: eliminate 300ms tap delay on all interactive elements */
+button, a, [role="button"] { touch-action: manipulation; }
+
 :root {
   --tab-bar-gap: 2px;
+
+  /* ── Muted text tokens — WCAG AA on #111 (≥4.5:1) ── */
+  --text-muted:    #999; /* 6.3:1 on #111, 5.6:1 on #1A1A1A — body secondary */
+  --text-faint:    #888; /* 4.5:1 on #111 — icons, placeholders */
 }
 
 /* ─── App shell ─── */
@@ -51,6 +58,7 @@ button, input, select, textarea { font: inherit; }
   bottom: calc(62px + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
   padding-top: 12px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 .screen::-webkit-scrollbar { display: none; }
@@ -104,7 +112,7 @@ button, input, select, textarea { font: inherit; }
 }
 .queue-info { flex: 1; min-width: 0; }
 .queue-title { font-size: 13px; font-weight: 600; color: #F0F0F0; }
-.queue-detail { font-size: 11px; color: #777; margin-top: 2px; }
+.queue-detail { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .queue-dots { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
 .queue-dots span {
   width: 5px; height: 5px; border-radius: 50%;
@@ -146,7 +154,7 @@ button, input, select, textarea { font: inherit; }
   background: none;
 }
 .section-chevron {
-  color: #666;
+  color: var(--text-muted);
   transition: transform 0.25s ease;
   flex-shrink: 0;
 }
@@ -174,6 +182,7 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   gap: 8px;
   overflow-x: auto;
+  overscroll-behavior: contain;
   /* padding-top gives breathing room for scale(1.03) + box-shadow on selected card */
   padding: 6px 16px 8px;
   scrollbar-width: none;
@@ -187,6 +196,7 @@ button, input, select, textarea { font: inherit; }
   align-items: center;
   gap: 22px;
   overflow-x: auto;
+  overscroll-behavior: contain;
   white-space: nowrap;
   padding: 8px 16px 8px;
   scrollbar-width: none;
@@ -280,7 +290,7 @@ button, input, select, textarea { font: inherit; }
   position: absolute;
   top: 8px; left: 8px;
   color: white;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   padding: 3px 7px;
   border-radius: 6px;
@@ -294,6 +304,7 @@ button, input, select, textarea { font: inherit; }
   gap: 6px;
   padding: 12px 20px;
   overflow-x: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 .photos-filter::-webkit-scrollbar { display: none; }
@@ -306,7 +317,7 @@ button, input, select, textarea { font: inherit; }
   white-space: nowrap;
   border: none;
   font-family: inherit;
-  transition: all 0.15s;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
   background: #1A1A1A;
   color: #888;
 }
@@ -333,7 +344,7 @@ button, input, select, textarea { font: inherit; }
   bottom: 0; left: 0; right: 0;
   padding: 20px 6px 5px;
   background: linear-gradient(transparent, rgba(0,0,0,0.55));
-  font-size: 10px;
+  font-size: 11px;
   color: rgba(255,255,255,0.85);
   font-weight: 500;
 }
@@ -342,7 +353,7 @@ button, input, select, textarea { font: inherit; }
   padding: 14px 20px 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .queue-stack {
@@ -414,11 +425,11 @@ button, input, select, textarea { font: inherit; }
   color: #F0F0F0;
   letter-spacing: -1px;
 }
-.balance-label { font-size: 13px; color: #666; margin-top: 2px; }
+.balance-label { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 .balance-section-title {
   font-size: 12px;
   font-weight: 600;
-  color: #555;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 8px 20px 10px;
@@ -451,7 +462,7 @@ button, input, select, textarea { font: inherit; }
   top: -8px; right: 14px;
   background: linear-gradient(145deg, #A78BFA, #7C3AED);
   color: white;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   padding: 3px 9px;
   border-radius: 8px;
@@ -480,7 +491,7 @@ button, input, select, textarea { font: inherit; }
   text-align: center;
   padding: 16px 20px 6px;
   font-size: 12px;
-  color: #666;
+  color: var(--text-muted);
   line-height: 1.45;
 }
 .balance-pricing-link {
@@ -518,7 +529,7 @@ button, input, select, textarea { font: inherit; }
   margin-bottom: 12px;
 }
 .profile-name { font-size: 18px; font-weight: 700; color: #F0F0F0; }
-.profile-username { font-size: 13px; color: #666; margin-top: 2px; }
+.profile-username { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 .profile-stats {
   display: flex;
   gap: 2px;
@@ -530,9 +541,9 @@ button, input, select, textarea { font: inherit; }
 .profile-stat { flex: 1; padding: 14px 8px; text-align: center; }
 .profile-stat + .profile-stat { border-left: 0.5px solid rgba(255,255,255,0.04); }
 .profile-stat-value { font-size: 20px; font-weight: 700; color: #F0F0F0; }
-.profile-stat-label { font-size: 10px; color: #666; margin-top: 2px; }
+.profile-stat-label { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .profile-section-title {
-  font-size: 12px; font-weight: 600; color: #555;
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.5px;
   padding: 20px 20px 8px;
 }
@@ -550,7 +561,7 @@ button, input, select, textarea { font: inherit; }
 }
 .profile-row-text { flex: 1; }
 .profile-row-label { font-size: 14px; font-weight: 500; color: #F0F0F0; }
-.profile-row-desc { font-size: 11px; color: #555; margin-top: 1px; }
+.profile-row-desc { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 .profile-row-arrow { flex-shrink: 0; opacity: 0.3; }
 
 /* ─── Partner block ─── */
@@ -579,8 +590,8 @@ button, input, select, textarea { font: inherit; }
 .partner-metric-value.green { color: #4ADE80; }
 .partner-metric-label {
   margin-top: 2px;
-  font-size: 10px;
-  color: #666;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 .partner-link-row {
   margin-top: 10px;
@@ -612,7 +623,7 @@ button, input, select, textarea { font: inherit; }
   align-items: center;
   justify-content: space-between;
 }
-.partner-tier-label { font-size: 12px; color: #666; }
+.partner-tier-label { font-size: 12px; color: var(--text-muted); }
 .partner-tier-value { font-size: 13px; font-weight: 700; color: #F0F0F0; }
 .partner-progress {
   margin-top: 8px;
@@ -629,7 +640,7 @@ button, input, select, textarea { font: inherit; }
 .partner-tier-hint {
   margin-top: 6px;
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* ─── Tab bar ─── */
@@ -662,7 +673,7 @@ button, input, select, textarea { font: inherit; }
   background: none;
 }
 .tab-item:active { background: rgba(255,255,255,0.06); }
-.tab-item svg { width: 24px; height: 24px; color: #555; transition: color 0.15s; display: block; }
+.tab-item svg { width: 24px; height: 24px; color: var(--text-muted); transition: color 0.15s; display: block; }
 .tab-item.active svg { color: #F0F0F0; }
 .tab-icon-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
 .tab-badge {
@@ -670,7 +681,7 @@ button, input, select, textarea { font: inherit; }
   top: -5px; right: -8px;
   background: #E24B4A;
   color: white;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   min-width: 16px; height: 16px;
   border-radius: 8px;
@@ -719,6 +730,7 @@ button, input, select, textarea { font: inherit; }
   background: #111;
   z-index: 20;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 .overlay-screen::-webkit-scrollbar { display: none; }
@@ -734,7 +746,7 @@ button, input, select, textarea { font: inherit; }
   z-index: 5;
 }
 .flow-back {
-  width: 36px; height: 36px;
+  width: 44px; height: 44px;
   border-radius: 50%;
   background: #1A1A1A;
   border: none;
@@ -745,7 +757,7 @@ button, input, select, textarea { font: inherit; }
 }
 .flow-back:active { background: #2A2A2A; }
 .flow-title { font-size: 16px; font-weight: 600; color: #F0F0F0; }
-.flow-step { font-size: 12px; font-weight: 500; color: #555; width: 36px; text-align: right; }
+.flow-step { font-size: 12px; font-weight: 500; color: var(--text-muted); width: 36px; text-align: right; }
 .flow-pricing-link {
   border: none;
   background: none;
@@ -766,8 +778,8 @@ button, input, select, textarea { font: inherit; }
   flex: 1; padding: 9px;
   border-radius: 8px; border: none;
   font-family: inherit; font-size: 13px; font-weight: 600;
-  cursor: pointer; text-align: center; transition: all 0.2s;
-  color: #666; background: transparent;
+  cursor: pointer; text-align: center; transition: background 0.2s, color 0.2s;
+  color: var(--text-muted); background: transparent;
 }
 .flow-tab.active { background: #2A2A2A; color: #F0F0F0; }
 
@@ -805,7 +817,7 @@ button, input, select, textarea { font: inherit; }
   font-family: inherit; font-size: 14px; font-weight: 500;
   appearance: none; cursor: pointer;
 }
-.custom-select:focus { outline: none; border-color: rgba(167,139,250,0.4); }
+.custom-select:focus { outline: 2px solid rgba(167,139,250,0.5); outline-offset: 1px; border-color: rgba(167,139,250,0.4); }
 .custom-textarea {
   width: 100%; padding: 12px 14px;
   background: #1A1A1A;
@@ -816,7 +828,7 @@ button, input, select, textarea { font: inherit; }
   resize: none; height: 90px; line-height: 1.5;
 }
 .custom-textarea::placeholder { color: #444; }
-.custom-textarea:focus { outline: none; border-color: rgba(167,139,250,0.4); }
+.custom-textarea:focus { outline: 2px solid rgba(167,139,250,0.5); outline-offset: 1px; border-color: rgba(167,139,250,0.4); }
 
 .ratio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .ratio-chip {
@@ -825,7 +837,7 @@ button, input, select, textarea { font: inherit; }
   border: 0.5px solid rgba(255,255,255,0.06);
   background: #1A1A1A;
   color: #888; font-family: inherit; font-size: 11px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
+  cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
 .ratio-chip:active { transform: scale(0.95); }
@@ -842,7 +854,7 @@ button, input, select, textarea { font: inherit; }
 
 .custom-cost {
   display: flex; align-items: center; justify-content: center; gap: 4px;
-  padding: 2px 0 10px; font-size: 12px; color: #666;
+  padding: 2px 0 10px; font-size: 12px; color: var(--text-muted);
 }
 .custom-cost strong { color: #F0F0F0; font-weight: 600; }
 
@@ -861,7 +873,7 @@ button, input, select, textarea { font: inherit; }
   display: flex; align-items: center; justify-content: center;
 }
 .upload-text { font-size: 15px; font-weight: 600; color: #F0F0F0; }
-.upload-hint { font-size: 12px; color: #555; }
+.upload-hint { font-size: 12px; color: var(--text-muted); }
 
 .upload-selected-style {
   margin: 16px 20px 0;
@@ -872,7 +884,7 @@ button, input, select, textarea { font: inherit; }
 }
 .upload-style-thumb { width: 36px; height: 36px; border-radius: 8px; }
 .upload-style-name { font-size: 13px; font-weight: 600; color: #F0F0F0; }
-.upload-style-label { font-size: 10px; color: #555; }
+.upload-style-label { font-size: 12px; color: var(--text-muted); }
 
 .flow-bottom-bar {
   position: sticky;
@@ -889,14 +901,20 @@ button, input, select, textarea { font: inherit; }
 .flow-btn:active { transform: scale(0.97); }
 .flow-btn.primary { background: #8B83D4; color: white; }
 .flow-btn.purple { background: linear-gradient(145deg, #A78BFA, #7C3AED); color: white; }
-.flow-btn.disabled { background: #2A2A2A; color: #555; pointer-events: none; }
+.flow-btn.disabled { background: #2A2A2A; color: var(--text-muted); pointer-events: none; }
 .flow-bottom-bar-with-note {
   padding-bottom: 14px;
+}
+/* Inline variant: no sticky positioning, sits inside the scroll flow */
+.flow-bottom-bar-inline {
+  position: relative;
+  bottom: unset;
+  padding-top: 12px;
 }
 .flow-helper-note {
   margin-top: 6px;
   font-size: 11px;
-  color: #666;
+  color: var(--text-muted);
   line-height: 1.45;
 }
 
@@ -966,16 +984,17 @@ button, input, select, textarea { font: inherit; }
 }
 .viewer-heart {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 34px;
-  height: 34px;
+  top: 8px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: rgba(0,0,0,0.45);
   color: white;
   font-size: 16px;
   cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
 }
 .viewer-body { padding: 20px; }
 .viewer-prompt-block {
@@ -983,7 +1002,7 @@ button, input, select, textarea { font: inherit; }
   padding: 14px; margin-bottom: 16px;
 }
 .viewer-prompt-label {
-  font-size: 10px; font-weight: 600; color: #555;
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
 }
 .viewer-prompt-text { font-size: 13px; color: #CCC; line-height: 1.5; }
@@ -1003,7 +1022,7 @@ button, input, select, textarea { font: inherit; }
 .pricing-screen { z-index: 35; }
 .pricing-subtitle {
   padding: 8px 20px 6px;
-  color: #666;
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -1135,7 +1154,7 @@ button, input, select, textarea { font: inherit; }
   padding: 8px 2px;
 }
 .purchase-row + .purchase-row { border-top: 0.5px solid rgba(255,255,255,0.06); }
-.purchase-row-label { font-size: 12px; color: #666; }
+.purchase-row-label { font-size: 12px; color: var(--text-muted); }
 .purchase-row-value { font-size: 14px; font-weight: 600; color: #F0F0F0; }
 .purchase-row-value.bonus { color: #4ADE80; }
 .purchase-total {
@@ -1177,7 +1196,7 @@ button, input, select, textarea { font: inherit; }
   cursor: not-allowed;
 }
 .purchase-method-name { font-size: 14px; font-weight: 600; color: #F0F0F0; }
-.purchase-method-desc { font-size: 11px; color: #666; margin-top: 2px; }
+.purchase-method-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
 .purchase-method-main {
   display: flex;
@@ -1217,7 +1236,7 @@ button, input, select, textarea { font: inherit; }
   line-height: 1;
 }
 .purchase-method-badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: #F0F0F0;
   background: rgba(255,255,255,0.1);
@@ -1235,5 +1254,14 @@ button, input, select, textarea { font: inherit; }
     border-left: 1px solid rgba(255,255,255,0.08);
     border-right: 1px solid rgba(255,255,255,0.08);
     box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 20px 80px rgba(0,0,0,0.45);
+  }
+}
+
+/* ─── UUPM: prefers-reduced-motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

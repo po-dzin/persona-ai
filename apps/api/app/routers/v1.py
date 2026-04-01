@@ -7,9 +7,10 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, Response, UploadFile
 
 from app.core.auth import require_user, parse_tg_user
+from app.core.rate_limit import generate_limiter, tg_webhook_limiter, upload_limiter
 from app.core.settings import settings
 from app.models.api_models import (
     CreateOrderRequest,
@@ -85,6 +86,43 @@ def get_history(request: Request, user_id: str = Depends(require_user)):
 
 # ──────────────────────────── uploads ────────────────────────────
 
+_IMAGE_MAGIC: list[tuple[bytes, str]] = [
+    (b"\xff\xd8\xff", "image/jpeg"),
+    (b"\x89PNG\r\n\x1a\n", "image/png"),
+    (b"RIFF", "image/webp"),   # WebP: RIFF....WEBP — check full header below
+]
+
+
+def _validate_image_magic(content: bytes) -> None:
+    """Raise 400 if the file's magic bytes don't match a known image format."""
+    for magic, _ in _IMAGE_MAGIC:
+        if content[: len(magic)] == magic:
+            # Extra check for WebP: bytes 8-11 must be 'WEBP'
+            if magic == b"RIFF" and content[8:12] != b"WEBP":
+                continue
+            return
+    raise HTTPException(status_code=400, detail="invalid_file_content")
+
+
+@router.post("/uploads/file")
+async def upload_file_direct(
+    request: Request,
+    user_id: str = Depends(require_user),
+    file: UploadFile = File(...),
+    filename: str = Form(...),
+):
+    """Accept a file upload directly (avoids browser CORS with R2 presigned URLs)."""
+    upload_limiter.check(request, use_user_id=True)
+    allowed = {".jpg", ".jpeg", ".png", ".webp"}
+    suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if suffix not in allowed:
+        raise HTTPException(status_code=400, detail="invalid_file_type")
+    content = await file.read()
+    _validate_image_magic(content)
+    source_key = get_service(request).upload_source_file(user_id, filename, content)
+    return {"source_key": source_key}
+
+
 @router.post("/uploads")
 def create_upload(data: UploadRequest, request: Request, user_id: str = Depends(require_user)):
     # Validate file extension
@@ -146,6 +184,7 @@ async def generate(data: GenerateRequest, request: Request, user_id: str = Depen
     Runs provider.submit() in a thread pool so the blocking Flux polling
     (up to 120s) doesn't stall the FastAPI event loop.
     """
+    generate_limiter.check(request, use_user_id=True)
     svc = get_service(request)
     loop = asyncio.get_event_loop()
     try:
@@ -166,6 +205,24 @@ async def generate(data: GenerateRequest, request: Request, user_id: str = Depen
 
 
 # ──────────────────────────── purchase ───────────────────────────
+
+@router.post("/purchase/invoice")
+def purchase_invoice(data: PurchaseRequest, request: Request, user_id: str = Depends(require_user)):
+    """Create a Telegram Stars invoice link for the given package."""
+    from app.services.tg_bot import create_invoice_link
+    if not settings.telegram_bot_token:
+        # No bot token: fallback to direct credit for local dev only.
+        return get_service(request).purchase(user_id, data.package_code, provider="telegram")
+    try:
+        link = create_invoice_link(data.package_code)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="invoice_creation_failed") from exc
+    if not link:
+        raise HTTPException(status_code=502, detail="invoice_creation_failed")
+    return {"invoice_link": link}
+
 
 @router.post("/purchase")
 def purchase(data: PurchaseRequest, request: Request, user_id: str = Depends(require_user)):
@@ -207,6 +264,17 @@ def toggle_favorite(order_id: str, request: Request, user_id: str = Depends(requ
         raise HTTPException(status_code=status, detail=code) from exc
 
 
+@router.delete("/me/photos/{order_id}")
+def delete_photo(order_id: str, request: Request, user_id: str = Depends(require_user)):
+    svc = get_service(request)
+    try:
+        return svc.delete_photo(user_id, order_id)
+    except ValueError as exc:
+        code = str(exc)
+        status = 404 if "not_found" in code else 403
+        raise HTTPException(status_code=status, detail=code) from exc
+
+
 # ──────────────────── send photo to Telegram ─────────────────────
 
 @router.post("/me/photos/{order_id}/send")
@@ -235,6 +303,7 @@ async def telegram_bot_webhook(request: Request):
     Validates X-Telegram-Bot-Api-Secret-Token header.
     Handles: /start, pre_checkout_query, successful_payment.
     """
+    tg_webhook_limiter.check(request)
     secret = settings.telegram_webhook_secret
     if secret:
         token = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
@@ -266,6 +335,12 @@ async def _handle_tg_update(update: dict[str, Any], svc: VerticalSliceService) -
     user_id = str(user.get("id")) if user.get("id") else None
 
     if text.startswith("/start") and chat_id:
+        if user_id:
+            svc.get_or_create_user(
+                user_id,
+                first_name=user.get("first_name"),
+                username=user.get("username"),
+            )
         await send_start_message(chat_id)
         return
 
@@ -280,5 +355,6 @@ async def _handle_tg_update(update: dict[str, Any], svc: VerticalSliceService) -
             user_id=user_id,
             payload=sp.get("invoice_payload", ""),
             stars=sp.get("total_amount", 0),
+            telegram_payment_charge_id=sp.get("telegram_payment_charge_id", ""),
             svc=svc,
         )
