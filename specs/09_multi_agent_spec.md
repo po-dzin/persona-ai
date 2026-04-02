@@ -29,7 +29,7 @@ OWNS (exclusive write):
 
 READS (no write):
   apps/web/src/screens/*.tsx  (to verify usage)
-  specs/03_uiux_spec.md       (design tokens source)
+  apps/web/src/styles/TOKEN_CONTRACT.md  (design tokens source)
 ```
 
 ### Agent C: Frontend — Data, Hooks & Utils
