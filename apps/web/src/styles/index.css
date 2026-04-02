@@ -45,13 +45,13 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 
 :root {
-  --tab-bar-gap: 0px;
+  --tab-bar-gap: var(--pr-space-0);
 }
 
 /* ─── App shell ─── */
 .app-shell {
   position: relative;
-  width: min(100vw, 430px);
+  width: min(100vw, var(--cmp-size-shell-max-width));
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
@@ -69,8 +69,8 @@ button, a, [role="button"] { touch-action: manipulation; }
 .screen {
   position: absolute;
   inset: 0;
-  top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
-  bottom: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
+  top: max(var(--tg-top-inset, var(--pr-space-0)), env(safe-area-inset-top, var(--pr-space-0)));
+  bottom: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--pr-space-0))) + var(--tab-bar-gap));
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -180,7 +180,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .category-body {
   overflow: hidden;   /* needed for max-height collapse animation */
   transition: max-height var(--cmp-motion-swipe) var(--cmp-ease-standard), opacity var(--cmp-motion-normal) var(--cmp-ease-standard);
-  max-height: 500px;  /* bumped from 400 → 500 to avoid clipping bottom row */
+  max-height: var(--cmp-size-category-body-max-height);
   opacity: 1;
   /* Give extra vertical space so scale(1.03) on cards isn't clipped */
   padding-top: var(--cmp-space-2);
@@ -290,7 +290,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   animation: none;
 }
 .style-card {
-  min-width: 132px;
+  min-width: var(--cmp-size-style-card-min-width);
   border-radius: var(--cmp-radius-card);
   overflow: hidden;
   cursor: pointer;
@@ -520,18 +520,22 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .package-card:active { transform: scale(var(--cmp-state-scale-press-sm)); background: var(--sem-color-bg-pressed); }
 .package-card.featured {
-  border: 1.var(--cmp-space-5) solid var(--sem-color-accent-light);
+  border: var(--cmp-space-2) solid var(--sem-color-accent-light);
   background: var(--sem-color-accent-soft-08);
+  box-shadow: 0 0 0 1px var(--sem-color-accent-soft-35) inset;
 }
 .package-featured-tag {
   position: absolute;
-  top: -var(--space-2); right: var(--cmp-space-14);
+  top: var(--cmp-space-6);
+  right: var(--cmp-space-10);
   background: linear-gradient(145deg, var(--sem-color-accent-light), var(--sem-color-accent-strong));
   color: white;
   font-size: var(--cmp-type-micro-size);
   font-weight: 700;
-  padding: var(--cmp-space-3) var(--cmp-space-9);
+  line-height: 1;
+  padding: var(--cmp-space-3) var(--cmp-space-8);
   border-radius: var(--space-2);
+  pointer-events: none;
 }
 .package-icon {
   width: var(--cmp-space-42); height: var(--cmp-space-42);
@@ -551,6 +555,9 @@ button, a, [role="button"] { touch-action: manipulation; }
 .package-name { font-size: var(--cmp-type-body-md-size); font-weight: 600; color: var(--sem-color-text-primary); }
 .package-coins { font-size: var(--cmp-type-label-md-size); color: var(--sem-color-text-secondary); margin-top: var(--cmp-space-2); }
 .package-right { text-align: right; flex-shrink: 0; }
+.package-card.featured .package-right {
+  padding-top: var(--cmp-space-16);
+}
 .package-price { font-size: var(--cmp-type-body-md-size); font-weight: 700; color: var(--sem-color-text-primary); }
 .package-bonus { font-size: var(--cmp-type-label-sm-size); font-weight: 600; color: var(--sem-color-success); margin-top: var(--cmp-size-hairline); }
 .balance-footer-copy {
@@ -739,7 +746,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .tab-bar {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  height: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
+  height: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--pr-space-0))));
   background: var(--sem-color-nav-bg);
   backdrop-filter: blur(var(--space-3));
   -webkit-backdrop-filter: blur(var(--space-3));
@@ -748,7 +755,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   align-items: center;
   justify-content: space-around;
   padding: var(--space-1) var(--space-2) 0;
-  padding-bottom: var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px));
+  padding-bottom: var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--pr-space-0)));
   z-index: var(--cmp-z-tab);
 }
 .tab-item {
@@ -817,8 +824,8 @@ button, a, [role="button"] { touch-action: manipulation; }
 .overlay-screen {
   position: absolute;
   inset: 0;
-  top: max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px));
-  bottom: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)) + var(--tab-bar-gap));
+  top: max(var(--tg-top-inset, var(--pr-space-0)), env(safe-area-inset-top, var(--pr-space-0)));
+  bottom: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--pr-space-0))) + var(--tab-bar-gap));
   background: var(--sem-color-bg-primary);
   z-index: var(--cmp-z-flow);
   overflow-y: auto;
@@ -895,7 +902,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   transition: transform var(--cmp-motion-fast) var(--cmp-ease-standard); position: relative; border: none;
 }
 .pick-style:active { transform: scale(var(--cmp-state-scale-press-md)); }
-.pick-style .style-preview { min-height: 160px; }
+.pick-style .style-preview { min-height: var(--cmp-size-style-preview-min-height); }
 .pick-style.selected { box-shadow: inset 0 0 0 var(--cmp-space-3) var(--sem-color-accent); }
 .pick-style.selected .style-overlay::after {
   content: '';
@@ -932,7 +939,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   border-radius: var(--space-3);
   color: var(--sem-color-text-primary);
   font-family: inherit; font-size: var(--cmp-type-title-md-size);
-  resize: none; height: 90px; line-height: var(--cmp-type-line-height-body);
+  resize: none; height: var(--cmp-size-textarea-height); line-height: var(--cmp-type-line-height-body);
 }
 .custom-textarea::placeholder { color: var(--sem-color-text-disabled); }
 .custom-textarea:focus { outline: var(--cmp-space-2) solid var(--sem-color-accent-ring-50); outline-offset: var(--cmp-size-hairline); border-color: var(--sem-color-accent-ring-40); }
@@ -1216,7 +1223,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .viewer-menu {
   position: absolute; bottom: calc(100% + var(--space-2)); right: 0;
   background: var(--sem-color-bg-pressed); border-radius: var(--cmp-space-14);
-  min-width: 200px; overflow: hidden;
+  min-width: var(--cmp-size-viewer-menu-min-width); overflow: hidden;
   box-shadow: 0 var(--space-2) var(--space-8) var(--sem-color-overlay-chip);
   z-index: var(--cmp-z-flow);
   transform-origin: bottom right;
@@ -1244,7 +1251,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   color: var(--sem-color-danger-soft);
   background: var(--sem-color-danger-soft-bg);
 }
-.viewer-share-menu { min-width: 230px; }
+.viewer-share-menu { min-width: var(--cmp-size-viewer-share-menu-min-width); }
 .viewer-icon-btn.active { background: var(--sem-color-bg-elevated); color: var(--sem-color-text-inverse); }
 
 /* ─── Models list ─── */
@@ -1338,7 +1345,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   background: var(--sem-color-bg-primary);
   overflow: hidden;
   top: 0;
-  bottom: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, 0px)));
+  bottom: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--pr-space-0))));
 }
 .style-preview-hero {
   height: 100%;
@@ -1352,7 +1359,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .style-preview-top {
   padding: var(--cmp-space-14) var(--cmp-space-page-edge) 0;
-  padding-top: calc(var(--cmp-space-14) + max(var(--tg-top-inset, 0px), env(safe-area-inset-top, 0px)));
+  padding-top: calc(var(--cmp-space-14) + max(var(--tg-top-inset, var(--pr-space-0)), env(safe-area-inset-top, var(--pr-space-0))));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1519,7 +1526,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 .hidden-file-input { display: none; }
 .fill-image-cover { width: 100%; height: 100%; object-fit: cover; display: block; }
-.fill-image-contain { width: 100%; max-height: 65vh; object-fit: contain; display: block; }
+.fill-image-contain { width: 100%; max-height: var(--cmp-size-media-contain-max-height); object-fit: contain; display: block; }
 
 .photo-loading-overlay {
   position: absolute;
@@ -1552,6 +1559,26 @@ button, a, [role="button"] { touch-action: manipulation; }
   position: relative;
   z-index: 1;
 }
+ .photo-failed-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--cmp-space-2);
+  padding: var(--cmp-space-10);
+  background: linear-gradient(180deg, var(--pr-scrim-22), var(--pr-scrim-60));
+ }
+ .photo-failed-title {
+  font-size: var(--cmp-type-label-md-size);
+  font-weight: 700;
+  color: var(--sem-color-danger-soft);
+ }
+ .photo-failed-subtitle {
+  font-size: var(--cmp-type-caption-size);
+  color: var(--sem-color-text-on-media-muted);
+ }
 @keyframes photoLoadingSweep {
   0% {
     transform: translateX(-25%) rotate(8deg);
@@ -1711,14 +1738,14 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 @media (min-width: 768px) {
   .app-shell {
-    width: 430px;
-    height: min(900px, calc(100dvh - var(--space-8)));
-    max-height: min(900px, calc(100dvh - var(--space-8)));
+    width: var(--cmp-size-shell-max-width);
+    height: min(var(--cmp-size-shell-desktop-max-height), calc(100dvh - var(--space-8)));
+    max-height: min(var(--cmp-size-shell-desktop-max-height), calc(100dvh - var(--space-8)));
     margin: var(--space-4) auto;
     border-radius: var(--cmp-space-30);
     border-left: var(--cmp-size-hairline) solid var(--sem-border-hover);
     border-right: var(--cmp-size-hairline) solid var(--sem-border-hover);
-    box-shadow: 0 0 0 var(--cmp-size-hairline) var(--pr-overlay-03), 0 var(--space-5) 80px var(--sem-color-overlay-image-dim);
+    box-shadow: 0 0 0 var(--cmp-size-hairline) var(--pr-overlay-03), 0 var(--space-5) var(--cmp-size-shell-desktop-shadow-blur) var(--sem-color-overlay-image-dim);
   }
 }
 

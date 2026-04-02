@@ -17,7 +17,8 @@ This project uses a strict 3-layer token architecture:
 - Use only `--sem-*` or `--cmp-*` in component/screen styles.
 - Keep literals (`#hex`, `rgba`, etc.) in `tokens.css` only.
 - Keep transition/animation durations and easing tokenized via `--cmp-motion-*` and `--cmp-ease-*`.
-- Prefer CSS classes over static inline `style={{...}}`.
+- Prefer CSS classes over inline `style={...}`.
+- Inline styles are allowed only for approved dynamic data cases (runtime gradients, runtime ratio geometry, measured panel height) and are enforced by drift-check allowlist.
 - Inline styles are allowed only for dynamic runtime values (for example per-item gradient or computed dimensions).
 
 ## Drift Gate

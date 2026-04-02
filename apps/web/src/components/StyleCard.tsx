@@ -7,7 +7,13 @@ interface StyleCardProps {
 
 export function StyleCard({ style, onClick }: StyleCardProps) {
   return (
-    <button className="style-card" style={{ background: style.gradient }} onClick={() => onClick(style)}>
+    <button
+      type="button"
+      className="style-card"
+      style={{ background: style.gradient }}
+      onClick={() => onClick(style)}
+      aria-label={style.name}
+    >
       <span className="style-name">{style.name}</span>
       {style.isTrending ? <span className="style-tag fire">Hot</span> : null}
       {style.isNew ? <span className="style-tag new">New</span> : null}

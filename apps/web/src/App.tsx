@@ -205,8 +205,15 @@ export function App() {
         typeof liveTg?.viewportStableHeight === "number"
           ? liveTg.viewportStableHeight
           : undefined;
+      const activeEl = document.activeElement as HTMLElement | null;
+      const isKeyboardInputFocused = Boolean(
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          activeEl.isContentEditable),
+      );
       const stableGapTop =
-        typeof stableH === "number"
+        typeof stableH === "number" && !isKeyboardInputFocused
           ? Math.max(0, window.innerHeight - stableH)
           : 0;
       const topInset = liveTg ? Math.max(tgChromeTop, stableGapTop) : 0;
@@ -229,7 +236,16 @@ export function App() {
     liveTgInit?.onEvent?.("safeAreaChanged", applyInsets);
     liveTgInit?.onEvent?.("contentSafeAreaChanged", applyInsets);
     liveTgInit?.onEvent?.("fullscreenChanged", applyInsets);
-    return () => { clearTimeout(tUser); clearTimeout(tUser2); clearTimeout(t1); clearTimeout(t2); };
+    window.addEventListener("focusin", applyInsets);
+    window.addEventListener("focusout", applyInsets);
+    return () => {
+      clearTimeout(tUser);
+      clearTimeout(tUser2);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("focusin", applyInsets);
+      window.removeEventListener("focusout", applyInsets);
+    };
   }, [refreshProfile]);
 
   const { styles, models, packages } = useCatalog();
@@ -289,6 +305,7 @@ export function App() {
   }, [activeScreen, donePhotosCount]);
 
   const [queuedModalOpen, setQueuedModalOpen] = useState(false);
+  const [queueModalConfirmed, setQueueModalConfirmed] = useState(false);
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
   const [paywallModalOpen, setPaywallModalOpen] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
@@ -470,6 +487,7 @@ export function App() {
       let generationAccepted = false;
       const expectedCost = models.find((m) => m.id === payload.modelId)?.coins ?? null;
       setLastChargedCoins(expectedCost);
+      setQueueModalConfirmed(false);
       setQueuedModalOpen(true);
 
       runGenerateBackground(
@@ -482,6 +500,7 @@ export function App() {
             return;
           }
           generationAccepted = true;
+          setQueueModalConfirmed(true);
           setLastChargedCoins(response.order.creditCost);
           refreshProfile();
         },
@@ -520,6 +539,7 @@ export function App() {
     });
     let generationAccepted = false;
     setLastChargedCoins(selectedModelCost);
+    setQueueModalConfirmed(false);
     setQueuedModalOpen(true);
 
     // Step 3: Generate in background — UI is free, photos screen shows polling state
@@ -539,6 +559,7 @@ export function App() {
           return;
         }
         generationAccepted = true;
+        setQueueModalConfirmed(true);
         setLastChargedCoins(response.order.creditCost);
         refreshProfile();
       },
@@ -831,9 +852,13 @@ export function App() {
 
       <Modal
         isOpen={queuedModalOpen}
-        title="Добавлено в очередь!"
-        description="Генерация уже началась. Результат появится в разделе «Мои фото»."
-        meta={lastChargedCoins ? `Списано: ${lastChargedCoins} 🪙` : undefined}
+        title={queueModalConfirmed ? "Добавлено в очередь!" : "Отправляем запрос..."}
+        description={
+          queueModalConfirmed
+            ? "Генерация уже началась. Результат появится в разделе «Мои фото»."
+            : "Проверяем запрос и запускаем генерацию."
+        }
+        meta={queueModalConfirmed && lastChargedCoins ? `Списано: ${lastChargedCoins} 🪙` : undefined}
         onClose={() => setQueuedModalOpen(false)}
       />
 

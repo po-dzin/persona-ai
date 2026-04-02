@@ -425,7 +425,6 @@ class VerticalSliceService:
 
             # Submit to provider
             provider_id = MODEL_BY_ID[order.model_id]["provider"]
-            provider = self.provider_registry[provider_id]
 
             job = JobRow(
                 job_id=str(uuid4()),
@@ -438,6 +437,7 @@ class VerticalSliceService:
             db.add(job)
 
             try:
+                provider = self.provider_registry[provider_id]
                 submit = provider.submit(
                     order_id=order.order_id,
                     model_id=order.model_id,
@@ -446,7 +446,7 @@ class VerticalSliceService:
                     prompt=order.prompt,
                     aspect_ratio=order.aspect_ratio,
                 )
-            except ProviderHTTPError as exc:
+            except Exception as exc:
                 job.status = "failed"
                 job.updated_at = now_iso()
                 order.status = "failed"

@@ -192,6 +192,9 @@
   --cmp-motion-overlay-enter: 0.24s;
   --cmp-motion-modal-enter: 0.22s;
   --cmp-motion-popover-enter: 0.18s;
+  --cmp-motion-swipe-lock: 0.32s;
+  --cmp-motion-feedback-toast: 1.4s;
+  --cmp-motion-external-app-handoff: 0.26s;
 
   --cmp-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --cmp-ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
@@ -217,6 +220,17 @@
   --cmp-breakpoint-md: 768px;
   --cmp-breakpoint-lg: 1024px;
   --cmp-breakpoint-xl: 1440px;
+
+  --cmp-size-shell-max-width: 430px;
+  --cmp-size-shell-desktop-max-height: 900px;
+  --cmp-size-shell-desktop-shadow-blur: 80px;
+  --cmp-size-category-body-max-height: 500px;
+  --cmp-size-style-card-min-width: 132px;
+  --cmp-size-style-preview-min-height: 160px;
+  --cmp-size-textarea-height: 90px;
+  --cmp-size-viewer-menu-min-width: 200px;
+  --cmp-size-viewer-share-menu-min-width: 230px;
+  --cmp-size-media-contain-max-height: 65vh;
 
   --cmp-space-screen-tail: var(--pr-space-5);
   --cmp-space-grid-gap: 5px;

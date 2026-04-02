@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
+import { readMotionTokenMs } from "../utils/motionTokens";
 
 interface PhotoViewerScreenProps {
   isOpen: boolean;
@@ -36,6 +37,18 @@ export function PhotoViewerScreen({
   const [menuOpen, setMenuOpen] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+  const copyToastDurationMs = useMemo(
+    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-feedback-toast", 1400)),
+    [prefersReducedMotion],
+  );
+  const externalAppHandoffMs = useMemo(
+    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-external-app-handoff", 260)),
+    [prefersReducedMotion],
+  );
 
   const url = photo?.resultUrl || "";
   const prompt = photo?.prompt || "Промпт недоступен";
@@ -59,7 +72,7 @@ export function PhotoViewerScreen({
   const handleCopyPrompt = async () => {
     try { await navigator.clipboard.writeText(prompt); } catch { /* unavailable */ }
     setPromptCopied(true);
-    window.setTimeout(() => setPromptCopied(false), 1400);
+    window.setTimeout(() => setPromptCopied(false), copyToastDurationMs);
   };
 
   const handleCopyLink = () => {
@@ -99,8 +112,8 @@ export function PhotoViewerScreen({
       window.open(igAppUrl, "_blank");
       window.setTimeout(() => {
         window.open(fallbackWeb, "_blank");
-      }, 260);
-    }, 260);
+      }, externalAppHandoffMs);
+    }, externalAppHandoffMs);
     closeAll();
   };
 
@@ -169,7 +182,12 @@ export function PhotoViewerScreen({
         <div className="viewer-prompt-block">
           <div className="viewer-prompt-header">
             <div className="viewer-prompt-label">Запрос</div>
-            <button className={`viewer-copy-btn${promptCopied ? " copied" : ""}`} onClick={handleCopyPrompt} title="Копировать промпт">
+            <button
+              className={`viewer-copy-btn${promptCopied ? " copied" : ""}`}
+              onClick={handleCopyPrompt}
+              title="Копировать промпт"
+              aria-label="Копировать промпт"
+            >
               {promptCopied ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
