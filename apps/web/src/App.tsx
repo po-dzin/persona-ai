@@ -280,7 +280,9 @@ export function App() {
   }, [refreshProfile]);
 
   const { styles, models, packages } = useCatalog();
-  const { wallet, photos, setWallet, setPhotos, refresh } = useWalletAndPhotos(userId);
+  const walletAndPhotos = useWalletAndPhotos(userId);
+  const { wallet, photos, setPhotos, refresh } = walletAndPhotos;
+  const setWallet = walletAndPhotos.setWallet ?? (() => undefined);
 
   useEffect(() => {
     refreshProfile();
