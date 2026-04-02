@@ -16,7 +16,7 @@ export function ProfileScreen({ credits, generations, firstName, username, avata
   const displayUsername = username ? `@${username}` : null;
 
   return (
-    <section className="screen">
+    <section className="screen profile-screen">
       <div className="profile-header">
         <div className="profile-avatar">
           {avatarUrl

@@ -32,7 +32,7 @@ const PACKAGE_ICON_BG: Record<string, string> = {
 
 export function BalanceScreen({ credits, packages, onSelectPackage, onOpenPricing }: BalanceScreenProps) {
   return (
-    <section className="screen">
+    <section className="screen balance-screen">
       <div className="balance-hero">
         <div className="balance-coin-icon">🪙</div>
         <div className="balance-amount">{credits}</div>

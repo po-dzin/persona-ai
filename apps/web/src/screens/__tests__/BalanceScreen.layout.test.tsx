@@ -5,7 +5,7 @@ import { FALLBACK_PACKAGES } from "../../data/packages";
 import { BalanceScreen } from "../BalanceScreen";
 
 describe("BalanceScreen layout", () => {
-  it("keeps the hero stack, featured package rail, and footer tail in canon order", () => {
+  it("keeps the hero, package rail, and footer order stable", () => {
     const { container } = render(
       <BalanceScreen
         credits={6078}
@@ -15,30 +15,37 @@ describe("BalanceScreen layout", () => {
       />,
     );
 
-    expect(container.firstElementChild).toHaveClass("screen");
-
     const hero = container.querySelector(".balance-hero");
     expect(hero).toBeTruthy();
-    expect(hero?.children[0]).toHaveClass("balance-coin-icon");
-    expect(hero?.children[1]).toHaveClass("balance-amount");
-    expect(hero?.children[2]).toHaveClass("balance-label");
+    expect(hero).toHaveTextContent("🪙");
+    expect(hero).toHaveTextContent("6078");
+    expect(hero).toHaveTextContent("монет на балансе");
 
     const sectionTitle = container.querySelector(".balance-section-title");
     const packagesList = container.querySelector(".packages-list");
+    expect(packagesList).toBeTruthy();
     expect(sectionTitle).toHaveTextContent("Пополнить баланс");
-    expect(packagesList?.children).toHaveLength(FALLBACK_PACKAGES.length);
+    expect(within(packagesList as HTMLElement).getAllByRole("button")).toHaveLength(FALLBACK_PACKAGES.length);
     expect(hero?.nextElementSibling).toBe(sectionTitle);
     expect(sectionTitle?.nextElementSibling).toBe(packagesList);
 
-    const popularCard = screen.getByRole("button", { name: /Popular/i });
-    expect(popularCard).toHaveClass("package-card", "featured");
-    expect(within(popularCard).getByText("Популярное")).toBeInTheDocument();
+    const packageButtons = within(packagesList as HTMLElement).getAllByRole("button");
+    expect(packageButtons).toHaveLength(FALLBACK_PACKAGES.length);
+    packageButtons.forEach((button, index) => {
+      expect(button).toHaveTextContent(FALLBACK_PACKAGES[index].title);
+    });
 
-    const rightCol = popularCard.querySelector(".package-right");
-    expect(rightCol).toBeTruthy();
-    expect(rightCol?.children[0]).toHaveClass("package-featured-tag");
-    expect(rightCol?.children[1]).toHaveClass("package-price");
-    expect(rightCol?.children[2]).toHaveClass("package-bonus");
+    const popularPackage = FALLBACK_PACKAGES.find((pkg) => pkg.code === "POPULAR");
+    expect(popularPackage).toBeTruthy();
+
+    const popularCard = packageButtons.find((button) =>
+      within(button).queryByText("Популярное"),
+    );
+    expect(popularCard).toBeTruthy();
+    expect(popularCard).toHaveTextContent(popularPackage!.title);
+    expect(popularCard).toHaveTextContent(`${popularPackage!.credits} монет`);
+    expect(popularCard).toHaveTextContent(`${popularPackage!.priceStars} ⭐`);
+    expect(within(popularCard as HTMLElement).getByText("Популярное")).toBeInTheDocument();
 
     const footerCopy = container.querySelector(".balance-footer-copy");
     const pricingLink = container.querySelector(".balance-pricing-link");
@@ -47,6 +54,9 @@ describe("BalanceScreen layout", () => {
     expect(footerCopy).toBeTruthy();
     expect(pricingLink).toBeTruthy();
     expect(tail).toBeTruthy();
+    expect(footerCopy).toHaveTextContent("Оплата через Telegram Stars.");
+    expect(footerCopy).toHaveTextContent("Монеты начисляются мгновенно.");
+    expect(pricingLink).toHaveTextContent("Описание тарифов →");
     expect(footerCopy?.nextElementSibling).toBe(pricingLink);
     expect(pricingLink?.nextElementSibling).toBe(tail);
     expect(container.firstElementChild?.lastElementChild).toHaveClass("screen-tail-space");

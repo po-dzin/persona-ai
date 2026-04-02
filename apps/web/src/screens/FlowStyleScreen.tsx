@@ -65,6 +65,7 @@ export function FlowStyleScreen({
   const [customPhoto, setCustomPhoto] = useState<File | null>(null);
   const [customPhotoUrl, setCustomPhotoUrl] = useState<string | null>(null);
   const [customPhotoError, setCustomPhotoError] = useState<string | null>(null);
+  const [isPromptFocused, setIsPromptFocused] = useState(false);
   const [modelDropOpen, setModelDropOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -130,9 +131,25 @@ export function FlowStyleScreen({
   if (!isOpen) return null;
 
   const canCreateCustom = customPrompt.trim().length > 0 && !!customPhoto && !customPhotoError;
+  const ensurePromptVisible = (el: HTMLTextAreaElement) => {
+    window.setTimeout(() => {
+      const scroller = el.closest(".overlay-screen") as HTMLElement | null;
+      if (!scroller) return;
+      const vv = window.visualViewport;
+      const keyboardInset = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+      const safeBottom = 52 + keyboardInset + 16;
+      const rect = el.getBoundingClientRect();
+      const targetBottom = window.innerHeight - safeBottom;
+      if (rect.bottom > targetBottom) {
+        scroller.scrollBy({ top: rect.bottom - targetBottom + 12, behavior: "smooth" });
+      } else {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 120);
+  };
 
   return (
-    <div className="overlay-screen">
+    <div className={"overlay-screen" + (tab === "custom" && isPromptFocused ? " overlay-screen-keyboard-active" : "")}>
       <div className="flow-top flow-top-create">
         <div className="flow-step" />
         <div className="flow-title">Создать</div>
@@ -257,18 +274,17 @@ export function FlowStyleScreen({
               </div>
             </div>
 
-            <div className="custom-field">
+            <div className={"custom-field custom-field-prompt" + (isPromptFocused ? " is-focused" : "")}>
               <div className="custom-label">Описание стиля</div>
               <textarea
                 className="custom-textarea"
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
                 onFocus={(e) => {
-                  const el = e.currentTarget;
-                  window.setTimeout(() => {
-                    el.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }, 120);
+                  setIsPromptFocused(true);
+                  ensurePromptVisible(e.currentTarget);
                 }}
+                onBlur={() => setIsPromptFocused(false)}
                 placeholder="Опишите желаемый стиль фотосессии..."
               />
             </div>

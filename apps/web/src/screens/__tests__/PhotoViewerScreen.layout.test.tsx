@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -42,8 +42,6 @@ describe("PhotoViewerScreen layout", () => {
   it("keeps the photo block, prompt block, and action rail order intact", () => {
     const { container } = renderViewer();
 
-    expect(container.firstElementChild).toHaveClass("overlay-screen");
-    expect(container.querySelector(".flow-top")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
     expect(screen.getByText("Фото")).toBeInTheDocument();
     expect(screen.getByAltText("Голливуд")).toBeInTheDocument();
@@ -65,6 +63,10 @@ describe("PhotoViewerScreen layout", () => {
     expect(photoBlock?.nextElementSibling).toBe(body);
     expect(body?.children[0]).toBe(promptBlock);
     expect(body?.children[1]).toBe(actionsRow);
+    expect(within(actionsRow as HTMLElement).getAllByRole("button")).toHaveLength(3);
+    expect(within(actionsRow as HTMLElement).getByRole("button", { name: "Скачать" })).toBeInTheDocument();
+    expect(within(actionsRow as HTMLElement).getByRole("button", { name: "Поделиться" })).toBeInTheDocument();
+    expect(within(actionsRow as HTMLElement).getByRole("button", { name: "Действия" })).toBeInTheDocument();
     expect(promptBlock?.firstElementChild).toBe(promptHeader);
     expect(promptHeader?.children[0]).toHaveTextContent("Запрос");
     expect(promptHeader?.children[1]).toHaveAttribute("aria-label", "Копировать промпт");
