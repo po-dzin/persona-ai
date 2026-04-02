@@ -4,6 +4,7 @@ import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { readMotionTokenMs } from "../utils/motionTokens";
+import { isGeneratingPhotoStatus } from "../utils/photoStatus";
 
 interface HomeScreenProps {
   styles: StyleItem[];
@@ -24,7 +25,7 @@ function CameraIcon() {
 export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) {
   const styleByCode = useMemo(() => Object.fromEntries(styles.map((s) => [s.id, s])), [styles]);
   const activePhotos = useMemo(
-    () => photos.filter((p) => p.status === "queued" || p.status === "processing"),
+    () => photos.filter((p) => isGeneratingPhotoStatus(p.status)),
     [photos],
   );
 

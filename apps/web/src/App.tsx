@@ -22,6 +22,7 @@ import type { StyleItem } from "./data/styles";
 import type { SourceTab } from "../../../../shared/contracts/ui";
 import { createPurchaseInvoice, deletePhoto, getPhotoShareLink, getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
 import { triggerHaptic } from "./utils/haptics";
+import { isGeneratingPhotoStatus } from "./utils/photoStatus";
 
 // Telegram WebApp integration
 declare global {
@@ -388,6 +389,26 @@ export function App() {
     setPhotos((prev) => prev.filter((p) => p.orderId !== optimisticId));
   }, [setPhotos]);
 
+  const replaceOptimisticGeneration = useCallback((optimisticId: string, response: GenerateResult) => {
+    const responseOrderId = response.order?.orderId;
+    if (!responseOrderId) return;
+    const responseStatus = isGeneratingPhotoStatus(response.order?.status) ? "queued" : "done";
+    const now = new Date().toISOString();
+    setPhotos((prev) =>
+      prev.map((photo) =>
+        photo.orderId === optimisticId
+          ? {
+              ...photo,
+              orderId: responseOrderId,
+              status: responseStatus,
+              resultUrl: response.order?.resultUrl ?? null,
+              updatedAt: now,
+            }
+          : photo,
+      ),
+    );
+  }, [setPhotos]);
+
   const openCreate = () => {
     // Photo viewer must not stay on top of create flow.
     setViewerOpen(false);
@@ -527,12 +548,15 @@ export function App() {
             return;
           }
           generationAccepted = true;
+          replaceOptimisticGeneration(optimisticId, response);
           setQueueModalConfirmed(true);
           setLastChargedCoins(response.order.creditCost);
           refreshProfile();
         },
         async () => {
-          removeOptimisticGeneration(optimisticId);
+          if (!generationAccepted) {
+            removeOptimisticGeneration(optimisticId);
+          }
           if (!generationAccepted) setQueuedModalOpen(false);
           setCreateActionLocked(false);
           await refresh();
@@ -592,12 +616,15 @@ export function App() {
           return;
         }
         generationAccepted = true;
+        replaceOptimisticGeneration(optimisticId, response);
         setQueueModalConfirmed(true);
         setLastChargedCoins(response.order.creditCost);
         refreshProfile();
       },
       async () => {
-        removeOptimisticGeneration(optimisticId);
+        if (!generationAccepted) {
+          removeOptimisticGeneration(optimisticId);
+        }
         if (!generationAccepted) setQueuedModalOpen(false);
         setCreateActionLocked(false);
         await refresh();
