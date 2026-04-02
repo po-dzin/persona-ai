@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
+import { readMotionTokenMs } from "../utils/motionTokens";
 
 interface PhotoViewerScreenProps {
   isOpen: boolean;
@@ -36,6 +37,8 @@ export function PhotoViewerScreen({
   const [menuOpen, setMenuOpen] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const copyToastDurationMs = useMemo(() => readMotionTokenMs("--cmp-motion-feedback-toast", 1400), []);
+  const externalAppHandoffMs = useMemo(() => readMotionTokenMs("--cmp-motion-external-app-handoff", 260), []);
 
   const url = photo?.resultUrl || "";
   const prompt = photo?.prompt || "Промпт недоступен";
@@ -59,7 +62,7 @@ export function PhotoViewerScreen({
   const handleCopyPrompt = async () => {
     try { await navigator.clipboard.writeText(prompt); } catch { /* unavailable */ }
     setPromptCopied(true);
-    window.setTimeout(() => setPromptCopied(false), 1400);
+    window.setTimeout(() => setPromptCopied(false), copyToastDurationMs);
   };
 
   const handleCopyLink = () => {
@@ -99,8 +102,8 @@ export function PhotoViewerScreen({
       window.open(igAppUrl, "_blank");
       window.setTimeout(() => {
         window.open(fallbackWeb, "_blank");
-      }, 260);
-    }, 260);
+      }, externalAppHandoffMs);
+    }, externalAppHandoffMs);
     closeAll();
   };
 

@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
+import { readMotionTokenMs } from "../utils/motionTokens";
 
 interface HomeScreenProps {
   styles: StyleItem[];
@@ -10,9 +11,6 @@ interface HomeScreenProps {
 }
 
 const CATEGORY_ORDER = ["Тренды", "Бизнес и карьера", "Лайфстайл", "Арт и креатив", "Особый повод"];
-const CATEGORY_TRANSITION_LOCK_MS = 320;
-const CATEGORY_HEIGHT_TRANSITION_MS = 320;
-
 function CameraIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -47,6 +45,8 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   const [isCategoryTransitioning, setIsCategoryTransitioning] = useState(false);
   const [panelsHeight, setPanelsHeight] = useState<number | null>(null);
   const allCategories = useMemo(() => ["ВСЕ", ...categories], [categories]);
+  const swipeDurationMs = useMemo(() => readMotionTokenMs("--cmp-motion-swipe", 280), []);
+  const transitionLockMs = useMemo(() => readMotionTokenMs("--cmp-motion-swipe-lock", 320), []);
   const tabsRef = useRef<HTMLDivElement>(null);
   const panelsRef = useRef<HTMLDivElement>(null);
   const panelRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -103,8 +103,8 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     if (heightTimerRef.current) window.clearTimeout(heightTimerRef.current);
     heightTimerRef.current = window.setTimeout(() => {
       setPanelsHeight(null);
-    }, CATEGORY_HEIGHT_TRANSITION_MS);
-  }, [activeCategory]);
+    }, swipeDurationMs);
+  }, [activeCategory, swipeDurationMs]);
 
   useEffect(() => {
     return () => {
@@ -132,7 +132,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     if (categoryTransitionTimerRef.current) window.clearTimeout(categoryTransitionTimerRef.current);
     categoryTransitionTimerRef.current = window.setTimeout(() => {
       setIsCategoryTransitioning(false);
-    }, CATEGORY_TRANSITION_LOCK_MS);
+    }, transitionLockMs);
     setActiveCategory(nextCategory);
   };
 
