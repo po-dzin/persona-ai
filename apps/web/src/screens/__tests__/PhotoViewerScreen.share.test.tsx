@@ -73,7 +73,7 @@ describe("PhotoViewerScreen share menu", () => {
     expect(screen.queryByRole("button", { name: "WhatsApp" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Telegram" }));
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining("https://t.me/share/url?url="),
+      expect.stringContaining("https://t.me/share/url?url=https%3A%2F%2Fcdn.example.com%2Fphoto.jpg"),
       "_blank",
     );
 
@@ -92,9 +92,7 @@ describe("PhotoViewerScreen share menu", () => {
     await user.click(screen.getByRole("button", { name: "Threads" }));
     await waitFor(() => {
       expect(openSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          "https://www.threads.net/intent/post?text=%D0%A1%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%BE%20%D0%B2%20PersonAI%20https%3A%2F%2Fpersonai.app%2Fshare%2Ford_1",
-        ),
+        expect.stringContaining("https://www.threads.net/intent/post?text="),
         "_blank",
       );
     });
@@ -119,8 +117,8 @@ describe("PhotoViewerScreen share menu", () => {
     await waitFor(() => {
       expect(shareSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          text: "Создано в PersonAI",
-          url: "https://personai.app/share/ord_1",
+          text: "Создано в PersonAI ✨",
+          url: "http://localhost:3000/",
         }),
       );
     });

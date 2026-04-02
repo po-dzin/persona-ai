@@ -34,7 +34,7 @@ export function PhotoViewerScreen({
   onUseAsReference,
   onDeletePhoto,
 }: PhotoViewerScreenProps) {
-  const SHARE_BRAND_TEXT = "Создано в PersonAI";
+  const SHARE_BRAND_TEXT = "Создано в PersonAI ✨";
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
@@ -47,6 +47,7 @@ export function PhotoViewerScreen({
 
   const url = photo?.resultUrl || "";
   const prompt = photo?.prompt || "Промпт недоступен";
+  const homeAppLink = `${window.location.origin}${window.location.pathname}`;
 
   const closeAll = () => {
     setShareOpen(false);
@@ -80,14 +81,13 @@ export function PhotoViewerScreen({
 
   const handleTelegramShare = () => {
     void (async () => {
-      const shareUrl = appLink || url;
-      // Prefer sharing actual photo file + short app link caption.
+      // One canonical share link only: app home link.
       if (navigator.share && url) {
         try {
           const imageBlob = await fetch(url).then((r) => r.blob());
           const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
           const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
-          const payload = { text: `${SHARE_BRAND_TEXT}\n${shareUrl}`.trim(), files: [file] };
+          const payload = { text: SHARE_BRAND_TEXT, url: homeAppLink, files: [file] };
           if (!navigator.canShare || navigator.canShare(payload)) {
             await navigator.share(payload);
             closeAll();
@@ -98,8 +98,8 @@ export function PhotoViewerScreen({
         }
       }
 
-      const telegramUrl = url || shareUrl;
-      const text = encodeURIComponent(`${SHARE_BRAND_TEXT}\n${appLink || shareUrl}`.trim());
+      const text = encodeURIComponent(SHARE_BRAND_TEXT);
+      const telegramUrl = url || homeAppLink;
       const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(telegramUrl)}&text=${text}`;
       const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (url: string) => void } | undefined;
       if (liveTg?.openTelegramLink) {
@@ -130,7 +130,7 @@ export function PhotoViewerScreen({
   };
 
   const handleThreads = () => {
-    const shareText = `${SHARE_BRAND_TEXT} ${appLink || url}`.trim();
+    const shareText = `${SHARE_BRAND_TEXT} ${homeAppLink}`.trim();
     window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareText)}`, "_blank");
     closeAll();
   };
@@ -138,7 +138,7 @@ export function PhotoViewerScreen({
   const handleSystemShare = () => {
     void (async () => {
       try {
-        const shareUrl = appLink || url;
+        const shareUrl = homeAppLink;
         if (navigator.share) {
           if (url) {
             try {
