@@ -19,7 +19,6 @@ This project uses a strict 3-layer token architecture:
 - Keep transition/animation durations and easing tokenized via `--cmp-motion-*` and `--cmp-ease-*`.
 - Prefer CSS classes over inline `style={...}`.
 - Inline styles are allowed only for approved dynamic data cases (runtime gradients, runtime ratio geometry, measured panel height) and are enforced by drift-check allowlist.
-- Inline styles are allowed only for dynamic runtime values (for example per-item gradient or computed dimensions).
 
 ## Drift Gate
 
@@ -29,6 +28,14 @@ This project uses a strict 3-layer token architecture:
 - new hardcoded spacing/typography declarations;
 - new raw motion durations/easing in non-token CSS;
 - forbidden inline style objects (non-dynamic).
+
+## Pre-merge Contract
+
+- Local strict gate: `npm run check:premerge`
+- CI strict gate: `.github/workflows/ci.yml` job `validate-web-ui` runs the same contract.
+- Any new exception (inline style, literal, hardcoded spacing/type) must be either:
+1. removed via tokenization; or
+2. intentionally allowlisted via baseline update.
 
 Baseline updates must be intentional:
 
