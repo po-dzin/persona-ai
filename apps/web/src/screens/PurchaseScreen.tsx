@@ -17,8 +17,8 @@ export function PurchaseScreen({ isOpen, selectedPackage, onClose, onConfirm }: 
 
   if (!isOpen || !selectedPackage) return null;
 
-  const bonusCoins = selectedPackage.bonus_percent > 0
-    ? Math.round(selectedPackage.credits * selectedPackage.bonus_percent / 100)
+  const bonusCoins = selectedPackage.bonusPercent > 0
+    ? Math.round(selectedPackage.credits * selectedPackage.bonusPercent / 100)
     : 0;
   const isStripeEnabled = false;
 
@@ -46,15 +46,15 @@ export function PurchaseScreen({ isOpen, selectedPackage, onClose, onConfirm }: 
             {bonusCoins > 0 && <span className="purchase-row-bonus-inline"> +{bonusCoins}</span>}
           </div>
         </div>
-        {selectedPackage.bonus_percent > 0 ? (
+        {selectedPackage.bonusPercent > 0 ? (
           <div className="purchase-row">
             <div className="purchase-row-label">Бонус</div>
-            <div className="purchase-row-value bonus">+{selectedPackage.bonus_percent}%</div>
+            <div className="purchase-row-value bonus">+{selectedPackage.bonusPercent}%</div>
           </div>
         ) : null}
         <div className="purchase-total">
           <div className="purchase-total-label">К оплате</div>
-          <div className="purchase-total-value">{selectedPackage.price_stars} ⭐</div>
+          <div className="purchase-total-value">{selectedPackage.priceStars} ⭐</div>
         </div>
       </div>
 

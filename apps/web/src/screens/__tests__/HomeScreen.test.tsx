@@ -10,7 +10,7 @@ describe("HomeScreen", () => {
     const user = userEvent.setup();
     const onPreviewStyle = vi.fn();
 
-    render(<HomeScreen styles={FALLBACK_STYLES} onPreviewStyle={onPreviewStyle} />);
+    render(<HomeScreen styles={FALLBACK_STYLES} photos={[]} onPreviewStyle={onPreviewStyle} />);
 
     expect(screen.getByRole("button", { name: "ВСЕ" })).toHaveClass("active");
     expect(screen.getByRole("button", { name: /Голливуд/ })).toBeInTheDocument();
@@ -26,7 +26,7 @@ describe("HomeScreen", () => {
     const user = userEvent.setup();
     const onPreviewStyle = vi.fn();
 
-    render(<HomeScreen styles={FALLBACK_STYLES} onPreviewStyle={onPreviewStyle} />);
+    render(<HomeScreen styles={FALLBACK_STYLES} photos={[]} onPreviewStyle={onPreviewStyle} />);
 
     await user.click(screen.getAllByRole("button", { name: /Голливуд/ })[0]);
 

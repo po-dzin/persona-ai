@@ -3,8 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getBalance, getPhotos, type PhotoRecord, type Wallet } from "../utils/api";
 
 const FALLBACK_WALLET: Wallet = {
-  free_credit_available: true,
-  paid_credits: 0,
+  freeCreditAvailable: true,
+  paidCredits: 0,
 };
 
 // Poll faster while a photo is processing, slower when all done

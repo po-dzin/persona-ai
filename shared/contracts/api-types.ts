@@ -1,20 +1,12 @@
-import type { AIModel, Style } from "./style-types";
+import type {
+  AIModel,
+  Style,
+  GenerateRequest,
+  GenerateResult,
+} from "./domain";
 
-export interface GenerationRequest {
-  userId: string;
-  sourceKey: string;
-  styleCode?: string;
-  modelId: string;
-  prompt?: string;
-  aspectRatio?: string;
-}
-
-export interface GenerationResult {
-  orderId: string;
-  jobId: string;
-  status: "queued" | "processing" | "done" | "failed";
-  resultUrl?: string | null;
-}
+export type GenerationRequest = GenerateRequest;
+export type GenerationResult = GenerateResult;
 
 export interface ProviderEvent {
   provider: string;

@@ -1,49 +1,28 @@
-import type { AIModel } from "../data/models";
-import type { PackageItem } from "../data/packages";
-import type { StyleItem } from "../data/styles";
+import type {
+  BalanceResponseDto,
+  ModelsResponseDto,
+  PackagesResponseDto,
+  PhotosResponseDto,
+  ProfileResponseDto,
+  StylesResponseDto,
+  GenerateResultDto,
+  ToggleFavoriteResponseDto,
+  UploadPhotoResponseDto,
+} from "../../../../shared/contracts/dto";
+import type {
+  GenerateRequest,
+  GenerateResult,
+  PhotoRecord,
+  UserProfile,
+  Wallet,
+} from "../../../../shared/contracts/domain";
+
+import { mapAIModelDto, mapGenerateRequestToDto, mapGenerateResultDto, mapPackageItemDto, mapPhotoRecordDto, mapStyleDto, mapToggleFavoriteDto, mapUploadPhotoResponseDto, mapUserProfileDto, mapWalletDto } from "./mappers";
 
 const API_BASE = "/v1";
 
 function getTgInitData(): string {
   return (window as any).Telegram?.WebApp?.initData ?? "";
-}
-
-export interface Wallet {
-  free_credit_available: boolean;
-  paid_credits: number;
-}
-
-export interface PhotoRecord {
-  order_id: string;
-  style_code: string;
-  model_id: string;
-  status: "queued" | "processing" | "done" | "failed";
-  prompt?: string;
-  result_url?: string | null;
-  is_favorite: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface GeneratePayload {
-  user_id: string;
-  source_key: string;
-  model_id: string;
-  style_code: string;
-  prompt?: string;
-  aspect_ratio?: string;
-}
-
-export interface GenerateResult {
-  result: "enqueued" | "paywall_required";
-  order: {
-    order_id: string;
-    status: string;
-    result_url?: string | null;
-    credit_cost: number;
-    [key: string]: unknown;
-  };
-  wallet?: Wallet;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -62,41 +41,37 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export async function getStyles(): Promise<StyleItem[]> {
-  const data = await request<{ styles: StyleItem[] }>("/styles");
-  return data.styles;
+export async function getStyles() {
+  const data = await request<StylesResponseDto>("/styles");
+  return data.styles.map(mapStyleDto);
 }
 
-export async function getModels(): Promise<AIModel[]> {
-  const data = await request<{ models: AIModel[] }>("/models");
-  return data.models;
+export async function getModels() {
+  const data = await request<ModelsResponseDto>("/models");
+  return data.models.map(mapAIModelDto);
 }
 
-export async function getPackages(): Promise<PackageItem[]> {
-  const data = await request<{ packages: PackageItem[] }>("/packages");
-  return data.packages;
+export async function getPackages() {
+  const data = await request<PackagesResponseDto>("/packages");
+  return data.packages.map(mapPackageItemDto);
 }
 
 export async function getBalance(userId: string): Promise<Wallet> {
-  const data = await request<{ wallet: Wallet }>(`/me/balance?user_id=${encodeURIComponent(userId)}`);
-  return data.wallet;
+  const data = await request<BalanceResponseDto>(`/me/balance?user_id=${encodeURIComponent(userId)}`);
+  return mapWalletDto(data.wallet);
 }
 
 export async function getPhotos(userId: string): Promise<PhotoRecord[]> {
-  const data = await request<{ photos: PhotoRecord[] }>(`/me/photos?user_id=${encodeURIComponent(userId)}`);
-  return data.photos;
+  const data = await request<PhotosResponseDto>(`/me/photos?user_id=${encodeURIComponent(userId)}`);
+  return data.photos.map(mapPhotoRecordDto);
 }
 
-export interface UploadPhotoResponse {
-  source_key: string;
-  signed_put_url?: string;
-}
-
-export async function uploadPhoto(userId: string, filename: string): Promise<UploadPhotoResponse> {
-  return await request<UploadPhotoResponse>("/uploads", {
+export async function uploadPhoto(userId: string, filename: string) {
+  const dto = await request<UploadPhotoResponseDto>("/uploads", {
     method: "POST",
     body: JSON.stringify({ user_id: userId, filename }),
   });
+  return mapUploadPhotoResponseDto(dto);
 }
 
 export async function uploadFileToSignedUrl(url: string, file: File): Promise<void> {
@@ -111,7 +86,7 @@ export async function uploadFileToSignedUrl(url: string, file: File): Promise<vo
   }
 }
 
-export async function uploadFileDirect(userId: string, filename: string, file: File): Promise<{ source_key: string }> {
+export async function uploadFileDirect(userId: string, filename: string, file: File): Promise<{ sourceKey: string }> {
   const form = new FormData();
   form.append("filename", filename);
   form.append("file", file, filename);
@@ -121,14 +96,16 @@ export async function uploadFileDirect(userId: string, filename: string, file: F
     body: form,
   });
   if (!res.ok) throw new Error(`upload_failed:${res.status}`);
-  return (await res.json()) as { source_key: string };
+  const dto = (await res.json()) as { source_key: string };
+  return { sourceKey: dto.source_key };
 }
 
-export async function generate(payload: GeneratePayload): Promise<GenerateResult> {
-  return await request<GenerateResult>("/generate", {
+export async function generate(payload: GenerateRequest): Promise<GenerateResult> {
+  const dto = await request<GenerateResultDto>("/generate", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(mapGenerateRequestToDto(payload)),
   });
+  return mapGenerateResultDto(dto);
 }
 
 export async function purchasePackage(userId: string, packageCode: string) {
@@ -138,33 +115,25 @@ export async function purchasePackage(userId: string, packageCode: string) {
   });
 }
 
-export async function createPurchaseInvoice(userId: string, packageCode: string): Promise<{ invoice_link: string }> {
-  return await request<{ invoice_link: string }>("/purchase/invoice", {
+export async function createPurchaseInvoice(userId: string, packageCode: string): Promise<{ invoiceLink: string }> {
+  const data = await request<{ invoice_link: string }>("/purchase/invoice", {
     method: "POST",
     body: JSON.stringify({ user_id: userId, package_code: packageCode, provider: "telegram" }),
   });
-}
-
-export interface UserProfile {
-  user_id: string;
-  first_name: string | null;
-  username: string | null;
-  paid_credits: number;
-  free_credit_available: boolean;
-  generations_count: number;
-  referrals_count: number;
+  return { invoiceLink: data.invoice_link };
 }
 
 export async function getProfile(): Promise<UserProfile> {
-  const data = await request<{ profile: UserProfile }>("/me/profile");
-  return data.profile;
+  const data = await request<ProfileResponseDto>("/me/profile");
+  return mapUserProfileDto(data.profile);
 }
 
-export async function toggleFavorite(orderId: string): Promise<{ is_favorite: boolean }> {
-  return await request<{ order_id: string; is_favorite: boolean }>(
+export async function toggleFavorite(orderId: string) {
+  const dto = await request<ToggleFavoriteResponseDto>(
     `/me/photos/${encodeURIComponent(orderId)}/favorite`,
     { method: "POST" },
   );
+  return mapToggleFavoriteDto(dto);
 }
 
 export async function sendPhotoToTelegram(orderId: string): Promise<void> {
@@ -178,3 +147,13 @@ export async function deletePhoto(orderId: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+export type {
+  GenerateRequest,
+  GenerateResult,
+  PhotoRecord,
+  UserProfile,
+  Wallet,
+};
+
+export type GeneratePayload = GenerateRequest;

@@ -29,8 +29,8 @@ export function CategoryScreen({ isOpen, category, styles, onClose, onPreviewSty
         {categoryStyles.map((style) => (
           <button key={style.id} className="style-card" onClick={() => onPreviewStyle(style)}>
             <div className="style-preview" style={{ background: style.gradient }}>
-              {style.is_trending ? <span className="style-tag fire">Hot</span> : null}
-              {style.is_new ? <span className="style-tag new">New</span> : null}
+              {style.isTrending ? <span className="style-tag fire">Hot</span> : null}
+              {style.isNew ? <span className="style-tag new">New</span> : null}
               <div className="style-overlay">
                 <div className="style-name">{style.name}</div>
               </div>

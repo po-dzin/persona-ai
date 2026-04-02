@@ -221,6 +221,30 @@ def test_generate_and_provider_webhook_finalize_photo() -> None:
     assert photos[0]["result_url"] == "https://cdn.example.com/photo.jpg"
 
 
+def test_generate_accepts_camel_case_payload_fields() -> None:
+    client = _client()
+    user_id = "u-camel-generate"
+    hdrs = _headers(user_id)
+
+    up = client.post("/v1/uploads", json={"filename": "camel.jpg"}, headers=hdrs).json()
+
+    generated = client.post(
+        "/v1/generate",
+        json={
+            "sourceKey": up["source_key"],
+            "modelId": "nano-banana-v1",
+            "styleCode": "anime",
+            "aspectRatio": "3:4",
+        },
+        headers=hdrs,
+    )
+    assert generated.status_code == 200
+    payload = generated.json()
+    assert payload["result"] == "enqueued"
+    assert payload["order"]["model_id"] == "nano-banana-v1"
+    assert payload["order"]["source_key"] == up["source_key"]
+
+
 def test_upload_rejects_invalid_file_type() -> None:
     client = _client()
     hdrs = _headers("u-filetype")

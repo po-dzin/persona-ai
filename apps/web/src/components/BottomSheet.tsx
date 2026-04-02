@@ -41,7 +41,7 @@ export function BottomSheet({ isOpen, title, options, onSelect, onClose }: Botto
               </div>
               {opt.selected ? (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M5 13l4 4L19 7" stroke="#A78BFA" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M5 13l4 4L19 7" stroke="var(--sem-color-accent-light)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               ) : null}
             </button>

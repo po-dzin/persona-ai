@@ -90,7 +90,7 @@ export function FlowUploadScreen({
       <div className="upload-selected-style">
         <div
           className="upload-style-thumb"
-          style={{ background: selectedStyle?.gradient || "#2A2A2A" }}
+          style={{ background: selectedStyle?.gradient || "var(--sem-color-bg-elevated)" }}
         />
         <div>
           <div className="upload-style-name">{selectedStyle?.name || "Кастом"}</div>
@@ -109,7 +109,7 @@ export function FlowUploadScreen({
 
       {/* Upload area / photo preview */}
       {photoUrl ? (
-        <div className="upload-area" style={{ border: "none", padding: 0, margin: "16px 20px 0", borderRadius: 20, overflow: "hidden", position: "relative", background: "#000" }}>
+        <div className="upload-area" style={{ border: "none", padding: 0, margin: "16px 20px 0", borderRadius: 20, overflow: "hidden", position: "relative", background: "var(--sem-color-bg-body)" }}>
           <img
             src={photoUrl}
             alt="preview"
@@ -131,9 +131,9 @@ export function FlowUploadScreen({
         <div className="upload-area" onClick={pickPhoto}>
           <div className="upload-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#666" strokeWidth="1.8" strokeLinecap="round"/>
-              <polyline points="17 8 12 3 7 8" stroke="#666" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              <line x1="12" y1="3" x2="12" y2="15" stroke="#666" strokeWidth="1.8" strokeLinecap="round"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.8" strokeLinecap="round"/>
+              <polyline points="17 8 12 3 7 8" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="12" y1="3" x2="12" y2="15" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.8" strokeLinecap="round"/>
             </svg>
           </div>
           <div className="upload-text">Загрузить фото</div>
@@ -142,7 +142,7 @@ export function FlowUploadScreen({
       )}
 
       {validationError ? (
-        <div style={{ margin: "10px 20px 0", fontSize: 12, color: "#E24B4A" }}>
+        <div style={{ margin: "10px 20px 0", fontSize: 12, color: "var(--sem-color-danger)" }}>
           {validationError}
         </div>
       ) : null}
@@ -152,13 +152,13 @@ export function FlowUploadScreen({
       </div>
 
       {/* Prompt preview */}
-      {showPromptBlock && (prompt || selectedStyle?.prompt_template) ? (
-        <div style={{ margin: "12px 20px 0", background: "#1A1A1A", borderRadius: 12, padding: "10px 14px" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "#555", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Промпт</div>
-          <div style={{ fontSize: 12, color: "#AAA", lineHeight: 1.5 }}>
-            {prompt || selectedStyle?.prompt_template}
+      {showPromptBlock && (prompt || selectedStyle?.promptTemplate) ? (
+        <div style={{ margin: "12px 20px 0", background: "var(--sem-color-bg-surface)", borderRadius: 12, padding: "10px 14px" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--sem-color-text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Промпт</div>
+          <div style={{ fontSize: 12, color: "var(--sem-color-text-secondary)", lineHeight: 1.5 }}>
+            {prompt || selectedStyle?.promptTemplate}
           </div>
-          <div style={{ fontSize: 10, color: "#555", marginTop: 6 }}>
+          <div style={{ fontSize: 10, color: "var(--sem-color-text-muted)", marginTop: 6 }}>
             Формат: {aspectRatio}
           </div>
         </div>
@@ -174,14 +174,7 @@ export function FlowUploadScreen({
           disabled={!photo || isSubmitting || Boolean(validationError)}
           onClick={() => onGenerate(photo)}
         >
-          {isSubmitting ? (
-            <span style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
-              <span className="queue-dots" style={{ display: "inline-flex", gap: 4 }}>
-                <span /><span /><span />
-              </span>
-              Генерация...
-            </span>
-          ) : "Создать"}
+          Создать
         </button>
       </div>
     </div>
