@@ -10,6 +10,19 @@ import { App } from "../App";
 
 const refreshMock = vi.fn().mockResolvedValue([]);
 const setPhotosMock = vi.fn();
+const uploadPhotoMock = vi.fn().mockResolvedValue("uploads/custom.png");
+const runGenerateBackgroundMock = vi.fn();
+let photosState: Array<{
+  orderId: string;
+  styleCode: string;
+  modelId: string;
+  status: "queued" | "processing" | "done" | "failed";
+  prompt?: string;
+  resultUrl?: string | null;
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}> = [];
 
 vi.mock("../hooks/useCatalog", () => ({
   useCatalog: () => ({
@@ -23,8 +36,8 @@ vi.mock("../hooks/useCatalog", () => ({
 
 vi.mock("../hooks/useWalletAndPhotos", () => ({
   useWalletAndPhotos: () => ({
-    wallet: { free_credit_available: true, paid_credits: 47 },
-    photos: [],
+    wallet: { freeCreditAvailable: true, paidCredits: 47 },
+    photos: photosState,
     setPhotos: setPhotosMock,
     refresh: refreshMock,
   }),
@@ -35,9 +48,11 @@ vi.mock("../hooks/useGenerateFlow", () => ({
     isSubmitting: false,
     lastError: null,
     clearError: vi.fn(),
+    uploadPhoto: uploadPhotoMock,
+    runGenerateBackground: runGenerateBackgroundMock,
     startGenerate: vi.fn().mockResolvedValue({
       result: "enqueued",
-      order: { order_id: "ord-1", status: "queued", credit_cost: 10 },
+      order: { orderId: "ord-1", status: "queued", creditCost: 10 },
     }),
     buyPackage: vi.fn().mockResolvedValue({ ok: true }),
   }),
@@ -57,17 +72,25 @@ describe("App flows", () => {
   // vi.restoreAllMocks() in setup.ts resets vi.fn() implementations between tests;
   // re-configure here so every test starts with working mocks.
   beforeEach(() => {
+    photosState = [];
+    refreshMock.mockClear();
+    setPhotosMock.mockClear();
+    uploadPhotoMock.mockReset();
+    uploadPhotoMock.mockResolvedValue("uploads/custom.png");
+    runGenerateBackgroundMock.mockReset();
+    runGenerateBackgroundMock.mockImplementation(() => {});
+
     vi.mocked(getProfile).mockResolvedValue({
-      user_id: "u1",
-      first_name: "G",
+      userId: "u1",
+      firstName: "G",
       username: "g_user",
-      paid_credits: 47,
-      free_credit_available: true,
-      generations_count: 0,
-      referrals_count: 0,
+      paidCredits: 47,
+      freeCreditAvailable: true,
+      generationsCount: 0,
+      referralsCount: 0,
     });
     vi.mocked(sendPhotoToTelegram).mockResolvedValue(undefined);
-    vi.mocked(toggleFavorite).mockResolvedValue({ is_favorite: true });
+    vi.mocked(toggleFavorite).mockResolvedValue({ isFavorite: true });
   });
   it("restores last screen from localStorage", async () => {
     localStorage.setItem("persona_last_screen", "balance");
@@ -89,18 +112,14 @@ describe("App flows", () => {
     const styleButtons = screen.getAllByRole("button", { name: /Голливуд/ });
     await user.click(styleButtons[styleButtons.length - 1]);
 
-    // Style preview is open — the preview name appears in the overlay;
-    // the grid card is still in DOM so use the specific preview-name selector.
-    await waitFor(() => {
-      expect(document.querySelector(".style-preview-name")?.textContent).toBe("Голливуд");
-    });
+    expect(await screen.findByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Создать в этом стиле" }));
 
     // "2/2" is unique to the FlowUploadScreen header — use it as the sentinel
     expect(await screen.findByText("2/2")).toBeInTheDocument();
   });
 
-  it("uses custom flow and opens upload with prefilled photo", async () => {
+  it("uses custom flow and returns to photos after inline upload", async () => {
     const user = userEvent.setup();
 
     render(<App />);
@@ -134,10 +153,50 @@ describe("App flows", () => {
     });
     await user.click(createButton);
 
-    // FlowUploadScreen is now open with the photo pre-filled
-    expect(await screen.findByText("Выбранный стиль")).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Изменить" })).toBeInTheDocument();
+    // Custom flow uploads inline and navigates straight to photos
+    expect(await screen.findByText("Пока нет фото")).toBeInTheDocument();
+  });
+
+  it("style flow redirects to photos and keeps generation indicator out of create button", async () => {
+    const user = userEvent.setup();
+    photosState = [{
+      orderId: "ord-processing-1",
+      styleCode: "anime",
+      modelId: "nano-banana-v1",
+      status: "processing",
+      isFavorite: false,
+      createdAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
+      updatedAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
+    }];
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+    const styleButtons = screen.getAllByRole("button", { name: /Голливуд/ });
+    await user.click(styleButtons[styleButtons.length - 1]);
+    await user.click(await screen.findByRole("button", { name: "Создать в этом стиле" }));
+
+    const uploadScreen = await screen.findByText("2/2");
+    expect(uploadScreen).toBeInTheDocument();
+
+    const overlay = document.querySelector(".overlay-screen");
+    expect(overlay).not.toBeNull();
+    const fileInput = (overlay as HTMLElement).querySelector('input[type="file"]') as HTMLInputElement | null;
+    expect(fileInput).not.toBeNull();
+
+    const file = new File(["img"], "style-source.png", { type: "image/png" });
+    await user.upload(fileInput as HTMLInputElement, file);
+
+    const createButton = await waitFor(() => {
+      const overlayEl = document.querySelector(".overlay-screen") as HTMLElement;
+      expect(overlayEl).toBeTruthy();
+      const btn = within(overlayEl).getByRole("button", { name: "Создать" });
+      expect(btn).not.toBeDisabled();
+      return btn;
     });
+    await user.click(createButton);
+
+    expect(screen.getByText("Генерация")).toBeInTheDocument();
+    expect(screen.queryByText("Генерация...")).not.toBeInTheDocument();
   });
 });

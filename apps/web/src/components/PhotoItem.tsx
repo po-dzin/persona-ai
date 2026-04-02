@@ -14,7 +14,7 @@ export function PhotoItem({ photo, style, onOpen }: PhotoItemProps) {
   return (
     <button className={`photo-item ${isLoading ? "loading" : ""}`} onClick={onOpen} disabled={isLoading}>
       <div className="photo-bg" style={{ background: bg }} />
-      <div className="photo-style-label">{style?.name || photo.style_code}</div>
+      <div className="photo-style-label">{style?.name || photo.styleCode}</div>
       {isLoading ? <div className="photo-loading">...</div> : null}
     </button>
   );

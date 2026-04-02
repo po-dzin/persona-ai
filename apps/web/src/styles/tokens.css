@@ -1,0 +1,82 @@
+:root {
+  /* Primitive: neutral surfaces */
+  --pr-color-neutral-1000: #09090B;
+  --pr-color-neutral-950: #111111;
+  --pr-color-neutral-900: #1A1A1A;
+  --pr-color-neutral-850: #222222;
+  --pr-color-neutral-800: #2A2A2A;
+
+  /* Primitive: text */
+  --pr-color-text-strong: #F0F0F0;
+  --pr-color-text-secondary: #B0B0B0;
+  --pr-color-text-tertiary: #969696;
+  --pr-color-text-muted: #8A8A8A;
+  --pr-color-text-disabled: #7D7D7D;
+
+  /* Primitive: brand and status */
+  --pr-color-accent-500: #8B83D4;
+  --pr-color-accent-400: #A78BFA;
+  --pr-color-accent-700: #7C3AED;
+  --pr-color-danger-500: #E24B4A;
+  --pr-color-success-500: #4ADE80;
+  --pr-color-tg-blue: #3888FF;
+
+  /* Primitive: borders and overlays */
+  --pr-border-subtle: rgba(255,255,255,0.04);
+  --pr-border-default: rgba(255,255,255,0.06);
+  --pr-border-hover: rgba(255,255,255,0.08);
+  --pr-border-strong: rgba(255,255,255,0.15);
+
+  /* Semantic */
+  --sem-color-bg-body: var(--pr-color-neutral-1000);
+  --sem-color-bg-primary: var(--pr-color-neutral-950);
+  --sem-color-bg-surface: var(--pr-color-neutral-900);
+  --sem-color-bg-pressed: var(--pr-color-neutral-850);
+  --sem-color-bg-elevated: var(--pr-color-neutral-800);
+
+  --sem-color-text-primary: var(--pr-color-text-strong);
+  --sem-color-text-secondary: var(--pr-color-text-secondary);
+  --sem-color-text-tertiary: var(--pr-color-text-tertiary);
+  --sem-color-text-muted: var(--pr-color-text-muted);
+  --sem-color-text-disabled: var(--pr-color-text-disabled);
+
+  --sem-color-accent: var(--pr-color-accent-500);
+  --sem-color-accent-light: var(--pr-color-accent-400);
+  --sem-color-accent-strong: var(--pr-color-accent-700);
+  --sem-color-danger: var(--pr-color-danger-500);
+  --sem-color-success: var(--pr-color-success-500);
+  --sem-color-info: var(--pr-color-tg-blue);
+
+  --sem-gradient-accent: linear-gradient(145deg, var(--pr-color-accent-400), var(--pr-color-accent-700));
+
+  --sem-border-subtle: var(--pr-border-subtle);
+  --sem-border-default: var(--pr-border-default);
+  --sem-border-hover: var(--pr-border-hover);
+  --sem-border-strong: var(--pr-border-strong);
+
+  /* Component/system contracts */
+  --cmp-font-family: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+  --cmp-touch-min-size: 44px;
+  --cmp-focus-ring-color: rgba(167,139,250,0.85);
+  --cmp-focus-ring-width: 2px;
+
+  --cmp-motion-fast: 0.15s;
+  --cmp-motion-normal: 0.2s;
+  --cmp-motion-medium: 0.25s;
+  --cmp-motion-slow: 0.3s;
+
+  --cmp-z-sticky: 5;
+  --cmp-z-flow: 20;
+  --cmp-z-viewer: 25;
+  --cmp-z-tab: 40;
+  --cmp-z-modal: 50;
+
+  --cmp-breakpoint-sm: 375px;
+  --cmp-breakpoint-md: 768px;
+  --cmp-breakpoint-lg: 1024px;
+  --cmp-breakpoint-xl: 1440px;
+
+  /* Legacy aliases used by existing styles */
+  --text-muted: var(--sem-color-text-muted);
+  --text-faint: var(--sem-color-text-tertiary);
+}

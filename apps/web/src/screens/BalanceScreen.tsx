@@ -7,19 +7,19 @@ interface BalanceScreenProps {
   onOpenPricing: () => void;
 }
 
+const PACKAGE_BONUS: Record<string, string> = {
+  BASIC: "+5% бонус",
+  POPULAR: "+10% бонус",
+  PRO: "+18% бонус",
+  ULTRA: "+25% бонус",
+};
+
 const PACKAGE_ICONS: Record<string, string> = {
   STARTER: "🪙",
   BASIC: "🪙",
   POPULAR: "🪙",
   PRO: "🪙",
   ULTRA: "🪙",
-};
-
-const PACKAGE_BONUS: Record<string, string> = {
-  BASIC: "+5% бонус",
-  POPULAR: "+10% бонус",
-  PRO: "+18% бонус",
-  ULTRA: "+25% бонус",
 };
 
 const PACKAGE_ICON_BG: Record<string, string> = {
@@ -59,7 +59,7 @@ export function BalanceScreen({ credits, packages, onSelectPackage, onOpenPricin
                 <div className="package-coins">{pkg.credits} монет</div>
               </div>
               <div className="package-right">
-                <div className="package-price">{pkg.price_stars} ⭐</div>
+                <div className="package-price">{pkg.priceStars} ⭐</div>
                 {bonus ? <div className="package-bonus">{bonus}</div> : null}
               </div>
             </button>

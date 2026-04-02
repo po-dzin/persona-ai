@@ -54,6 +54,13 @@ if (!URL.revokeObjectURL) {
   });
 }
 
+if (!Element.prototype.scrollIntoView) {
+  Object.defineProperty(Element.prototype, "scrollIntoView", {
+    writable: true,
+    value: vi.fn(),
+  });
+}
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();

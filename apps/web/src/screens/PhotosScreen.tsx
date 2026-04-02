@@ -24,14 +24,14 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
 
   const filtered = photos.filter((p) => {
     if (filter === "Все") return true;
-    if (filter === "Избранное") return favorites.has(p.order_id);
-    return styleByCode[p.style_code]?.name === filter;
+    if (filter === "Избранное") return favorites.has(p.orderId);
+    return styleByCode[p.styleCode]?.name === filter;
   });
 
   const datedItems = filtered.map((photo, index) => {
-    const currentLabel = dateLabel(photo.created_at);
+    const currentLabel = dateLabel(photo.createdAt);
     const previous = filtered[index - 1];
-    const previousLabel = previous ? dateLabel(previous.created_at) : null;
+    const previousLabel = previous ? dateLabel(previous.createdAt) : null;
     return {
       photo,
       showDivider: currentLabel !== previousLabel,
@@ -49,8 +49,8 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
             <div className="stack-count">{queuedCount}</div>
             <div className="queue-thumb">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#666" strokeWidth="1.5" strokeLinecap="round"/>
-                <circle cx="12" cy="13" r="4" stroke="#666" strokeWidth="1.5"/>
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="12" cy="13" r="4" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.5"/>
               </svg>
             </div>
             <div className="queue-info">
@@ -64,17 +64,17 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
 
       {queuedCount === 1 ? (() => {
         const activePhoto = photos.find((p) => p.status === "queued" || p.status === "processing")!;
-        const activeStyle = styleByCode[activePhoto.style_code];
+        const activeStyle = styleByCode[activePhoto.styleCode];
         return (
           <div className="queue-single">
             <div className="queue-thumb">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#666" strokeWidth="1.5" strokeLinecap="round"/>
-                <circle cx="12" cy="13" r="4" stroke="#666" strokeWidth="1.5"/>
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.5" strokeLinecap="round"/>
+                <circle cx="12" cy="13" r="4" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.5"/>
               </svg>
             </div>
             <div className="queue-info">
-              <div className="queue-title">{activeStyle?.name || activePhoto.style_code}</div>
+              <div className="queue-title">{activeStyle?.name || activePhoto.styleCode}</div>
               <div className="queue-detail">Генерация</div>
             </div>
             <div className="queue-dots"><span /><span /><span /></div>
@@ -105,29 +105,29 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
       ) : (
         <div className="photos-grid">
           {datedItems.map(({ photo, showDivider, dividerLabel }) => {
-            const style = styleByCode[photo.style_code];
+            const style = styleByCode[photo.styleCode];
             const isLoading = photo.status === "queued" || photo.status === "processing";
             const bg = style?.gradient || "linear-gradient(145deg, #2A2A2A, #3A3A3A)";
-            const isImageBroken = imageErrorIds.has(photo.order_id);
+            const isImageBroken = imageErrorIds.has(photo.orderId);
             return (
-              <div key={photo.order_id} style={{ display: "contents" }}>
+              <div key={photo.orderId} style={{ display: "contents" }}>
                 {showDivider ? <div className="photo-date-divider">{dividerLabel}</div> : null}
                 <button
                   className="photo-item"
                   onClick={() => onOpenPhoto(photo)}
                   disabled={isLoading}
-                  aria-label={isLoading ? "Генерация" : (style?.name || photo.style_code)}
+                  aria-label={isLoading ? "Генерация" : (style?.name || photo.styleCode)}
                 >
-                  {photo.result_url && !isLoading && !isImageBroken ? (
+                  {photo.resultUrl && !isLoading && !isImageBroken ? (
                     <img
                       className="photo-bg"
-                      src={photo.result_url}
-                      alt={style?.name || photo.style_code}
+                      src={photo.resultUrl}
+                      alt={style?.name || photo.styleCode}
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                       onError={() => {
                         setImageErrorIds((prev) => {
                           const next = new Set(prev);
-                          next.add(photo.order_id);
+                          next.add(photo.orderId);
                           return next;
                         });
                       }}
@@ -138,10 +138,10 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                   {isLoading ? (
                     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
                       <div className="queue-dots"><span /><span /><span /></div>
-                      <div style={{ fontSize: 10, color: "#555", fontWeight: 500 }}>Генерация</div>
+                      <div style={{ fontSize: 10, color: "var(--sem-color-text-muted)", fontWeight: 500 }}>Генерация</div>
                     </div>
                   ) : (
-                    <div className="photo-style-label">{style?.name || photo.style_code}</div>
+                    <div className="photo-style-label">{style?.name || photo.styleCode}</div>
                   )}
                 </button>
               </div>

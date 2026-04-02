@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class UploadRequest(BaseModel):
@@ -11,12 +11,12 @@ class UploadRequest(BaseModel):
 class CreateOrderRequest(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    user_id: str | None = None
-    style_code: str = Field(min_length=1)
-    source_key: str = Field(min_length=1)
-    model_id: str | None = None
+    user_id: str | None = Field(default=None, validation_alias=AliasChoices("user_id", "userId"))
+    style_code: str = Field(default="hollywood", min_length=1, validation_alias=AliasChoices("style_code", "styleCode"))
+    source_key: str = Field(min_length=1, validation_alias=AliasChoices("source_key", "sourceKey"))
+    model_id: str | None = Field(default=None, validation_alias=AliasChoices("model_id", "modelId"))
     prompt: str | None = None
-    aspect_ratio: str = Field(default="1:1", min_length=3)
+    aspect_ratio: str = Field(default="1:1", min_length=3, validation_alias=AliasChoices("aspect_ratio", "aspectRatio"))
 
 
 class StartOrderRequest(BaseModel):
@@ -26,12 +26,12 @@ class StartOrderRequest(BaseModel):
 class GenerateRequest(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    user_id: str | None = None
-    source_key: str = Field(min_length=1)
-    model_id: str = Field(min_length=1)
-    style_code: str = Field(default="hollywood", min_length=1)
+    user_id: str | None = Field(default=None, validation_alias=AliasChoices("user_id", "userId"))
+    source_key: str = Field(min_length=1, validation_alias=AliasChoices("source_key", "sourceKey"))
+    model_id: str = Field(min_length=1, validation_alias=AliasChoices("model_id", "modelId"))
+    style_code: str = Field(default="hollywood", min_length=1, validation_alias=AliasChoices("style_code", "styleCode"))
     prompt: str | None = None
-    aspect_ratio: str = Field(default="1:1", min_length=3)
+    aspect_ratio: str = Field(default="1:1", min_length=3, validation_alias=AliasChoices("aspect_ratio", "aspectRatio"))
 
 
 class PurchaseRequest(BaseModel):

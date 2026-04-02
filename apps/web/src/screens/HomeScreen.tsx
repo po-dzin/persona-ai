@@ -14,8 +14,8 @@ const CATEGORY_ORDER = ["Тренды", "Бизнес и карьера", "Ла�
 function CameraIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="#666" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="12" cy="13" r="4" stroke="#666" strokeWidth="1.5" />
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="12" cy="13" r="4" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -109,7 +109,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
         <div className="queue-single">
           <div className="queue-thumb"><CameraIcon /></div>
           <div className="queue-info">
-            <div className="queue-title">{styleByCode[activePhotos[0].style_code]?.name || activePhotos[0].style_code}</div>
+            <div className="queue-title">{styleByCode[activePhotos[0].styleCode]?.name || activePhotos[0].styleCode}</div>
             <div className="queue-detail">Генерация</div>
           </div>
           <div className="queue-dots"><span /><span /><span /></div>
@@ -145,8 +145,8 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
         {activeStyles.map((style) => (
           <button key={style.id} className="style-card style-card-grid" onClick={() => onPreviewStyle(style)}>
             <div className="style-preview" style={{ background: style.gradient }}>
-              {style.is_trending ? <span className="style-tag fire">Hot</span> : null}
-              {style.is_new ? <span className="style-tag new">New</span> : null}
+              {style.isTrending ? <span className="style-tag fire">Hot</span> : null}
+              {style.isNew ? <span className="style-tag new">New</span> : null}
               <div className="style-overlay">
                 <div className="style-name">{style.name}</div>
               </div>

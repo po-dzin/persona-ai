@@ -35,7 +35,7 @@ export function PhotoViewerScreen({
   const [promptCopied, setPromptCopied] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
 
-  const url = photo?.result_url || "";
+  const url = photo?.resultUrl || "";
   const prompt = photo?.prompt || "Промпт недоступен";
 
   const closeAll = () => { setShareOpen(false); setMenuOpen(false); };
@@ -50,7 +50,7 @@ export function PhotoViewerScreen({
   useEffect(() => {
     setPromptCopied(false);
     setImageFailed(false);
-  }, [photo?.order_id]);
+  }, [photo?.orderId]);
 
   if (!isOpen || !photo) return null;
 
@@ -109,10 +109,10 @@ export function PhotoViewerScreen({
       </div>
 
       <div className="viewer-photo" style={{ background: style?.gradient || "linear-gradient(145deg, #2A2A2A, #3A3A3A)" }}>
-        {photo.result_url && !imageFailed ? (
+        {photo.resultUrl && !imageFailed ? (
           <img
-            src={photo.result_url}
-            alt={style?.name || photo.style_code}
+            src={photo.resultUrl}
+            alt={style?.name || photo.styleCode}
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
             onError={() => setImageFailed(true)}
           />
@@ -124,7 +124,7 @@ export function PhotoViewerScreen({
         )}
         <button className="viewer-heart" onClick={onToggleFavorite} aria-label={isFavorite ? "Убрать из избранного" : "Добавить в избранное"}>
           {isFavorite ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#E24B4A" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--sem-color-danger)" aria-hidden="true">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
           ) : (

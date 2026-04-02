@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [],
+    "lib": ["ES2020", "DOM", "DOM.Iterable"]
+  },
+  "include": [
+    "src/type-tests/**/*.ts",
+    "src/utils/mappers.ts",
+    "../../shared/contracts/**/*.ts"
+  ]
+}

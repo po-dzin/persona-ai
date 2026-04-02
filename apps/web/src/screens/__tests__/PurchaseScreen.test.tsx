@@ -31,7 +31,7 @@ describe("PurchaseScreen", () => {
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({ code: "POPULAR", price_stars: 799 }),
+      expect.objectContaining({ code: "POPULAR", priceStars: 799 }),
     );
   });
 });

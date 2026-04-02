@@ -19,6 +19,7 @@ import { PurchaseScreen } from "./screens/PurchaseScreen";
 import { StylePreviewScreen } from "./screens/StylePreviewScreen";
 import type { PackageItem } from "./data/packages";
 import type { StyleItem } from "./data/styles";
+import type { SourceTab } from "../../../../shared/contracts/ui";
 import { createPurchaseInvoice, deletePhoto, getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
 import { triggerHaptic } from "./utils/haptics";
 
@@ -81,6 +82,52 @@ function _getWebUserId(): string {
   return id;
 }
 
+function greatestCommonDivisor(a: number, b: number): number {
+  let x = Math.max(1, Math.floor(Math.abs(a)));
+  let y = Math.max(1, Math.floor(Math.abs(b)));
+  while (y !== 0) {
+    const t = x % y;
+    x = y;
+    y = t;
+  }
+  return x || 1;
+}
+
+function aspectRatioFromSize(width: number, height: number): string {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return "1:1";
+  }
+  const gcd = greatestCommonDivisor(width, height);
+  const rw = Math.max(1, Math.round(width / gcd));
+  const rh = Math.max(1, Math.round(height / gcd));
+  return `${rw}:${rh}`;
+}
+
+async function readImageAspectRatio(file: File): Promise<string | null> {
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const ratio = await new Promise<string | null>((resolve) => {
+      const img = new Image();
+      let settled = false;
+      const finish = (value: string | null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        resolve(value);
+      };
+      const timeoutId = window.setTimeout(() => finish(null), 1200);
+      img.onload = () => finish(aspectRatioFromSize(img.naturalWidth, img.naturalHeight));
+      img.onerror = () => finish(null);
+      img.src = objectUrl;
+    });
+    return ratio;
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export function App() {
   // Reactive TG user — initDataUnsafe may be empty before tg.ready() on some versions.
   const [tgUser, setTgUser] = useState<TgUser | null>(
@@ -106,20 +153,20 @@ export function App() {
       setTgUser(u);
       setUserId(String(u.id));
     }
-    // Retry after 500ms — some TG versions populate initDataUnsafe/initData after ready().
+    // Retry after 300ms — some TG versions populate initDataUnsafe/initData after ready().
     // Always call refreshProfile even if userId didn't change: initData may now be available
     // for auth even when initDataUnsafe.user is null.
     const tUser = setTimeout(() => {
       const u2 = readTelegramUser();
       if (u2?.id) { setTgUser(u2); setUserId(String(u2.id)); }
       refreshProfile();
-    }, 500);
-    // Second retry at 1500ms for slow TG SDK environments
+    }, 300);
+    // Second retry at 1200ms for slow TG SDK environments
     const tUser2 = setTimeout(() => {
       const u3 = readTelegramUser();
       if (u3?.id) { setTgUser(u3); setUserId(String(u3.id)); }
       refreshProfile();
-    }, 1500);
+    }, 1200);
 
     // Calculate top/bottom insets from TG viewport and safe-area metrics.
     // Re-read window.Telegram?.WebApp dynamically — the module-scope `tg` may have
@@ -133,10 +180,16 @@ export function App() {
 
       // safeTop  = device notch/rounded corners (hardware layer)
       // contentSafeTop = TG chrome on top (close button etc.) — must be ADDED, not maxed
-      // Use only the TG-reported chrome heights; stableH/viewportH include keyboard
-      // reservation and would overestimate the top inset on many devices.
       const tgChromeTop = safeTop + contentSafeTop;
-      const topInset = liveTg ? tgChromeTop : 0;
+      const stableH =
+        typeof liveTg?.viewportStableHeight === "number"
+          ? liveTg.viewportStableHeight
+          : undefined;
+      const stableGapTop =
+        typeof stableH === "number"
+          ? Math.max(0, window.innerHeight - stableH)
+          : 0;
+      const topInset = liveTg ? Math.max(tgChromeTop, stableGapTop) : 0;
       root.style.setProperty("--tg-top-inset", `${topInset}px`);
 
       const safeBottom = Math.max(0, liveTg?.safeAreaInset?.bottom ?? 0);
@@ -152,10 +205,10 @@ export function App() {
     // Re-apply after short delay — TG SDK may report isFullscreen / safeAreaInset lazily
     const t1 = setTimeout(applyInsets, 150);
     const t2 = setTimeout(applyInsets, 600);
-    tg?.onEvent?.("viewportChanged", applyInsets);
-    tg?.onEvent?.("safeAreaChanged", applyInsets);
-    tg?.onEvent?.("contentSafeAreaChanged", applyInsets);
-    tg?.onEvent?.("fullscreenChanged", applyInsets);
+    liveTgInit?.onEvent?.("viewportChanged", applyInsets);
+    liveTgInit?.onEvent?.("safeAreaChanged", applyInsets);
+    liveTgInit?.onEvent?.("contentSafeAreaChanged", applyInsets);
+    liveTgInit?.onEvent?.("fullscreenChanged", applyInsets);
     return () => { clearTimeout(tUser); clearTimeout(tUser2); clearTimeout(t1); clearTimeout(t2); };
   }, [refreshProfile]);
 
@@ -185,16 +238,16 @@ export function App() {
   const selectedModelCost = models.find((m) => m.id === selectedModelId)?.coins ?? 10;
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState("1:1");
-  const [selectedSourceTab, setSelectedSourceTab] = useState<"styles" | "custom">("styles");
+  const [selectedSourceTab, setSelectedSourceTab] = useState<SourceTab>("styles");
   const [prefilledUploadPhoto, setPrefilledUploadPhoto] = useState<File | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoRecord | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("Тренды");
   const [selectedPackage, setSelectedPackage] = useState<PackageItem | null>(null);
   const favoriteOrderIds = useMemo(
-    () => new Set(photos.filter((p) => p.is_favorite).map((p) => p.order_id)),
+    () => new Set(photos.filter((p) => p.isFavorite).map((p) => p.orderId)),
     [photos],
   );
-  const [flowInitialTab, setFlowInitialTab] = useState<"styles" | "custom">("styles");
+  const [flowInitialTab, setFlowInitialTab] = useState<SourceTab>("styles");
   const [flowInitialCustomPrompt, setFlowInitialCustomPrompt] = useState("");
   const [flowInitialCustomModelId, setFlowInitialCustomModelId] = useState<string | undefined>(undefined);
 
@@ -247,7 +300,7 @@ export function App() {
 
   const applyStyleSelection = (style: StyleItem) => {
     setSelectedStyle(style);
-    setSelectedPrompt(style.prompt_template);
+    setSelectedPrompt(style.promptTemplate);
     setSelectedModelId("nano-banana-v1");
     setSelectedAspectRatio("1:1");
   };
@@ -268,7 +321,7 @@ export function App() {
     setStylePreviewOpen(true);
   };
 
-  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string; sourceTab: "styles" | "custom"; photoFile?: File | null }) => {
+  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string; sourceTab: SourceTab; photoFile?: File | null }) => {
     setSelectedModelId(payload.modelId);
     setSelectedPrompt(payload.prompt);
     setSelectedAspectRatio(payload.aspectRatio);
@@ -304,7 +357,7 @@ export function App() {
             setPaywallModalOpen(true);
             return;
           }
-          setLastChargedCoins(response.order.credit_cost);
+          setLastChargedCoins(response.order.creditCost);
           setQueuedModalOpen(true);
           await refresh();
           refreshProfile();
@@ -316,6 +369,10 @@ export function App() {
 
   const handleGenerate = async (photoFile?: File | null) => {
     if (!selectedModelId || !photoFile) return;
+
+    // In style flow aspect ratio should come from the source photo dimensions.
+    const sourceAspectRatio = await readImageAspectRatio(photoFile);
+    const aspectRatio = sourceAspectRatio || selectedAspectRatio;
 
     // Step 1: Upload (~1-2s) — button shows "Загрузка..."
     let sourceKey: string;
@@ -339,14 +396,14 @@ export function App() {
         modelId: selectedModelId,
         styleCode: selectedStyle?.id || "hollywood",
         prompt: selectedPrompt,
-        aspectRatio: selectedAspectRatio,
+        aspectRatio,
       },
       async (response) => {
         if (response.result === "paywall_required") {
           setPaywallModalOpen(true);
           return;
         }
-        setLastChargedCoins(response.order.credit_cost);
+        setLastChargedCoins(response.order.creditCost);
         setQueuedModalOpen(true);
         await refresh();
         refreshProfile();
@@ -371,9 +428,9 @@ export function App() {
     try {
       const result = await createPurchaseInvoice(userId, pkg.code);
       // Real TG Stars: open native payment sheet
-      if (!liveTg?.openInvoice || !("invoice_link" in result)) return;
+      if (!liveTg?.openInvoice) return;
       setPurchaseOpen(false);
-      liveTg.openInvoice(result.invoice_link as string, async (status: string) => {
+      liveTg.openInvoice(result.invoiceLink, async (status: string) => {
         if (status === "paid") {
           // Webhook may arrive with a slight delay — poll a few times
           const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -401,22 +458,22 @@ export function App() {
   const handleToggleFavorite = useCallback(async (orderId: string) => {
     // Optimistic update
     setPhotos((prev) =>
-      prev.map((p) => (p.order_id === orderId ? { ...p, is_favorite: !p.is_favorite } : p)),
+      prev.map((p) => (p.orderId === orderId ? { ...p, isFavorite: !p.isFavorite } : p)),
     );
     try {
       await toggleFavorite(orderId);
     } catch {
       // Revert on error
       setPhotos((prev) =>
-        prev.map((p) => (p.order_id === orderId ? { ...p, is_favorite: !p.is_favorite } : p)),
+        prev.map((p) => (p.orderId === orderId ? { ...p, isFavorite: !p.isFavorite } : p)),
       );
     }
   }, [setPhotos]);
 
   const handleDownloadPhoto = async () => {
-    if (!selectedPhoto?.result_url) return;
-    const url = selectedPhoto.result_url;
-    const filename = `persona-${selectedPhoto.order_id}.jpg`;
+    if (!selectedPhoto?.resultUrl) return;
+    const url = selectedPhoto.resultUrl;
+    const filename = `persona-${selectedPhoto.orderId}.jpg`;
 
     // Telegram WebApp native download (Bot API 7.10+)
     const liveTg = window.Telegram?.WebApp as { downloadFile?: (opts: { url: string; file_name: string }) => void } | undefined;
@@ -445,7 +502,7 @@ export function App() {
   const handleSendToTelegram = useCallback(async () => {
     if (!selectedPhoto) return;
     try {
-      await sendPhotoToTelegram(selectedPhoto.order_id);
+      await sendPhotoToTelegram(selectedPhoto.orderId);
       setTelegramModalOpen(true);
     } catch {
       setTelegramModalOpen(true); // show confirmation even if bot send fails (no bot token in dev)
@@ -453,18 +510,18 @@ export function App() {
   }, [selectedPhoto]);
 
   const handleSharePhoto = async () => {
-    if (!selectedPhoto?.result_url) return;
+    if (!selectedPhoto?.resultUrl) return;
     const shareData = {
       title: "Persona photo",
       text: "Сгенерировано в Persona",
-      url: selectedPhoto.result_url,
+      url: selectedPhoto.resultUrl,
     };
     try {
       if (navigator.share) {
         await navigator.share(shareData);
         return;
       }
-      await navigator.clipboard.writeText(selectedPhoto.result_url);
+      await navigator.clipboard.writeText(selectedPhoto.resultUrl);
     } catch {
       // User canceled share or clipboard is unavailable.
     }
@@ -475,18 +532,18 @@ export function App() {
     setViewerOpen(false);
     setFlowInitialTab("custom");
     setFlowInitialCustomPrompt(selectedPhoto.prompt || selectedPrompt || "");
-    setFlowInitialCustomModelId(selectedPhoto.model_id);
-    setSelectedModelId(selectedPhoto.model_id);
+    setFlowInitialCustomModelId(selectedPhoto.modelId);
+    setSelectedModelId(selectedPhoto.modelId);
     setSelectedPrompt(selectedPhoto.prompt || selectedPrompt || "");
     setFlowStyleOpen(true);
   };
 
   const handleDeletePhoto = useCallback(async () => {
     if (!selectedPhoto) return;
-    const orderId = selectedPhoto.order_id;
+    const orderId = selectedPhoto.orderId;
     setViewerOpen(false);
     setSelectedPhoto(null);
-    setPhotos((prev) => prev.filter((p) => p.order_id !== orderId));
+    setPhotos((prev) => prev.filter((p) => p.orderId !== orderId));
     try {
       await deletePhoto(orderId);
     } catch {
@@ -526,7 +583,7 @@ export function App() {
       ) : null}
       {activeScreen === "balance" ? (
         <BalanceScreen
-          credits={wallet.paid_credits}
+          credits={wallet.paidCredits}
           packages={packages}
           onSelectPackage={handleSelectPackage}
           onOpenPricing={() => setModelsOpen(true)}
@@ -534,10 +591,9 @@ export function App() {
       ) : null}
       {activeScreen === "profile" ? (
         <ProfileScreen
-          credits={wallet.paid_credits}
-          generations={profile?.generations_count ?? photos.length}
-          referrals={profile?.referrals_count ?? 0}
-          firstName={profile?.first_name ?? tgUser?.first_name}
+          credits={wallet.paidCredits}
+          generations={profile?.generationsCount ?? photos.length}
+          firstName={profile?.firstName ?? tgUser?.first_name}
           username={profile?.username ?? tgUser?.username}
           avatarUrl={tgUser?.photo_url}
         />
@@ -576,12 +632,12 @@ export function App() {
       <PhotoViewerScreen
         isOpen={viewerOpen}
         photo={selectedPhoto}
-        style={selectedPhoto ? stylesById[selectedPhoto.style_code] : undefined}
-        isFavorite={selectedPhoto ? favoriteOrderIds.has(selectedPhoto.order_id) : false}
+        style={selectedPhoto ? stylesById[selectedPhoto.styleCode] : undefined}
+        isFavorite={selectedPhoto ? favoriteOrderIds.has(selectedPhoto.orderId) : false}
         onClose={() => setViewerOpen(false)}
         onSendToTelegram={() => { void handleSendToTelegram(); }}
         onToggleFavorite={() => {
-          if (selectedPhoto) void handleToggleFavorite(selectedPhoto.order_id);
+          if (selectedPhoto) void handleToggleFavorite(selectedPhoto.orderId);
         }}
         onDownload={handleDownloadPhoto}
         onShare={() => {

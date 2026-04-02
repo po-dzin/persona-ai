@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { AIModel } from "../data/models";
 import type { StyleItem } from "../data/styles";
+import type { SourceTab } from "../../../../shared/contracts/ui";
 
 interface FlowStyleScreenProps {
   isOpen: boolean;
   styles: StyleItem[];
   models: AIModel[];
   selectedStyle: StyleItem | null;
-  initialTab?: "styles" | "custom";
+  initialTab?: SourceTab;
   initialCustomPrompt?: string;
   initialCustomModelId?: string;
   onSelectStyle: (style: StyleItem) => void;
@@ -16,7 +17,7 @@ interface FlowStyleScreenProps {
     modelId: string;
     prompt: string;
     aspectRatio: string;
-    sourceTab: "styles" | "custom";
+    sourceTab: SourceTab;
     photoFile?: File | null;
   }) => void;
   onClose: () => void;
@@ -55,7 +56,7 @@ export function FlowStyleScreen({
   const MAX_FILE_SIZE_MB = 20;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
-  const [tab, setTab] = useState<"styles" | "custom">(initialTab);
+  const [tab, setTab] = useState<SourceTab>(initialTab);
   const [customModel, setCustomModel] = useState(initialCustomModelId ?? "nano-banana-v1");
   const [customPrompt, setCustomPrompt] = useState(initialCustomPrompt);
   const [ratio, setRatio] = useState("1:1");
@@ -156,8 +157,8 @@ export function FlowStyleScreen({
                     aria-pressed={selectedStyle?.id === style.id}
                   >
                     <div className="style-preview" style={{ background: style.gradient }}>
-                      {style.is_trending ? <span className="style-tag fire">Hot</span> : null}
-                      {style.is_new ? <span className="style-tag new">New</span> : null}
+                      {style.isTrending ? <span className="style-tag fire">Hot</span> : null}
+                      {style.isNew ? <span className="style-tag new">New</span> : null}
                       <div className="style-overlay">
                         <div className="style-name">{style.name}</div>
                       </div>
@@ -182,7 +183,7 @@ export function FlowStyleScreen({
               >
                 <span>{models.find((m) => m.id === customModel)?.name ?? customModel} — {models.find((m) => m.id === customModel)?.coins ?? 10} 🪙</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transform: modelDropOpen ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }}>
-                  <path d="M6 9l6 6 6-6" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M6 9l6 6 6-6" stroke="var(--sem-color-text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
               {modelDropOpen && (
@@ -198,7 +199,7 @@ export function FlowStyleScreen({
                       <span>{m.name} — {m.coins} 🪙</span>
                       {m.id === customModel ? (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path d="M5 13l4 4L19 7" stroke="#A78BFA" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M5 13l4 4L19 7" stroke="var(--sem-color-accent-light)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       ) : null}
                     </button>
@@ -248,9 +249,9 @@ export function FlowStyleScreen({
                 <div className="upload-area custom-upload-area" style={{ margin: 0, padding: "28px 16px" }} onClick={pickPhoto}>
                   <div className="upload-icon">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
-                      <polyline points="17 8 12 3 7 8" stroke="#666" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      <line x1="12" y1="3" x2="12" y2="15" stroke="#666" strokeWidth="1.8" strokeLinecap="round" />
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.8" strokeLinecap="round" />
+                      <polyline points="17 8 12 3 7 8" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <line x1="12" y1="3" x2="12" y2="15" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.8" strokeLinecap="round" />
                     </svg>
                   </div>
                   <div className="upload-text">Нажми, чтобы загрузить</div>
@@ -259,7 +260,7 @@ export function FlowStyleScreen({
               )}
 
               {customPhotoError ? (
-                <div style={{ marginTop: 8, fontSize: 12, color: "#E24B4A" }}>{customPhotoError}</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: "var(--sem-color-danger)" }}>{customPhotoError}</div>
               ) : null}
 
               <div className="flow-helper-note flow-helper-note-under-upload">

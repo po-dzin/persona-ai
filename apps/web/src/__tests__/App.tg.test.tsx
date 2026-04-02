@@ -33,7 +33,7 @@ vi.mock("../hooks/useCatalog", () => ({
 
 vi.mock("../hooks/useWalletAndPhotos", () => ({
   useWalletAndPhotos: () => ({
-    wallet: { free_credit_available: false, paid_credits: 0 },
+    wallet: { freeCreditAvailable: false, paidCredits: 0 },
     photos: [],
     setPhotos: vi.fn(),
     refresh: vi.fn().mockResolvedValue([]),
@@ -98,16 +98,16 @@ function getCssInset(): number {
 // re-configure here so every test starts with working mocks.
 beforeEach(() => {
   vi.mocked(getProfile).mockResolvedValue({
-    user_id: "0",
-    first_name: null,
+    userId: "0",
+    firstName: null,
     username: null,
-    paid_credits: 0,
-    free_credit_available: false,
-    generations_count: 0,
-    referrals_count: 0,
+    paidCredits: 0,
+    freeCreditAvailable: false,
+    generationsCount: 0,
+    referralsCount: 0,
   });
   vi.mocked(sendPhotoToTelegram).mockResolvedValue(undefined);
-  vi.mocked(toggleFavorite).mockResolvedValue({ is_favorite: true });
+  vi.mocked(toggleFavorite).mockResolvedValue({ isFavorite: true });
 });
 
 afterEach(() => {

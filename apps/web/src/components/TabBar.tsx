@@ -1,4 +1,4 @@
-import type { BaseScreen } from "../hooks/useScreen";
+import type { BaseScreen } from "../../../../shared/contracts/ui";
 
 interface TabBarProps {
   activeScreen: BaseScreen;

@@ -34,12 +34,12 @@ export function useGenerateFlow() {
       const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
       const uploaded = await uploadFileDirect(input.userId, uniqueName, input.photoFile);
       return await generate({
-        user_id: input.userId,
-        source_key: uploaded.source_key,
-        model_id: input.modelId,
-        style_code: input.styleCode,
+        userId: input.userId,
+        sourceKey: uploaded.sourceKey,
+        modelId: input.modelId,
+        styleCode: input.styleCode,
         prompt: input.prompt,
-        aspect_ratio: input.aspectRatio,
+        aspectRatio: input.aspectRatio,
       });
     } catch (error) {
       setLastError(String(error));
@@ -68,7 +68,7 @@ export function useGenerateFlow() {
     try {
       const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
       const uploaded = await uploadFileDirect(userId, uniqueName, photoFile);
-      return uploaded.source_key;
+      return uploaded.sourceKey;
     } catch (error) {
       setLastError(String(error));
       throw error;
