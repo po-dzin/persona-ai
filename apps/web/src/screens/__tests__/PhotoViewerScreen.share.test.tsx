@@ -86,7 +86,7 @@ describe("PhotoViewerScreen share menu", () => {
 
     await user.click(screen.getByRole("button", { name: "Поделиться" }));
     await user.click(screen.getByRole("button", { name: "Instagram" }));
-    expect(openSpy).toHaveBeenCalledWith("instagram://camera", "_blank");
+    expect(openSpy).toHaveBeenCalledWith("https://www.instagram.com/create/select/", "_blank");
 
     await user.click(screen.getByRole("button", { name: "Поделиться" }));
     await user.click(screen.getByRole("button", { name: "Threads" }));
@@ -94,6 +94,32 @@ describe("PhotoViewerScreen share menu", () => {
       expect(openSpy).toHaveBeenCalledWith(
         expect.stringContaining("https://www.threads.net/intent/post?text="),
         "_blank",
+      );
+    });
+
+    await user.click(screen.getByRole("button", { name: "Поделиться" }));
+    await user.click(screen.getByRole("button", { name: "Другое" }));
+    expect(screen.queryByRole("button", { name: "Другое" })).not.toBeInTheDocument();
+  });
+
+  it("uses system share sheet for 'Другое' when available", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, "open").mockImplementation(() => null);
+    const shareSpy = vi.fn().mockResolvedValue(undefined);
+
+    Object.defineProperty(navigator, "share", { configurable: true, value: shareSpy });
+    Object.defineProperty(navigator, "canShare", { configurable: true, value: () => false });
+
+    renderViewer();
+
+    await user.click(screen.getByRole("button", { name: "Поделиться" }));
+    await user.click(screen.getByRole("button", { name: "Другое" }));
+    await waitFor(() => {
+      expect(shareSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          text: "Создано в PersonAI",
+          url: "https://personai.app/share/ord_1",
+        }),
       );
     });
   });

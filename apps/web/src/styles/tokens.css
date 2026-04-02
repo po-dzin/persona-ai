@@ -143,6 +143,7 @@
   --sem-color-overlay-10: var(--pr-overlay-10);
   --sem-color-overlay-12: var(--pr-overlay-12);
   --sem-color-overlay-13: var(--pr-overlay-13);
+  --sem-color-overlay-18: color-mix(in srgb, var(--sem-color-text-primary) 18%, transparent);
   --sem-color-scrim-22: var(--pr-scrim-22);
   --sem-color-scrim-30: var(--pr-scrim-30);
   --sem-color-scrim-42: var(--pr-scrim-42);
