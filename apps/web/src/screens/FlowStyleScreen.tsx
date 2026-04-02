@@ -168,12 +168,12 @@ export function FlowStyleScreen({
               </div>
             </div>
           ))}
-          <div style={{ height: 12 }} />
+          <div className="screen-section-gap-sm" />
         </>
       ) : (
         <>
           <div className="custom-content">
-            <div className="custom-field" style={{ position: "relative" }}>
+            <div className="custom-field custom-field-relative">
               <div className="custom-label">Модель</div>
               <button
                 className="model-trigger"
@@ -182,7 +182,7 @@ export function FlowStyleScreen({
                 aria-expanded={modelDropOpen}
               >
                 <span>{models.find((m) => m.id === customModel)?.name ?? customModel} — {models.find((m) => m.id === customModel)?.coins ?? 10} 🪙</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transform: modelDropOpen ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={"model-trigger-chevron" + (modelDropOpen ? " open" : "")}>
                   <path d="M6 9l6 6 6-6" stroke="var(--sem-color-text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
@@ -210,43 +210,30 @@ export function FlowStyleScreen({
 
             <div className="custom-field">
               <div className="custom-label">Фото</div>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="image/jpeg,image/png"
-                style={{ display: "none" }}
-                onChange={handleCustomFile}
-              />
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  className="hidden-file-input"
+                  onChange={handleCustomFile}
+                />
 
               {customPhotoUrl ? (
-                <div className="upload-area custom-upload-area" style={{ border: "none", padding: 0, margin: 0, borderRadius: 16, overflow: "hidden", position: "relative" }}>
+                <div className="upload-area custom-upload-area custom-upload-preview-shell">
                   <img
                     src={customPhotoUrl}
                     alt="preview"
-                    style={{ width: "100%", aspectRatio: "4/5", objectFit: "cover", display: "block" }}
+                    className="fill-image-cover custom-upload-preview-image"
                   />
                   <button
                     onClick={pickPhoto}
-                    style={{
-                      position: "absolute",
-                      bottom: 10,
-                      right: 10,
-                      background: "rgba(0,0,0,0.5)",
-                      backdropFilter: "blur(8px)",
-                      border: "none",
-                      color: "white",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      padding: "7px 14px",
-                      borderRadius: 20,
-                      cursor: "pointer",
-                    }}
+                    className="upload-preview-edit-btn upload-preview-edit-btn-sm"
                   >
                     Изменить
                   </button>
                 </div>
               ) : (
-                <div className="upload-area custom-upload-area" style={{ margin: 0, padding: "28px 16px" }} onClick={pickPhoto}>
+                <div className="upload-area custom-upload-area custom-upload-empty-shell" onClick={pickPhoto}>
                   <div className="upload-icon">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="var(--sem-color-text-tertiary)" strokeWidth="1.8" strokeLinecap="round" />
@@ -260,7 +247,7 @@ export function FlowStyleScreen({
               )}
 
               {customPhotoError ? (
-                <div style={{ marginTop: 8, fontSize: 12, color: "var(--sem-color-danger)" }}>{customPhotoError}</div>
+                <div className="form-error-inline form-error-inline-compact">{customPhotoError}</div>
               ) : null}
 
               <div className="flow-helper-note flow-helper-note-under-upload">
@@ -274,10 +261,6 @@ export function FlowStyleScreen({
                 className="custom-textarea"
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
-                onFocus={(e) => {
-                  const el = e.currentTarget;
-                  setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
-                }}
                 placeholder="Опишите желаемый стиль фотосессии..."
               />
             </div>

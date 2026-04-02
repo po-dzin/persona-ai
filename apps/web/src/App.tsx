@@ -47,6 +47,7 @@ declare global {
 
 const tg = window.Telegram?.WebApp;
 type TgUser = { id: number; first_name?: string; username?: string; photo_url?: string };
+const PUBLIC_RESULTS_BASE_URL = "https://pub-e794b2d465ca4a9fab7ca1b1151068d5.r2.dev";
 
 function parseTgUserFromInitData(initData?: string): TgUser | null {
   if (!initData) return null;
@@ -68,6 +69,17 @@ function readTelegramUser(): TgUser | null {
   const unsafe = liveTg?.initDataUnsafe?.user;
   if (unsafe?.id) return unsafe;
   return parseTgUserFromInitData(liveTg?.initData);
+}
+
+function toShareableResultUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl;
+  const fallback = rawUrl.split("?")[0]?.split("#")[0] ?? rawUrl;
+  try {
+    const parsed = new URL(rawUrl);
+    return `${PUBLIC_RESULTS_BASE_URL}${parsed.pathname}`;
+  } catch {
+    return fallback;
+  }
 }
 
 const _tgUserSnapshot = readTelegramUser();
@@ -279,6 +291,34 @@ export function App() {
 
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
 
+  const addOptimisticGeneration = useCallback((payload: {
+    styleCode: string;
+    modelId: string;
+    prompt: string;
+  }): string => {
+    const optimisticId = `optimistic-${crypto.randomUUID()}`;
+    const now = new Date().toISOString();
+    setPhotos((prev) => [
+      {
+        orderId: optimisticId,
+        styleCode: payload.styleCode,
+        modelId: payload.modelId,
+        status: "processing",
+        prompt: payload.prompt,
+        resultUrl: null,
+        isFavorite: false,
+        createdAt: now,
+        updatedAt: now,
+      },
+      ...prev,
+    ]);
+    return optimisticId;
+  }, [setPhotos]);
+
+  const removeOptimisticGeneration = useCallback((optimisticId: string) => {
+    setPhotos((prev) => prev.filter((p) => p.orderId !== optimisticId));
+  }, [setPhotos]);
+
   const openCreate = () => {
     // If already in create flow, don't reset — user stays where they are
     if (flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)) return;
@@ -347,22 +387,34 @@ export function App() {
       // Navigate immediately — don't wait for generation
       setFlowStyleOpen(false);
       setActiveScreen("photos");
-      await refresh();
+      const optimisticId = addOptimisticGeneration({
+        styleCode: "custom",
+        modelId: payload.modelId,
+        prompt: payload.prompt,
+      });
+      let generationAccepted = false;
+      const expectedCost = models.find((m) => m.id === payload.modelId)?.coins ?? null;
+      setLastChargedCoins(expectedCost);
+      setQueuedModalOpen(true);
 
       runGenerateBackground(
         { userId, sourceKey, modelId: payload.modelId, styleCode: "custom",
           prompt: payload.prompt, aspectRatio: payload.aspectRatio },
         async (response) => {
           if (response.result === "paywall_required") {
+            setQueuedModalOpen(false);
             setPaywallModalOpen(true);
             return;
           }
+          generationAccepted = true;
           setLastChargedCoins(response.order.creditCost);
-          setQueuedModalOpen(true);
-          await refresh();
           refreshProfile();
         },
-        async () => { await refresh(); },
+        async () => {
+          removeOptimisticGeneration(optimisticId);
+          if (!generationAccepted) setQueuedModalOpen(false);
+          await refresh();
+        },
       );
     })();
   };
@@ -386,7 +438,14 @@ export function App() {
     // Step 2: Immediately close upload screen + navigate to photos
     setFlowUploadOpen(false);
     setActiveScreen("photos");
-    await refresh();
+    const optimisticId = addOptimisticGeneration({
+      styleCode: selectedStyle?.id || "hollywood",
+      modelId: selectedModelId,
+      prompt: selectedPrompt,
+    });
+    let generationAccepted = false;
+    setLastChargedCoins(selectedModelCost);
+    setQueuedModalOpen(true);
 
     // Step 3: Generate in background — UI is free, photos screen shows polling state
     runGenerateBackground(
@@ -400,15 +459,19 @@ export function App() {
       },
       async (response) => {
         if (response.result === "paywall_required") {
+          setQueuedModalOpen(false);
           setPaywallModalOpen(true);
           return;
         }
+        generationAccepted = true;
         setLastChargedCoins(response.order.creditCost);
-        setQueuedModalOpen(true);
-        await refresh();
         refreshProfile();
       },
-      async () => { await refresh(); },
+      async () => {
+        removeOptimisticGeneration(optimisticId);
+        if (!generationAccepted) setQueuedModalOpen(false);
+        await refresh();
+      },
     );
   };
 
@@ -511,17 +574,18 @@ export function App() {
 
   const handleSharePhoto = async () => {
     if (!selectedPhoto?.resultUrl) return;
+    const shareUrl = toShareableResultUrl(selectedPhoto.resultUrl);
     const shareData = {
       title: "Persona photo",
       text: "Сгенерировано в Persona",
-      url: selectedPhoto.resultUrl,
+      url: shareUrl,
     };
     try {
       if (navigator.share) {
         await navigator.share(shareData);
         return;
       }
-      await navigator.clipboard.writeText(selectedPhoto.resultUrl);
+      await navigator.clipboard.writeText(shareUrl);
     } catch {
       // User canceled share or clipboard is unavailable.
     }
