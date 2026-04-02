@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { AIModel } from "../data/models";
 import type { StyleItem } from "../data/styles";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
+import { readMotionTokenMs } from "../utils/motionTokens";
 import type { SourceTab } from "../../../../shared/contracts/ui";
 
 interface FlowStyleScreenProps {
@@ -67,6 +69,11 @@ export function FlowStyleScreen({
   const [customPhotoError, setCustomPhotoError] = useState<string | null>(null);
   const [isPromptFocused, setIsPromptFocused] = useState(false);
   const [modelDropOpen, setModelDropOpen] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const promptRevealDelayMs = useMemo(
+    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-fast", 150)),
+    [prefersReducedMotion],
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
   const stylesByCategory = useMemo(() => {
@@ -132,7 +139,7 @@ export function FlowStyleScreen({
 
   const canCreateCustom = customPrompt.trim().length > 0 && !!customPhoto && !customPhotoError;
   const ensurePromptVisible = (el: HTMLTextAreaElement) => {
-    window.setTimeout(() => {
+    const reveal = () => {
       const scroller = el.closest(".overlay-screen") as HTMLElement | null;
       if (!scroller) return;
       const vv = window.visualViewport;
@@ -140,12 +147,18 @@ export function FlowStyleScreen({
       const safeBottom = 52 + keyboardInset + 16;
       const rect = el.getBoundingClientRect();
       const targetBottom = window.innerHeight - safeBottom;
+      const behavior: ScrollBehavior = prefersReducedMotion ? "auto" : "smooth";
       if (rect.bottom > targetBottom) {
-        scroller.scrollBy({ top: rect.bottom - targetBottom + 12, behavior: "smooth" });
+        scroller.scrollBy({ top: rect.bottom - targetBottom + 12, behavior });
       } else {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.scrollIntoView({ behavior, block: "center" });
       }
-    }, 120);
+    };
+    if (promptRevealDelayMs <= 0) {
+      reveal();
+      return;
+    }
+    window.setTimeout(reveal, promptRevealDelayMs);
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
@@ -45,6 +45,9 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   const [visitedCategories, setVisitedCategories] = useState<Set<string>>(() => new Set(["ВСЕ"]));
   const [transitionDirection, setTransitionDirection] = useState<"next" | "prev">("next");
   const [isCategoryTransitioning, setIsCategoryTransitioning] = useState(false);
+  const [outgoingCategory, setOutgoingCategory] = useState<string | null>(null);
+  const [dragOffsetPx, setDragOffsetPx] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const [panelsHeight, setPanelsHeight] = useState<number | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const allCategories = useMemo(() => ["ВСЕ", ...categories], [categories]);
@@ -65,11 +68,26 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchStartTs = useRef<number | null>(null);
+  const isSwipeGestureRef = useRef(false);
+  const dragOffsetRef = useRef(0);
   const categoryTransitionTimerRef = useRef<number | null>(null);
+  const preloadCategory = (category: string | undefined) => {
+    if (!category) return;
+    setVisitedCategories((prev) => {
+      if (prev.has(category)) return prev;
+      const next = new Set(prev);
+      next.add(category);
+      return next;
+    });
+  };
   const clearTouchTracking = () => {
     touchStartX.current = null;
     touchStartY.current = null;
     touchStartTs.current = null;
+    isSwipeGestureRef.current = false;
+    dragOffsetRef.current = 0;
+    setDragOffsetPx(0);
+    setIsDragging(false);
   };
 
   useEffect(() => {
@@ -91,12 +109,38 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
       next.add(activeCategory);
       return next;
     });
-  }, [activeCategory]);
+    const idx = allCategories.indexOf(activeCategory);
+    preloadCategory(allCategories[idx + 1]);
+    preloadCategory(allCategories[idx - 1]);
+  }, [activeCategory, allCategories]);
 
   useLayoutEffect(() => {
-    if (prefersReducedMotion) {
+    if (prefersReducedMotion || !panelsRef.current) {
       prevCategoryRef.current = activeCategory;
       setPanelsHeight(null);
+      return;
+    }
+    const activePanel = panelRefs.current[activeCategory];
+    const activeHeight = activePanel?.offsetHeight ?? 0;
+
+    if (isDragging) {
+      const idx = allCategories.indexOf(activeCategory);
+      const targetCategory = dragOffsetPx < 0 ? allCategories[idx + 1] : allCategories[idx - 1];
+      const targetPanel = targetCategory ? panelRefs.current[targetCategory] : null;
+      const targetHeight = targetPanel?.offsetHeight ?? activeHeight;
+      setPanelsHeight(Math.max(activeHeight, targetHeight));
+      return;
+    }
+
+    if (isCategoryTransitioning && outgoingCategory) {
+      const outgoingPanel = panelRefs.current[outgoingCategory];
+      const outgoingHeight = outgoingPanel?.offsetHeight ?? activeHeight;
+      setPanelsHeight(Math.max(activeHeight, outgoingHeight));
+      if (heightTimerRef.current) window.clearTimeout(heightTimerRef.current);
+      heightTimerRef.current = window.setTimeout(() => {
+        setPanelsHeight(null);
+      }, swipeDurationMs);
+      prevCategoryRef.current = activeCategory;
       return;
     }
 
@@ -124,7 +168,16 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     heightTimerRef.current = window.setTimeout(() => {
       setPanelsHeight(null);
     }, swipeDurationMs);
-  }, [activeCategory, swipeDurationMs, prefersReducedMotion]);
+  }, [
+    activeCategory,
+    allCategories,
+    dragOffsetPx,
+    isCategoryTransitioning,
+    isDragging,
+    outgoingCategory,
+    swipeDurationMs,
+    prefersReducedMotion,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -149,17 +202,21 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     if (nextCategory === activeCategory || isCategoryTransitioning) return;
     const currentIdx = allCategories.indexOf(activeCategory);
     const nextIdx = allCategories.indexOf(nextCategory);
+    preloadCategory(nextCategory);
     if (currentIdx >= 0 && nextIdx >= 0) {
       setTransitionDirection(nextIdx > currentIdx ? "next" : "prev");
     }
     if (transitionLockMs > 0) {
       setIsCategoryTransitioning(true);
+      setOutgoingCategory(activeCategory);
       if (categoryTransitionTimerRef.current) window.clearTimeout(categoryTransitionTimerRef.current);
       categoryTransitionTimerRef.current = window.setTimeout(() => {
         setIsCategoryTransitioning(false);
+        setOutgoingCategory(null);
       }, transitionLockMs);
     } else {
       setIsCategoryTransitioning(false);
+      setOutgoingCategory(null);
     }
     setActiveCategory(nextCategory);
   };
@@ -175,6 +232,41 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     touchStartTs.current = performance.now();
+    const idx = allCategories.indexOf(activeCategory);
+    preloadCategory(allCategories[idx + 1]);
+    preloadCategory(allCategories[idx - 1]);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (
+      touchStartX.current === null ||
+      touchStartY.current === null ||
+      isCategoryTransitioning
+    ) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+    if (!isSwipeGestureRef.current) {
+      if (absDx < 10) return;
+      if (absDy > absDx * 0.8) return;
+      isSwipeGestureRef.current = true;
+      setIsDragging(true);
+    }
+    if (!isSwipeGestureRef.current) return;
+    e.preventDefault();
+    const idx = allCategories.indexOf(activeCategory);
+    if ((dx < 0 && idx >= allCategories.length - 1) || (dx > 0 && idx <= 0)) {
+      dragOffsetRef.current = 0;
+      setDragOffsetPx(0);
+      return;
+    }
+    const width = panelsRef.current?.clientWidth || 1;
+    const clamped = Math.max(-width, Math.min(width, dx));
+    dragOffsetRef.current = clamped;
+    setDragOffsetPx(clamped);
+    if (dx < 0) preloadCategory(allCategories[idx + 1]);
+    if (dx > 0) preloadCategory(allCategories[idx - 1]);
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -187,7 +279,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
       clearTouchTracking();
       return;
     }
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dx = isSwipeGestureRef.current ? dragOffsetRef.current : e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     const dt = Math.max(1, performance.now() - touchStartTs.current);
     const absDx = Math.abs(dx);
@@ -261,21 +353,42 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
       </div>
 
       <div
-        className={`home-styles-panels dir-${transitionDirection}`}
+        className={`home-styles-panels dir-${transitionDirection}${isDragging ? " is-dragging" : ""}${isCategoryTransitioning ? " is-transitioning" : ""}`}
         ref={panelsRef}
-        style={panelsHeight !== null ? { height: `${panelsHeight}px` } : undefined}
+        style={
+          {
+            ...(panelsHeight !== null ? { height: `${panelsHeight}px` } : {}),
+            "--home-swipe-ratio": `${(dragOffsetPx / Math.max(1, panelsRef.current?.clientWidth || 1)).toFixed(4)}`,
+          } as CSSProperties
+        }
         onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onTouchCancel={clearTouchTracking}
       >
         {allCategories.map((category) => {
-          if (!visitedCategories.has(category)) return null;
+          const activeIdx = allCategories.indexOf(activeCategory);
+          const categoryIdx = allCategories.indexOf(category);
+          const isAdjacentPrev = categoryIdx === activeIdx - 1;
+          const isAdjacentNext = categoryIdx === activeIdx + 1;
+          const isOutgoing = outgoingCategory === category;
+          const shouldRender = visitedCategories.has(category) || isAdjacentPrev || isAdjacentNext || isOutgoing;
+          if (!shouldRender) return null;
           const isActive = category === activeCategory;
           const categoryStyles = stylesByCategory[category] || [];
+          const transitionClass = isCategoryTransitioning && isOutgoing
+            ? transitionDirection === "next"
+              ? " is-outgoing-next"
+              : " is-outgoing-prev"
+            : isCategoryTransitioning && isActive && outgoingCategory
+              ? transitionDirection === "next"
+                ? " is-entering-next"
+                : " is-entering-prev"
+              : "";
           return (
             <div
               key={category}
-              className={`home-styles-panel${isActive ? " is-active" : ""}`}
+              className={`home-styles-panel${isActive ? " is-active" : ""}${isAdjacentPrev ? " is-adjacent-prev" : ""}${isAdjacentNext ? " is-adjacent-next" : ""}${isOutgoing ? " is-outgoing" : ""}${transitionClass}`}
               aria-hidden={!isActive}
               ref={(node) => {
                 panelRefs.current[category] = node;
