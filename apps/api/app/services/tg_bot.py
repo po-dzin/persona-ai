@@ -168,15 +168,22 @@ def _resolve_package(payload: str, stars: int) -> str | None:
     return None
 
 
-def send_photo_to_user(chat_id: str, photo_url: str) -> dict[str, Any]:
+def send_photo_to_user(chat_id: str, photo_url: str, app_link: str | None = None) -> dict[str, Any]:
     """Send a generated photo back to the user via Telegram bot."""
+    payload: dict[str, Any] = {
+        "chat_id": chat_id,
+        "photo": photo_url,
+        "caption": "Ваше фото из PersonAI ✨\nНажмите «Открыть в PersonAI», чтобы повторить стиль на своем фото.",
+    }
+    if app_link:
+        payload["reply_markup"] = {
+            "inline_keyboard": [
+                [{"text": "🎨 Открыть в PersonAI", "web_app": {"url": app_link}}],
+            ],
+        }
     return _tg_api(
         "sendPhoto",
-        {
-            "chat_id": chat_id,
-            "photo": photo_url,
-            "caption": "Ваше фото из Persona ✨",
-        },
+        payload,
     )
 
 

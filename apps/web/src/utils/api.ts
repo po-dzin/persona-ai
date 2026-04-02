@@ -142,6 +142,13 @@ export async function sendPhotoToTelegram(orderId: string): Promise<void> {
   });
 }
 
+export async function getPhotoShareLink(orderId: string): Promise<{ appLink: string; resultUrl?: string | null }> {
+  const data = await request<{ app_link: string; result_url?: string | null }>(
+    `/me/photos/${encodeURIComponent(orderId)}/share-link`,
+  );
+  return { appLink: data.app_link, resultUrl: data.result_url };
+}
+
 export async function deletePhoto(orderId: string): Promise<void> {
   await request<{ deleted: boolean }>(`/me/photos/${encodeURIComponent(orderId)}`, {
     method: "DELETE",
