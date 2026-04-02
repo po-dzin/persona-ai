@@ -135,7 +135,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .queue-dots-running span {
   background: var(--sem-color-text-primary);
-  box-shadow: 0 0 0 1px var(--pr-overlay-18), 0 0 8px var(--pr-overlay-18);
+  box-shadow: 0 0 0 1px var(--sem-color-overlay-18), 0 0 8px var(--sem-color-overlay-18);
 }
 .queue-dots-large span {
   width: var(--cmp-space-6);

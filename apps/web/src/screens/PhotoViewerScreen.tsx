@@ -34,6 +34,7 @@ export function PhotoViewerScreen({
   onUseAsReference,
   onDeletePhoto,
 }: PhotoViewerScreenProps) {
+  const SHARE_BRAND_TEXT = "Создано в PersonAI";
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
@@ -41,10 +42,6 @@ export function PhotoViewerScreen({
   const prefersReducedMotion = usePrefersReducedMotion();
   const copyToastDurationMs = useMemo(
     () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-feedback-toast", 1400)),
-    [prefersReducedMotion],
-  );
-  const externalAppHandoffMs = useMemo(
-    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-external-app-handoff", 260)),
     [prefersReducedMotion],
   );
 
@@ -82,7 +79,7 @@ export function PhotoViewerScreen({
   };
 
   const handleTelegramShare = () => {
-    const text = encodeURIComponent("Сгенерировано в PersonAI");
+    const text = encodeURIComponent(SHARE_BRAND_TEXT);
     const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(appLink || url)}&text=${text}`;
     const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (url: string) => void } | undefined;
     if (liveTg?.openTelegramLink) {
@@ -104,38 +101,47 @@ export function PhotoViewerScreen({
   };
 
   const handleInstagram = () => {
-    const igComposeUrl = "instagram://camera";
-    const igAppUrl = "instagram://app";
-    const fallbackWeb = "https://instagram.com/";
-    const popup = window.open(igComposeUrl, "_blank");
-    window.setTimeout(() => {
-      if (popup && !popup.closed) return;
-      window.open(igAppUrl, "_blank");
-      window.setTimeout(() => {
-        window.open(fallbackWeb, "_blank");
-      }, externalAppHandoffMs);
-    }, externalAppHandoffMs);
+    const igTarget = /iPhone|iPad|Android/i.test(navigator.userAgent)
+      ? "instagram://story-camera"
+      : "https://www.instagram.com/create/select/";
+    window.open(igTarget, "_blank");
     closeAll();
   };
 
   const handleThreads = () => {
+    const shareText = `${SHARE_BRAND_TEXT} ${appLink || url}`.trim();
+    window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareText)}`, "_blank");
+    closeAll();
+  };
+
+  const handleSystemShare = () => {
     void (async () => {
       try {
-        if (navigator.share && url) {
-          const imageBlob = await fetch(url).then((r) => r.blob());
-          const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
-          const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
-          const payload = { text: appLink || url, files: [file] };
-          if (!navigator.canShare || navigator.canShare(payload)) {
-            await navigator.share(payload);
-            closeAll();
-            return;
+        const shareUrl = appLink || url;
+        if (navigator.share) {
+          if (url) {
+            try {
+              const imageBlob = await fetch(url).then((r) => r.blob());
+              const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
+              const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
+              const payload = { text: SHARE_BRAND_TEXT, url: shareUrl, files: [file] };
+              if (!navigator.canShare || navigator.canShare(payload)) {
+                await navigator.share(payload);
+                closeAll();
+                return;
+              }
+            } catch {
+              // fall through to URL/text-only share
+            }
           }
+          await navigator.share({ text: SHARE_BRAND_TEXT, url: shareUrl });
+          closeAll();
+          return;
         }
       } catch {
-        // fall through to URL intent
+        // fallback to app copy-link handler
       }
-      window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(appLink || url)}`, "_blank");
+      onCopyLink();
       closeAll();
     })();
   };
@@ -267,9 +273,10 @@ export function PhotoViewerScreen({
                 <button className="viewer-menu-item" onClick={handleThreads}>
                   <span className="vmi-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10z" stroke="currentColor" strokeWidth="1.8"/>
-                      <path d="M8 12a4 4 0 0 1 8 0c0 2.5-1.5 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                      <path d="M12 16v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+                      <path d="M9.2 9.4c.5-.8 1.5-1.4 2.8-1.4 2 0 3.6 1.3 3.9 3.2.2 1.2 0 2.5-.8 3.5-.7.9-1.8 1.5-3.1 1.5-1.8 0-3.2-1.1-3.7-2.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 8v8.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+                      <path d="M14.2 11.6c-.6-.4-1.3-.6-2.1-.6-1.4 0-2.5.7-3.2 1.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
                     </svg>
                   </span>
                   Threads
@@ -291,6 +298,16 @@ export function PhotoViewerScreen({
                     </svg>
                   </span>
                   Выгрузить в бот
+                </button>
+                <button className="viewer-menu-item" onClick={handleSystemShare}>
+                  <span className="vmi-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 3v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      <path d="M8 11l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M5 20h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                    </svg>
+                  </span>
+                  Другое
                 </button>
               </div>
             ) : null}
