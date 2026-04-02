@@ -200,6 +200,7 @@ export function PhotoViewerScreen({
             <button
               className={`viewer-icon-btn${shareOpen ? " active" : ""}`}
               onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setShareOpen((v) => !v); }}
+              aria-label="Поделиться"
               title="Поделиться"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -277,6 +278,7 @@ export function PhotoViewerScreen({
             <button
               className={`viewer-icon-btn${menuOpen ? " active" : ""}`}
               onClick={(e) => { e.stopPropagation(); setShareOpen(false); setMenuOpen((v) => !v); }}
+              aria-label="Действия"
               title="Действия"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

@@ -11,6 +11,9 @@ const baselinePath = path.join(__dirname, "token-drift-baseline.json");
 const COLOR_LITERAL_RE = /#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/g;
 const HARDCODED_CSS_RE = /(padding|margin|gap|font-size|letter-spacing|line-height)\s*:\s*[^;]*\d+px/g;
 const HARDCODED_TSX_RE = /(padding|margin|gap|fontSize|letterSpacing|lineHeight)\s*:\s*("[^"]*\d+px"|'[^']*\d+px'|\d+(?:\.\d+)?)/g;
+const MOTION_DECL_RE = /(?:^|[;{]\s*)(transition(?:-duration|-delay|-timing-function)?|animation(?:-duration|-delay|-timing-function)?)\s*:\s*([^;{}]+)(?=;|})/g;
+const RAW_DURATION_RE = /(^|[^-\w])\d+(?:\.\d+)?(?:ms|s)\b/g;
+const RAW_EASING_RE = /\b(ease-in-out|ease-in|ease-out|steps|linear)\b|cubic-bezier\s*\(/g;
 const INLINE_STYLE_RE = /style=\{\{([\s\S]*?)\}\}/g;
 
 function walk(dir) {
@@ -40,6 +43,49 @@ function relPath(filePath) {
 
 function normalizeSnippet(value) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function maskTokenizedMotionValues(value) {
+  return value
+    .replace(/var\(--cmp-motion-[^)]+\)/g, "__MOTION_TOKEN__")
+    .replace(/var\(--cmp-ease-[^)]+\)/g, "__EASE_TOKEN__");
+}
+
+function collectMotionViolations(raw, rel) {
+  const violations = [];
+  let motionMatch;
+
+  while ((motionMatch = MOTION_DECL_RE.exec(raw)) !== null) {
+    const property = motionMatch[1] ?? "";
+    const value = motionMatch[2] ?? "";
+    const normalizedValue = normalizeSnippet(value);
+
+    if (!normalizedValue) continue;
+
+    if (
+      normalizedValue === "none" ||
+      normalizedValue === "initial" ||
+      normalizedValue === "inherit" ||
+      normalizedValue === "unset" ||
+      normalizedValue === "revert" ||
+      normalizedValue === "revert-layer"
+    ) {
+      continue;
+    }
+
+    const maskedValue = maskTokenizedMotionValues(normalizedValue);
+    const hasRawDuration = RAW_DURATION_RE.test(maskedValue);
+    RAW_DURATION_RE.lastIndex = 0;
+    const hasRawEasing = RAW_EASING_RE.test(maskedValue);
+    RAW_EASING_RE.lastIndex = 0;
+
+    if (!hasRawDuration && !hasRawEasing) continue;
+
+    violations.push(`motion_css::${rel}::${property}::${normalizedValue}`);
+  }
+
+  MOTION_DECL_RE.lastIndex = 0;
+  return violations;
 }
 
 function isAllowedInlineStyle(snippet) {
@@ -81,6 +127,11 @@ function collectEntries() {
       for (const match of hardcodedMatches) {
         const key = `hardcoded_css::${rel}::${normalizeSnippet(match)}`;
         entries[key] = (entries[key] ?? 0) + 1;
+      }
+
+      const motionViolations = collectMotionViolations(raw, rel);
+      for (const violation of motionViolations) {
+        entries[violation] = (entries[violation] ?? 0) + 1;
       }
     }
 

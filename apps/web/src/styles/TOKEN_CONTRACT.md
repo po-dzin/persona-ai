@@ -16,6 +16,7 @@ This project uses a strict 3-layer token architecture:
 
 - Use only `--sem-*` or `--cmp-*` in component/screen styles.
 - Keep literals (`#hex`, `rgba`, etc.) in `tokens.css` only.
+- Keep transition/animation durations and easing tokenized via `--cmp-motion-*` and `--cmp-ease-*`.
 - Prefer CSS classes over static inline `style={{...}}`.
 - Inline styles are allowed only for dynamic runtime values (for example per-item gradient or computed dimensions).
 
@@ -25,6 +26,7 @@ This project uses a strict 3-layer token architecture:
 
 - new color literals in UI layer;
 - new hardcoded spacing/typography declarations;
+- new raw motion durations/easing in non-token CSS;
 - forbidden inline style objects (non-dynamic).
 
 Baseline updates must be intentional:
