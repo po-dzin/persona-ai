@@ -50,7 +50,6 @@ export function BalanceScreen({ credits, packages, onSelectPackage, onOpenPricin
               className={`package-card${isFeatured ? " featured" : ""}`}
               onClick={() => onSelectPackage(pkg)}
             >
-              {isFeatured ? <div className="package-featured-tag">Популярное</div> : null}
               <div className="package-icon" style={{ background: PACKAGE_ICON_BG[pkg.code] ?? "var(--sem-color-package-icon-fallback)" }}>
                 {PACKAGE_ICONS[pkg.code] ?? "🪙"}
               </div>
@@ -59,6 +58,7 @@ export function BalanceScreen({ credits, packages, onSelectPackage, onOpenPricin
                 <div className="package-coins">{pkg.credits} монет</div>
               </div>
               <div className="package-right">
+                {isFeatured ? <div className="package-featured-tag">Популярное</div> : null}
                 <div className="package-price">{pkg.priceStars} ⭐</div>
                 {bonus ? <div className="package-bonus">{bonus}</div> : null}
               </div>

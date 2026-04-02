@@ -257,7 +257,7 @@
   --cmp-space-screen-tail: var(--pr-space-5);
   --cmp-space-grid-gap: 5px;
   --cmp-space-grid-edge: var(--pr-space-2);
-  --cmp-space-page-edge: var(--pr-space-5);
+  --cmp-space-page-edge: var(--pr-space-2);
   --cmp-space-0: var(--pr-space-0);
   --cmp-space-4: var(--pr-space-1);
   --cmp-space-8: var(--pr-space-2);
