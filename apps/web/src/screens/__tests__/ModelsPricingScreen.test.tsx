@@ -7,7 +7,7 @@ import { ModelsPricingScreen } from "../ModelsPricingScreen";
 
 describe("ModelsPricingScreen", () => {
   it("shows model costs and storage retention blocks", () => {
-    render(
+    const { container } = render(
       <ModelsPricingScreen
         isOpen
         models={FALLBACK_MODELS}
@@ -16,10 +16,12 @@ describe("ModelsPricingScreen", () => {
       />,
     );
 
+    expect(container.firstElementChild).toHaveClass("overlay-screen", "pricing-screen");
     expect(screen.getByText("Описание тарифов")).toBeInTheDocument();
     expect(screen.getByText("Nano Banana")).toBeInTheDocument();
     expect(screen.getByText("10 🪙")).toBeInTheDocument();
     expect(screen.getByText("Хранение фотографий")).toBeInTheDocument();
     expect(screen.getAllByText("30 дней")).toHaveLength(2);
+    expect(container.firstElementChild?.lastElementChild).toHaveClass("screen-tail-space");
   });
 });

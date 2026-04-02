@@ -160,6 +160,34 @@ export async function getPhotoShareLink(orderId: string): Promise<{ appLink: str
   return { appLink: data.app_link, resultUrl: data.result_url };
 }
 
+export async function getSharedPhoto(
+  orderId: string,
+): Promise<{
+  orderId: string;
+  styleCode: string;
+  modelId: string;
+  resultUrl: string;
+  createdAt: string;
+  updatedAt: string;
+}> {
+  const data = await request<{
+    order_id: string;
+    style_code: string;
+    model_id: string;
+    result_url: string;
+    created_at: string;
+    updated_at: string;
+  }>(`/share/${encodeURIComponent(orderId)}`);
+  return {
+    orderId: data.order_id,
+    styleCode: data.style_code,
+    modelId: data.model_id,
+    resultUrl: data.result_url,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+  };
+}
+
 export async function deletePhoto(orderId: string): Promise<void> {
   await request<{ deleted: boolean }>(`/me/photos/${encodeURIComponent(orderId)}`, {
     method: "DELETE",

@@ -47,6 +47,7 @@ export function BalanceScreen({ credits, packages, onSelectPackage, onOpenPricin
           return (
             <button
               key={pkg.code}
+              type="button"
               className={`package-card${isFeatured ? " featured" : ""}`}
               onClick={() => onSelectPackage(pkg)}
             >
@@ -71,7 +72,9 @@ export function BalanceScreen({ credits, packages, onSelectPackage, onOpenPricin
         Оплата через Telegram Stars.<br />
         Монеты начисляются мгновенно.
       </div>
-      <button className="balance-pricing-link" onClick={onOpenPricing}>Описание тарифов →</button>
+      <button type="button" className="balance-pricing-link" onClick={onOpenPricing}>Описание тарифов →</button>
+
+      <div className="screen-tail-space" />
     </section>
   );
 }

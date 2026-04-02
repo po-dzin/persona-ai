@@ -20,9 +20,8 @@ import { StylePreviewScreen } from "./screens/StylePreviewScreen";
 import type { PackageItem } from "./data/packages";
 import type { StyleItem } from "./data/styles";
 import type { SourceTab } from "../../../../shared/contracts/ui";
-import { createPurchaseInvoice, deletePhoto, getPhotoShareLink, getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
+import { createPurchaseInvoice, deletePhoto, getPhotoShareLink, getProfile, getSharedPhoto, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
 import { triggerHaptic } from "./utils/haptics";
-import { isGeneratingPhotoStatus } from "./utils/photoStatus";
 
 // Telegram WebApp integration
 declare global {
@@ -48,7 +47,7 @@ declare global {
 
 const tg = window.Telegram?.WebApp;
 type TgUser = { id: number; first_name?: string; username?: string; photo_url?: string };
-type SharePreset = { styleCode?: string; modelId?: string; prompt?: string };
+type SharePreview = { orderId?: string };
 
 function parseTgUserFromInitData(initData?: string): TgUser | null {
   if (!initData) return null;
@@ -72,22 +71,18 @@ function readTelegramUser(): TgUser | null {
   return parseTgUserFromInitData(liveTg?.initData);
 }
 
-function readSharePresetFromUrl(): SharePreset | null {
+function readSharePreviewFromUrl(): SharePreview | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
-  const styleCode = params.get("ref_style")?.trim() || undefined;
-  const modelId = params.get("ref_model")?.trim() || undefined;
-  const prompt = params.get("ref_prompt")?.trim() || undefined;
-  if (!styleCode && !modelId && !prompt) return null;
-  return { styleCode, modelId, prompt };
+  const orderId = params.get("share_order")?.trim() || undefined;
+  if (!orderId) return null;
+  return { orderId };
 }
 
-function clearSharePresetFromUrl() {
+function clearSharePreviewFromUrl() {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
-  url.searchParams.delete("ref_style");
-  url.searchParams.delete("ref_model");
-  url.searchParams.delete("ref_prompt");
+  url.searchParams.delete("share_order");
   window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -309,21 +304,35 @@ export function App() {
   const [flowInitialCustomPrompt, setFlowInitialCustomPrompt] = useState("");
   const [flowInitialCustomModelId, setFlowInitialCustomModelId] = useState<string | undefined>(undefined);
 
-  const [seenPhotosCount, setSeenPhotosCount] = useState(0);
-  const donePhotosCount = photos.filter(p => p.status === "done").length;
-  const newPhotosCount = Math.max(0, donePhotosCount - seenPhotosCount);
+  const [seenDoneOrderIds, setSeenDoneOrderIds] = useState<Set<string>>(new Set());
   const photosSeedRef = useRef(false);
+  const doneOrderIds = useMemo(
+    () =>
+      photos
+        .filter((p) => p.status === "done" && Boolean(p.resultUrl))
+        .map((p) => p.orderId),
+    [photos],
+  );
+  const newPhotosCount = useMemo(
+    () => doneOrderIds.filter((orderId) => !seenDoneOrderIds.has(orderId)).length,
+    [doneOrderIds, seenDoneOrderIds],
+  );
   // Seed baseline on first load so existing photos don't appear as "new"
   useEffect(() => {
-    if (!photosSeedRef.current && donePhotosCount > 0) {
-      setSeenPhotosCount(donePhotosCount);
-      photosSeedRef.current = true;
-    }
-  }, [donePhotosCount]);
-  // Reset badge when user visits photos tab
+    if (photosSeedRef.current) return;
+    if (!doneOrderIds.length) return;
+    photosSeedRef.current = true;
+    setSeenDoneOrderIds(new Set(doneOrderIds));
+  }, [doneOrderIds]);
+  // Reset badge when user opens/reopens photos tab
   useEffect(() => {
-    if (activeScreen === "photos") setSeenPhotosCount(donePhotosCount);
-  }, [activeScreen, donePhotosCount]);
+    if (activeScreen !== "photos") return;
+    setSeenDoneOrderIds((prev) => {
+      const next = new Set(prev);
+      doneOrderIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }, [activeScreen, doneOrderIds]);
 
   const [queuedModalOpen, setQueuedModalOpen] = useState(false);
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
@@ -336,6 +345,7 @@ export function App() {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const appliedSharePresetRef = useRef(false);
+  const sharedPreviewOrderRef = useRef<string | null>(null);
 
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
 
@@ -343,6 +353,16 @@ export function App() {
     let cancelled = false;
     if (!selectedPhoto?.orderId) {
       setSelectedPhotoShareLink("");
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (selectedPhoto.orderId.startsWith("shared-")) {
+      const sharedOrderId = sharedPreviewOrderRef.current;
+      const fallback = sharedOrderId
+        ? `${window.location.origin}${window.location.pathname}?share_order=${encodeURIComponent(sharedOrderId)}`
+        : window.location.origin;
+      setSelectedPhotoShareLink(fallback);
       return () => {
         cancelled = true;
       };
@@ -391,7 +411,8 @@ export function App() {
   const replaceOptimisticGeneration = useCallback((optimisticId: string, response: GenerateResult) => {
     const responseOrderId = response.order?.orderId;
     if (!responseOrderId) return;
-    const responseStatus = isGeneratingPhotoStatus(response.order?.status) ? "queued" : "done";
+    const hasResult = Boolean(response.order?.resultUrl);
+    const responseStatus = hasResult ? "done" : "queued";
     const now = new Date().toISOString();
     setPhotos((prev) =>
       prev.map((photo) =>
@@ -438,38 +459,39 @@ export function App() {
     if (appliedSharePresetRef.current) return;
     if (!styles.length || !models.length) return;
 
-    const preset = readSharePresetFromUrl();
-    if (!preset) return;
+    const preview = readSharePreviewFromUrl();
+    if (!preview?.orderId) return;
     appliedSharePresetRef.current = true;
 
-    const sharedStyle = preset.styleCode
-      ? styles.find((style) => style.id === preset.styleCode) || null
-      : null;
-    const sharedModel = preset.modelId && models.some((model) => model.id === preset.modelId)
-      ? preset.modelId
-      : models[0]?.id || "nano-banana-v1";
-    const sharedPrompt = preset.prompt?.trim() || "";
-
-    if (sharedStyle) setSelectedStyle(sharedStyle);
-    setSelectedModelId(sharedModel);
-    if (sharedPrompt) {
-      setSelectedPrompt(sharedPrompt);
-      setFlowInitialTab("custom");
-      setFlowInitialCustomPrompt(sharedPrompt);
-      setFlowInitialCustomModelId(sharedModel);
-      setSelectedSourceTab("custom");
-    } else if (sharedStyle) {
-      setSelectedPrompt(sharedStyle.promptTemplate);
-      setFlowInitialTab("styles");
-      setSelectedSourceTab("styles");
-    }
-
-    setFlowUploadOpen(false);
-    setStylePreviewOpen(false);
-    setCategoryOpen(false);
-    setActiveScreen("home");
-    setFlowStyleOpen(true);
-    clearSharePresetFromUrl();
+    void (async () => {
+      try {
+        const shared = await getSharedPhoto(preview.orderId!);
+        const sharedPhoto: PhotoRecord = {
+          orderId: `shared-${shared.orderId}`,
+          styleCode: shared.styleCode || "custom",
+          modelId: shared.modelId || (models[0]?.id || "nano-banana-v1"),
+          status: "done",
+          prompt: "",
+          resultUrl: shared.resultUrl,
+          isFavorite: false,
+          createdAt: shared.createdAt,
+          updatedAt: shared.updatedAt,
+        };
+        sharedPreviewOrderRef.current = shared.orderId;
+        setSelectedPhoto(sharedPhoto);
+        setSelectedPhotoShareLink(window.location.href);
+        setFlowStyleOpen(false);
+        setFlowUploadOpen(false);
+        setStylePreviewOpen(false);
+        setCategoryOpen(false);
+        setActiveScreen("photos");
+        setViewerOpen(true);
+      } catch {
+        sharedPreviewOrderRef.current = null;
+      } finally {
+        clearSharePreviewFromUrl();
+      }
+    })();
   }, [styles, models]);
 
   const applyStyleSelection = (style: StyleItem) => {
@@ -666,6 +688,14 @@ export function App() {
   };
 
   const handleOpenPhoto = (photo: PhotoRecord) => {
+    if (photo.status === "done" && photo.resultUrl) {
+      setSeenDoneOrderIds((prev) => {
+        if (prev.has(photo.orderId)) return prev;
+        const next = new Set(prev);
+        next.add(photo.orderId);
+        return next;
+      });
+    }
     setSelectedPhoto(photo);
     setViewerOpen(true);
   };
@@ -892,7 +922,11 @@ export function App() {
         photosBadge={activeScreen === "photos" ? 0 : newPhotosCount}
         onChange={(screen) => {
           if (screen === "photos") {
-            setSeenPhotosCount(photos.filter(p => p.status === "done").length);
+            setSeenDoneOrderIds((prev) => {
+              const next = new Set(prev);
+              doneOrderIds.forEach((id) => next.add(id));
+              return next;
+            });
           }
           setFlowStyleOpen(false);
           setFlowUploadOpen(false);
