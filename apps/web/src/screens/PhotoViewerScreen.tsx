@@ -99,8 +99,7 @@ export function PhotoViewerScreen({
       }
 
       const text = encodeURIComponent(SHARE_BRAND_TEXT);
-      const telegramUrl = url || homeAppLink;
-      const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(telegramUrl)}&text=${text}`;
+      const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(homeAppLink)}&text=${text}`;
       const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (url: string) => void } | undefined;
       if (liveTg?.openTelegramLink) {
         liveTg.openTelegramLink(targetUrl);

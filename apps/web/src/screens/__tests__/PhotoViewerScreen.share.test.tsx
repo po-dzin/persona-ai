@@ -73,7 +73,7 @@ describe("PhotoViewerScreen share menu", () => {
     expect(screen.queryByRole("button", { name: "WhatsApp" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Telegram" }));
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining("https://t.me/share/url?url=https%3A%2F%2Fcdn.example.com%2Fphoto.jpg"),
+      expect.stringContaining("https://t.me/share/url?url=http%3A%2F%2Flocalhost%3A3000%2F"),
       "_blank",
     );
 
