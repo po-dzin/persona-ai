@@ -228,7 +228,19 @@ export function App() {
       );
     };
 
+    const applyKeyboardInset = () => {
+      const root = document.documentElement;
+      const vv = window.visualViewport;
+      if (!vv) {
+        root.style.setProperty("--keyboard-inset", "0px");
+        return;
+      }
+      const delta = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.style.setProperty("--keyboard-inset", `${delta}px`);
+    };
+
     applyInsets();
+    applyKeyboardInset();
     // Re-apply after short delay — TG SDK may report isFullscreen / safeAreaInset lazily
     const t1 = setTimeout(applyInsets, 150);
     const t2 = setTimeout(applyInsets, 600);
@@ -238,6 +250,10 @@ export function App() {
     liveTgInit?.onEvent?.("fullscreenChanged", applyInsets);
     window.addEventListener("focusin", applyInsets);
     window.addEventListener("focusout", applyInsets);
+    window.addEventListener("focusin", applyKeyboardInset);
+    window.addEventListener("focusout", applyKeyboardInset);
+    window.visualViewport?.addEventListener("resize", applyKeyboardInset);
+    window.visualViewport?.addEventListener("scroll", applyKeyboardInset);
     return () => {
       clearTimeout(tUser);
       clearTimeout(tUser2);
@@ -245,6 +261,10 @@ export function App() {
       clearTimeout(t2);
       window.removeEventListener("focusin", applyInsets);
       window.removeEventListener("focusout", applyInsets);
+      window.removeEventListener("focusin", applyKeyboardInset);
+      window.removeEventListener("focusout", applyKeyboardInset);
+      window.visualViewport?.removeEventListener("resize", applyKeyboardInset);
+      window.visualViewport?.removeEventListener("scroll", applyKeyboardInset);
     };
   }, [refreshProfile]);
 
@@ -307,6 +327,7 @@ export function App() {
   const [queuedModalOpen, setQueuedModalOpen] = useState(false);
   const [queueModalConfirmed, setQueueModalConfirmed] = useState(false);
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
+  const [createActionLocked, setCreateActionLocked] = useState(false);
   const [paywallModalOpen, setPaywallModalOpen] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   // purchaseSuccessOpen removed — Telegram's native openInvoice already shows payment success UI
@@ -379,6 +400,7 @@ export function App() {
     if (flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)) return;
 
     // Reset all create-flow state so each session starts clean
+    setCreateActionLocked(false);
     setFlowInitialTab("styles");
     setPrefilledUploadPhoto(null);
     setFlowInitialCustomPrompt("");
@@ -466,29 +488,34 @@ export function App() {
       return;
     }
 
-    // Custom: upload first, then fire generate in the background
+    // Custom: move to photos immediately, upload/generate in background.
     if (!payload.photoFile) return;
+    if (createActionLocked) return;
+    setCreateActionLocked(true);
+    setFlowStyleOpen(false);
+    setActiveScreen("photos");
+    const optimisticId = addOptimisticGeneration({
+      styleCode: "custom",
+      modelId: payload.modelId,
+      prompt: payload.prompt,
+    });
+    let generationAccepted = false;
+    const expectedCost = models.find((m) => m.id === payload.modelId)?.coins ?? null;
+    setLastChargedCoins(expectedCost);
+    setQueueModalConfirmed(false);
+    setQueuedModalOpen(true);
+
     void (async () => {
       let sourceKey: string;
       try {
         sourceKey = await uploadPhoto(userId, payload.photoFile!);
       } catch {
         // upload error is already set in lastError
+        removeOptimisticGeneration(optimisticId);
+        setQueuedModalOpen(false);
+        setCreateActionLocked(false);
         return;
       }
-      // Navigate immediately — don't wait for generation
-      setFlowStyleOpen(false);
-      setActiveScreen("photos");
-      const optimisticId = addOptimisticGeneration({
-        styleCode: "custom",
-        modelId: payload.modelId,
-        prompt: payload.prompt,
-      });
-      let generationAccepted = false;
-      const expectedCost = models.find((m) => m.id === payload.modelId)?.coins ?? null;
-      setLastChargedCoins(expectedCost);
-      setQueueModalConfirmed(false);
-      setQueuedModalOpen(true);
 
       runGenerateBackground(
         { userId, sourceKey, modelId: payload.modelId, styleCode: "custom",
@@ -507,6 +534,7 @@ export function App() {
         async () => {
           removeOptimisticGeneration(optimisticId);
           if (!generationAccepted) setQueuedModalOpen(false);
+          setCreateActionLocked(false);
           await refresh();
         },
       );
@@ -515,21 +543,10 @@ export function App() {
 
   const handleGenerate = async (photoFile?: File | null) => {
     if (!selectedModelId || !photoFile) return;
+    if (createActionLocked) return;
+    setCreateActionLocked(true);
 
-    // In style flow aspect ratio should come from the source photo dimensions.
-    const sourceAspectRatio = await readImageAspectRatio(photoFile);
-    const aspectRatio = sourceAspectRatio || selectedAspectRatio;
-
-    // Step 1: Upload (~1-2s) — button shows "Загрузка..."
-    let sourceKey: string;
-    try {
-      sourceKey = await uploadPhoto(userId, photoFile);
-    } catch {
-      // upload error already in lastError
-      return;
-    }
-
-    // Step 2: Immediately close upload screen + navigate to photos
+    // Immediately switch to photos and show queued modal.
     setFlowUploadOpen(false);
     setActiveScreen("photos");
     const optimisticId = addOptimisticGeneration({
@@ -541,6 +558,22 @@ export function App() {
     setLastChargedCoins(selectedModelCost);
     setQueueModalConfirmed(false);
     setQueuedModalOpen(true);
+
+    // In style flow aspect ratio should come from the source photo dimensions.
+    const sourceAspectRatio = await readImageAspectRatio(photoFile);
+    const aspectRatio = sourceAspectRatio || selectedAspectRatio;
+
+    // Step 1: Upload (~1-2s) — button shows "Загрузка..."
+    let sourceKey: string;
+    try {
+      sourceKey = await uploadPhoto(userId, photoFile);
+    } catch {
+      // upload error already in lastError
+      removeOptimisticGeneration(optimisticId);
+      setQueuedModalOpen(false);
+      setCreateActionLocked(false);
+      return;
+    }
 
     // Step 3: Generate in background — UI is free, photos screen shows polling state
     runGenerateBackground(
@@ -566,6 +599,7 @@ export function App() {
       async () => {
         removeOptimisticGeneration(optimisticId);
         if (!generationAccepted) setQueuedModalOpen(false);
+        setCreateActionLocked(false);
         await refresh();
       },
     );
@@ -760,6 +794,7 @@ export function App() {
         initialTab={flowInitialTab}
         initialCustomPrompt={flowInitialCustomPrompt}
         initialCustomModelId={flowInitialCustomModelId}
+        isCreating={createActionLocked}
         onSelectStyle={handlePickStyleFromCreateTab}
         onContinue={handleFlowContinue}
         onClose={() => setFlowStyleOpen(false)}
@@ -772,7 +807,7 @@ export function App() {
         cost={selectedModelCost}
         showPromptBlock={selectedSourceTab === "custom"}
         initialPhotoFile={prefilledUploadPhoto}
-        isSubmitting={isSubmitting}
+        isSubmitting={isSubmitting || createActionLocked}
         onBack={() => {
           setFlowUploadOpen(false);
           setFlowStyleOpen(true);
@@ -845,6 +880,7 @@ export function App() {
           setPurchaseOpen(false);
           setViewerOpen(false);
           setModelsOpen(false);
+          setCreateActionLocked(false);
           setActiveScreen(screen);
         }}
         onOpenCreate={openCreate}

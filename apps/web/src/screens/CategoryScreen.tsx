@@ -27,7 +27,13 @@ export function CategoryScreen({ isOpen, category, styles, onClose, onPreviewSty
 
       <div className="category-grid">
         {categoryStyles.map((style) => (
-          <button key={style.id} className="style-card" onClick={() => onPreviewStyle(style)}>
+          <button
+            type="button"
+            key={style.id}
+            className="style-card"
+            onClick={() => onPreviewStyle(style)}
+            aria-label={style.name}
+          >
             <div className="style-preview" style={{ background: style.gradient }}>
               {style.isTrending ? <span className="style-tag fire">Hot</span> : null}
               {style.isNew ? <span className="style-tag new">New</span> : null}

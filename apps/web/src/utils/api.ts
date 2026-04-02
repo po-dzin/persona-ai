@@ -87,17 +87,28 @@ export async function uploadFileToSignedUrl(url: string, file: File): Promise<vo
 }
 
 export async function uploadFileDirect(userId: string, filename: string, file: File): Promise<{ sourceKey: string }> {
-  const form = new FormData();
-  form.append("filename", filename);
-  form.append("file", file, filename);
-  const res = await fetch(`${API_BASE}/uploads/file`, {
-    method: "POST",
-    headers: { "X-Telegram-Init-Data": getTgInitData() },
-    body: form,
-  });
-  if (!res.ok) throw new Error(`upload_failed:${res.status}`);
-  const dto = (await res.json()) as { source_key: string };
-  return { sourceKey: dto.source_key };
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const form = new FormData();
+    form.append("filename", filename);
+    form.append("file", file, filename);
+    try {
+      const res = await fetch(`${API_BASE}/uploads/file`, {
+        method: "POST",
+        headers: { "X-Telegram-Init-Data": getTgInitData() },
+        body: form,
+      });
+      if (!res.ok) throw new Error(`upload_failed:${res.status}`);
+      const dto = (await res.json()) as { source_key: string };
+      return { sourceKey: dto.source_key };
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("upload_failed:network");
 }
 
 export async function generate(payload: GenerateRequest): Promise<GenerateResult> {

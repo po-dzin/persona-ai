@@ -32,7 +32,7 @@ export function TabBar({ activeScreen, isCreateActive, photosBadge, onChange, on
       </button>
 
       <button className={`tab-ai${isCreateActive ? " active" : ""}`} onClick={onOpenCreate} aria-label="Создать">
-        <svg className="tab-ai-icon" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg className="tab-ai-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M11.5 20h-6.5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h1a2 2 0 0 0 2-2 1 1 0 0 1 1-1h6a1 1 0 0 1 1 1 2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v3"/>
           <path d="M9 13a3 3 0 1 0 6 0 3 3 0 0 0-6 0"/>
           <path d="M19 22.5a4.75 4.75 0 0 1 3.5-3.5 4.75 4.75 0 0 1-3.5-3.5 4.75 4.75 0 0 1-3.5 3.5 4.75 4.75 0 0 1 3.5 3.5"/>

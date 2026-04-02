@@ -142,8 +142,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                     </div>
                   ) : isFailed ? (
                     <div className="photo-failed-overlay">
-                      <div className="photo-failed-title">Ошибка</div>
-                      <div className="photo-failed-subtitle">Генерация не удалась</div>
+                      <div className="photo-failed-icon" aria-hidden="true" />
                     </div>
                   ) : (
                     <div className="photo-style-label">{style?.name || photo.styleCode}</div>

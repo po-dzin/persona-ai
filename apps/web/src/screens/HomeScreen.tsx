@@ -229,18 +229,22 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
       ) : null}
 
       <div className="home-sticky-header">
-        <div className="category-tabs-row" ref={tabsRef}>
+        <div className="category-tabs-row" ref={tabsRef} aria-label="Категории стилей">
           <button
+            type="button"
             className={"category-tab-link" + (activeCategory === "ВСЕ" ? " active" : "")}
             onClick={() => setCategory("ВСЕ")}
+            aria-pressed={activeCategory === "ВСЕ"}
           >
             ВСЕ
           </button>
           {categories.map((category) => (
             <button
+              type="button"
               key={category}
               className={"category-tab-link" + (activeCategory === category ? " active" : "")}
               onClick={() => setCategory(category)}
+              aria-pressed={activeCategory === category}
             >
               {category}
             </button>
@@ -270,7 +274,13 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
             >
               <div className="styles-grid-2 home-styles-grid">
                 {categoryStyles.map((style) => (
-                  <button key={style.id} className="style-card style-card-grid" onClick={() => onPreviewStyle(style)}>
+                  <button
+                    type="button"
+                    key={style.id}
+                    className="style-card style-card-grid"
+                    onClick={() => onPreviewStyle(style)}
+                    aria-label={style.name}
+                  >
                     <div className="style-preview" style={{ background: style.gradient }}>
                       {style.isTrending ? <span className="style-tag fire">Hot</span> : null}
                       {style.isNew ? <span className="style-tag new">New</span> : null}

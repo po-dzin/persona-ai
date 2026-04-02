@@ -12,6 +12,7 @@ interface FlowStyleScreenProps {
   initialTab?: SourceTab;
   initialCustomPrompt?: string;
   initialCustomModelId?: string;
+  isCreating?: boolean;
   onSelectStyle: (style: StyleItem) => void;
   onContinue: (payload: {
     modelId: string;
@@ -47,6 +48,7 @@ export function FlowStyleScreen({
   initialTab = "styles",
   initialCustomPrompt = "",
   initialCustomModelId,
+  isCreating = false,
   onSelectStyle,
   onContinue,
   onClose,
@@ -261,6 +263,12 @@ export function FlowStyleScreen({
                 className="custom-textarea"
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
+                onFocus={(e) => {
+                  const el = e.currentTarget;
+                  window.setTimeout(() => {
+                    el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }, 120);
+                }}
                 placeholder="Опишите желаемый стиль фотосессии..."
               />
             </div>
@@ -284,7 +292,7 @@ export function FlowStyleScreen({
           <div className="flow-bottom-bar flow-bottom-bar-inline flow-bottom-bar-with-note">
             <button
               className={"flow-btn " + (canCreateCustom ? "purple" : "disabled")}
-              disabled={!canCreateCustom}
+              disabled={!canCreateCustom || isCreating}
               onClick={() => onContinue({
                 modelId: customModel,
                 prompt: customPrompt,

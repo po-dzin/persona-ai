@@ -164,6 +164,14 @@
   --sem-gradient-accent: linear-gradient(145deg, var(--pr-color-accent-400), var(--pr-color-accent-700));
   --sem-gradient-accent-strong: linear-gradient(145deg, var(--pr-color-accent-300), var(--pr-color-accent-800));
   --sem-gradient-photo-fallback: linear-gradient(145deg, var(--pr-color-neutral-800), var(--pr-color-neutral-780));
+  --sem-gradient-style-violet: linear-gradient(145deg, #3D2855, #7B5FC0, #B896E8);
+  --sem-gradient-style-rose: linear-gradient(145deg, #3D1E28, #6B2E42, #9B4A68);
+  --sem-gradient-style-cyan: linear-gradient(145deg, #1E3A4A, #2E6890, #4A98C4);
+  --sem-gradient-style-indigo: linear-gradient(145deg, #1E2040, #2E3870, #4A58A0);
+  --sem-gradient-style-gold: linear-gradient(145deg, #3D3A1E, #6B642E, #9B944A);
+  --sem-gradient-style-magenta: linear-gradient(145deg, #3D1E3A, #6B2E64, #9B4A90);
+  --sem-gradient-style-green: linear-gradient(145deg, #1E3D2A, #2E6B48, #4A9B70);
+  --sem-gradient-style-amber: linear-gradient(145deg, #3D3020, #6B5530, #A08050);
 
   --sem-border-subtle: var(--pr-overlay-04);
   --sem-border-default: var(--pr-overlay-06);
@@ -273,6 +281,7 @@
   --cmp-state-opacity-idle: 0.9;
   --cmp-state-opacity-disabled: 0.55;
   --cmp-state-opacity-arrow: 0.3;
+  --cmp-state-opacity-press-soft: 0.75;
 
   --cmp-state-scale-press-sm: 0.98;
   --cmp-state-scale-press-md: 0.97;
@@ -291,9 +300,12 @@
   --cmp-type-title-xl-size: var(--pr-font-size-22);
   --cmp-type-title-lg-size: var(--pr-font-size-18);
   --cmp-type-title-md-size: var(--pr-font-size-16);
+  --cmp-type-title-sm-size: var(--pr-font-size-17);
   --cmp-type-body-lg-size: var(--pr-font-size-15);
   --cmp-type-body-md-size: var(--pr-font-size-14);
   --cmp-type-body-sm-size: var(--pr-font-size-13);
+  --cmp-type-number-lg-size: var(--pr-font-size-20);
+  --cmp-type-icon-xl-size: var(--pr-font-size-24);
   --cmp-type-label-md-size: var(--pr-font-size-12);
   --cmp-type-label-sm-size: var(--pr-font-size-11);
   --cmp-type-caption-size: var(--pr-font-size-10);
