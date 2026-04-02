@@ -29,6 +29,25 @@
 - `09_multi_agent_spec.md` — разделение ownership для parallel delivery.
 - `schema.sql` — стартовая SQL-схема Postgres.
 
+## UI token canon
+
+Канонический контракт UI-токенов и drift-policy живет в коде:
+
+- `apps/web/src/styles/tokens.css` — primitive/semantic/component tokens.
+- `apps/web/src/styles/TOKEN_CONTRACT.md` — правила использования, allowlist и strict drift-check.
+- `apps/web/scripts/check-token-drift.mjs` — CI enforcement.
+
+`03_uiux_spec.md` остается продуктовым UX-спеком. Он описывает флоу и поведение, но не является единственным источником truth для токенов.
+
+## Legacy / reference artifacts
+
+Эти файлы полезны как исторические снимки или визуальные референсы, но не являются активным контрактом:
+
+- `uiux-spec.html`
+- `ux_pain_to_solution.html`
+- `live_photo_app_architecture.html`
+- `Live Photo App.png`
+
 ## Фазы
 
 - **Phase 1 (MVP)**: AI фотосессии (image generation only).

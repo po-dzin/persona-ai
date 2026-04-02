@@ -51,7 +51,10 @@ export function PhotoViewerScreen({
   const url = photo?.resultUrl || "";
   const prompt = photo?.prompt || "Промпт недоступен";
 
-  const closeAll = () => { setShareOpen(false); setMenuOpen(false); };
+  const closeAll = () => {
+    setShareOpen(false);
+    setMenuOpen(false);
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -215,7 +218,11 @@ export function PhotoViewerScreen({
           <div className="viewer-menu-wrap">
             <button
               className={`viewer-icon-btn${shareOpen ? " active" : ""}`}
-              onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setShareOpen((v) => !v); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(false);
+                setShareOpen((v) => !v);
+              }}
               aria-label="Поделиться"
               title="Поделиться"
             >
@@ -293,7 +300,11 @@ export function PhotoViewerScreen({
           <div className="viewer-menu-wrap">
             <button
               className={`viewer-icon-btn${menuOpen ? " active" : ""}`}
-              onClick={(e) => { e.stopPropagation(); setShareOpen(false); setMenuOpen((v) => !v); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShareOpen(false);
+                setMenuOpen((v) => !v);
+              }}
               aria-label="Действия"
               title="Действия"
             >

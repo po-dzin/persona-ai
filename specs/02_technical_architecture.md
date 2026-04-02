@@ -15,7 +15,7 @@
   - `preact` + `preact/compat` (React API совместимость)
   - `@preact/signals` для реактивного state management (опционально)
   - Vite alias: `react` → `preact/compat`
-  - Vanilla CSS с design tokens из `03_uiux_spec.md`
+  - Vanilla CSS с design tokens из `apps/web/src/styles/TOKEN_CONTRACT.md`
 - **API**: FastAPI (Python 3.12)
 - **Queue**: Redis + Celery workers
 - **Scheduler**: Celery Beat (reconciliation + periodic checks)

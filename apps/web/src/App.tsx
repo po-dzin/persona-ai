@@ -326,7 +326,6 @@ export function App() {
   }, [activeScreen, donePhotosCount]);
 
   const [queuedModalOpen, setQueuedModalOpen] = useState(false);
-  const [queueModalConfirmed, setQueueModalConfirmed] = useState(false);
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
   const [createActionLocked, setCreateActionLocked] = useState(false);
   const [paywallModalOpen, setPaywallModalOpen] = useState(false);
@@ -523,7 +522,6 @@ export function App() {
     let generationAccepted = false;
     const expectedCost = models.find((m) => m.id === payload.modelId)?.coins ?? null;
     setLastChargedCoins(expectedCost);
-    setQueueModalConfirmed(false);
     setQueuedModalOpen(true);
 
     void (async () => {
@@ -549,7 +547,6 @@ export function App() {
           }
           generationAccepted = true;
           replaceOptimisticGeneration(optimisticId, response);
-          setQueueModalConfirmed(true);
           setLastChargedCoins(response.order.creditCost);
           refreshProfile();
         },
@@ -580,7 +577,6 @@ export function App() {
     });
     let generationAccepted = false;
     setLastChargedCoins(selectedModelCost);
-    setQueueModalConfirmed(false);
     setQueuedModalOpen(true);
 
     // In style flow aspect ratio should come from the source photo dimensions.
@@ -617,7 +613,6 @@ export function App() {
         }
         generationAccepted = true;
         replaceOptimisticGeneration(optimisticId, response);
-        setQueueModalConfirmed(true);
         setLastChargedCoins(response.order.creditCost);
         refreshProfile();
       },
@@ -915,13 +910,9 @@ export function App() {
 
       <Modal
         isOpen={queuedModalOpen}
-        title={queueModalConfirmed ? "Добавлено в очередь!" : "Отправляем запрос..."}
-        description={
-          queueModalConfirmed
-            ? "Генерация уже началась. Результат появится в разделе «Мои фото»."
-            : "Проверяем запрос и запускаем генерацию."
-        }
-        meta={queueModalConfirmed && lastChargedCoins ? `Списано: ${lastChargedCoins} 🪙` : undefined}
+        title="Добавлено в очередь!"
+        description="Генерация уже началась. Результат появится в разделе «Мои фото»."
+        meta={lastChargedCoins ? `Списано: ${lastChargedCoins} 🪙` : undefined}
         onClose={() => setQueuedModalOpen(false)}
       />
 

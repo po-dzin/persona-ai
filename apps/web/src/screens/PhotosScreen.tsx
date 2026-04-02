@@ -58,7 +58,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
               <div className="queue-title">В очереди</div>
               <div className="queue-detail">{queuedCount} генерации</div>
             </div>
-            <div className="queue-dots"><span /><span /><span /></div>
+            <div className="queue-dots queue-dots-running"><span /><span /><span /></div>
           </div>
         </div>
       ) : null}
@@ -78,7 +78,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
               <div className="queue-title">{activeStyle?.name || activePhoto.styleCode}</div>
               <div className="queue-detail">Генерация</div>
             </div>
-            <div className="queue-dots"><span /><span /><span /></div>
+            <div className="queue-dots queue-dots-running"><span /><span /><span /></div>
           </div>
         );
       })() : null}
@@ -138,12 +138,17 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                   )}
                   {isLoading ? (
                     <div className="photo-loading-overlay">
-                      <div className="queue-dots"><span /><span /><span /></div>
+                      <div className="queue-dots queue-dots-running queue-dots-large"><span /><span /><span /></div>
                       <div className="photo-loading-label">Генерация</div>
                     </div>
                   ) : isFailed ? (
                     <div className="photo-failed-overlay">
-                      <div className="photo-failed-icon" aria-hidden="true" />
+                      <svg className="photo-failed-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M14 3v5h5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="m9 16 6-6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"/>
+                        <path d="M9 10h.01M15 16h.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/>
+                      </svg>
                     </div>
                   ) : (
                     <div className="photo-style-label">{style?.name || photo.styleCode}</div>
