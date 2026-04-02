@@ -12,7 +12,8 @@
     "test:a11y-smoke": "vitest run src/__tests__/a11y.smoke.test.tsx",
     "check:token-drift": "node scripts/check-token-drift.mjs",
     "check:contracts": "tsc -p tsconfig.contracts.json --noEmit",
-    "check:ui-gates": "npm run check:token-drift && npm run check:contracts && npm run test:a11y-smoke"
+    "check:ui-gates": "npm run check:token-drift && npm run check:contracts && npm run test:a11y-smoke",
+    "check:premerge": "npm run check:ui-gates && npm run test && npm run build"
   },
   "dependencies": {
     "react": "^18.3.1",

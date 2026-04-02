@@ -39,11 +39,5 @@ jobs:
       - name: Install web dependencies
         run: npm --prefix apps/web ci
 
-      - name: UI quality gates
-        run: npm --prefix apps/web run check:ui-gates
-
-      - name: Web unit tests
-        run: npm --prefix apps/web test
-
-      - name: Web build
-        run: npm --prefix apps/web run build
+      - name: Web pre-merge gates
+        run: npm --prefix apps/web run check:premerge

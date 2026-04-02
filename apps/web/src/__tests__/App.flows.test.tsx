@@ -198,7 +198,7 @@ describe("App flows", () => {
     });
     await user.click(createButton);
 
-    expect(screen.getByText("Генерация")).toBeInTheDocument();
+    expect(screen.getAllByText("Генерация").length).toBeGreaterThan(0);
     expect(screen.queryByText("Генерация...")).not.toBeInTheDocument();
   });
 

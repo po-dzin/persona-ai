@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import time
 
 from app.adapters.http_client import ProviderHTTPError, fetch_bytes, post_json
 from app.adapters.mock_provider import MockPhotoProvider
@@ -16,6 +17,8 @@ _MODEL_MAP: dict[str, str] = {
     "nano-banana-pro": "gemini-3-pro-image-preview",        # pro
 }
 _DEFAULT_MODEL = "gemini-2.5-flash-image"
+_RETRYABLE_HTTP_CODES = (429, 500, 502, 503, 504)
+_MAX_ATTEMPTS = 3
 
 # Accepted aspect ratios (superset supported by all models)
 _VALID_AR = {"1:1", "3:4", "4:3", "9:16", "16:9"}
@@ -112,11 +115,9 @@ class NanoBananaAdapter(MockPhotoProvider):
             },
         }
 
-        resp = post_json(
-            url=url,
-            headers={"x-goog-api-key": self.api_key},
+        resp = self._call_generate_with_fallback(
+            model_name=gemini_model,
             payload=payload,
-            timeout_seconds=self.timeout_seconds,
         )
 
         img_bytes, mime_type = _extract_image(resp)
@@ -142,6 +143,47 @@ class NanoBananaAdapter(MockPhotoProvider):
             and self.real_calls_enabled
             and bool(self.api_key)
         )
+
+    def _call_generate_with_fallback(self, *, model_name: str, payload: dict) -> dict:
+        try:
+            return self._call_generate(model_name=model_name, payload=payload)
+        except ProviderHTTPError as exc:
+            # Gemini model aliases can disappear between rollouts; fallback to
+            # the stable default model on 404 before failing the generation.
+            if _is_http_status(exc, 404) and model_name != _DEFAULT_MODEL:
+                return self._call_generate(model_name=_DEFAULT_MODEL, payload=payload)
+            raise
+
+    def _call_generate(self, *, model_name: str, payload: dict) -> dict:
+        url = f"{_GEMINI_BASE}/{model_name}:generateContent"
+        delay_seconds = 0.35
+
+        for attempt in range(1, _MAX_ATTEMPTS + 1):
+            try:
+                return post_json(
+                    url=url,
+                    headers={"x-goog-api-key": self.api_key},
+                    payload=payload,
+                    timeout_seconds=self.timeout_seconds,
+                )
+            except ProviderHTTPError as exc:
+                if attempt >= _MAX_ATTEMPTS or not _is_retryable(exc):
+                    raise
+                time.sleep(delay_seconds)
+                delay_seconds *= 2
+
+        raise ProviderHTTPError("gemini_call_failed")
+
+
+def _is_http_status(exc: ProviderHTTPError, code: int) -> bool:
+    return f"http_{code}" in str(exc).lower()
+
+
+def _is_retryable(exc: ProviderHTTPError) -> bool:
+    message = str(exc).lower()
+    if "network_error" in message:
+        return True
+    return any(f"http_{code}" in message for code in _RETRYABLE_HTTP_CODES)
 
 
 def _load_source_image(url: str, timeout: int) -> tuple[str, str]:

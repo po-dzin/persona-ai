@@ -326,12 +326,78 @@ def test_real_mode_uses_correct_model_per_model_id(monkeypatch) -> None:
         assert expected_slug in calls[0], f"{model_id} should call {expected_slug}"
 
 
-def test_real_mode_raises_on_http_error(monkeypatch) -> None:
-    """ProviderHTTPError should propagate — no silent mock fallback in real mode."""
+def test_real_mode_retries_on_503_and_succeeds(monkeypatch) -> None:
+    import app.adapters.nano_banana as nb_mod
+    import app.adapters.r2_client as r2_mod
+
+    calls = {"count": 0}
+
+    def flaky_post(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] < 2:
+            raise ProviderHTTPError("http_503: backend overloaded")
+        raw = b"\x89PNG ok"
+        return {"candidates": [{"content": {"parts": [
+            {"inlineData": {"mimeType": "image/png", "data": base64.b64encode(raw).decode()}}
+        ]}}]}
+
+    monkeypatch.setattr(nb_mod, "post_json", flaky_post)
+    monkeypatch.setattr(nb_mod.time, "sleep", lambda *_: None)
+    monkeypatch.setattr(r2_mod, "upload_bytes", lambda key, data, content_type: f"https://cdn/{key}")
+
+    adapter = NanoBananaAdapter(integration_mode="real", real_calls_enabled=True, api_key="k")
+    result = adapter.submit(
+        order_id="ord-retry",
+        model_id="nano-banana-v1",
+        source_key="k",
+        source_image_url="https://r2/k",
+        prompt="test",
+        aspect_ratio="1:1",
+    )
+
+    assert calls["count"] == 2
+    assert result.status == "done"
+
+
+def test_real_mode_falls_back_to_default_model_on_404(monkeypatch) -> None:
+    import app.adapters.nano_banana as nb_mod
+    import app.adapters.r2_client as r2_mod
+
+    called_urls: list[str] = []
+
+    def fake_post_json(*, url, headers, payload, timeout_seconds):
+        called_urls.append(url)
+        if "gemini-3.1-flash-image-preview" in url:
+            raise ProviderHTTPError("http_404: model not found")
+        raw = b"\x89PNG fallback"
+        return {"candidates": [{"content": {"parts": [
+            {"inlineData": {"mimeType": "image/png", "data": base64.b64encode(raw).decode()}}
+        ]}}]}
+
+    monkeypatch.setattr(nb_mod, "post_json", fake_post_json)
+    monkeypatch.setattr(r2_mod, "upload_bytes", lambda key, data, content_type: f"https://cdn/{key}")
+
+    adapter = NanoBananaAdapter(integration_mode="real", real_calls_enabled=True, api_key="k")
+    result = adapter.submit(
+        order_id="ord-fallback",
+        model_id="nano-banana-v2",
+        source_key="k",
+        source_image_url="https://r2/k",
+        prompt="test",
+        aspect_ratio="1:1",
+    )
+
+    assert any("gemini-3.1-flash-image-preview" in url for url in called_urls)
+    assert any("gemini-2.5-flash-image:generateContent" in url for url in called_urls)
+    assert result.status == "done"
+
+
+def test_real_mode_raises_on_non_retryable_http_error(monkeypatch) -> None:
+    """Non-retryable errors should propagate in real mode."""
     import app.adapters.nano_banana as nb_mod
 
     def fail_post(*args, **kwargs):
-        raise ProviderHTTPError("http_404: model not found")
+        raise ProviderHTTPError("http_400: bad request")
 
     monkeypatch.setattr(nb_mod, "post_json", fail_post)
 
