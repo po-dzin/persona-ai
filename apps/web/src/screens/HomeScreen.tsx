@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
+import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { readMotionTokenMs } from "../utils/motionTokens";
 
 interface HomeScreenProps {
@@ -44,10 +45,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   const [transitionDirection, setTransitionDirection] = useState<"next" | "prev">("next");
   const [isCategoryTransitioning, setIsCategoryTransitioning] = useState(false);
   const [panelsHeight, setPanelsHeight] = useState<number | null>(null);
-  const prefersReducedMotion = useMemo(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  }, []);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const allCategories = useMemo(() => ["ВСЕ", ...categories], [categories]);
   const swipeDurationMs = useMemo(
     () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-swipe", 280)),
