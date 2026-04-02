@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -129,5 +129,46 @@ describe("HomeScreen", () => {
       "true",
     );
     expect(container.firstElementChild?.lastElementChild).toHaveClass("screen-tail-space");
+  });
+
+  it("does not enter dragging state on edge swipe at the first category", () => {
+    const { container } = render(
+      <HomeScreen styles={FALLBACK_STYLES} photos={[]} onPreviewStyle={vi.fn()} />,
+    );
+
+    const panels = container.querySelector(".home-styles-panels") as HTMLElement | null;
+    expect(panels).toBeTruthy();
+
+    fireEvent.touchStart(panels as HTMLElement, {
+      touches: [{ clientX: 120, clientY: 140 }],
+    });
+    fireEvent.touchMove(panels as HTMLElement, {
+      touches: [{ clientX: 170, clientY: 142 }],
+    });
+
+    expect(panels).not.toHaveClass("is-dragging");
+  });
+
+  it("enters and exits dragging mode on a valid horizontal swipe gesture", () => {
+    const { container } = render(
+      <HomeScreen styles={FALLBACK_STYLES} photos={[]} onPreviewStyle={vi.fn()} />,
+    );
+
+    const panels = container.querySelector(".home-styles-panels") as HTMLElement | null;
+    expect(panels).toBeTruthy();
+
+    fireEvent.touchStart(panels as HTMLElement, {
+      touches: [{ clientX: 240, clientY: 160 }],
+    });
+    fireEvent.touchMove(panels as HTMLElement, {
+      touches: [{ clientX: 140, clientY: 164 }],
+    });
+    expect(panels).toHaveClass("is-dragging");
+
+    fireEvent.touchEnd(panels as HTMLElement, {
+      changedTouches: [{ clientX: 140, clientY: 164 }],
+    });
+
+    expect(panels).not.toHaveClass("is-dragging");
   });
 });

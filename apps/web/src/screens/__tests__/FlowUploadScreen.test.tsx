@@ -62,4 +62,52 @@ describe("FlowUploadScreen", () => {
     expect(screen.getByText("Поддерживаются только JPG и PNG")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Создать" })).toBeDisabled();
   });
+
+  it("clears prefilled upload state when reopened without initial file", () => {
+    const prefilledFile = new File(["ok"], "prefilled.jpg", { type: "image/jpeg" });
+    const { rerender } = render(
+      <FlowUploadScreen
+        isOpen
+        selectedStyle={FALLBACK_STYLES[0]}
+        prompt="custom"
+        aspectRatio="1:1"
+        isSubmitting={false}
+        initialPhotoFile={prefilledFile}
+        onGenerate={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(document.querySelector(".upload-preview-shell img")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Создать" })).toBeEnabled();
+
+    rerender(
+      <FlowUploadScreen
+        isOpen={false}
+        selectedStyle={FALLBACK_STYLES[0]}
+        prompt="custom"
+        aspectRatio="1:1"
+        isSubmitting={false}
+        initialPhotoFile={prefilledFile}
+        onGenerate={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    rerender(
+      <FlowUploadScreen
+        isOpen
+        selectedStyle={FALLBACK_STYLES[0]}
+        prompt="custom"
+        aspectRatio="1:1"
+        isSubmitting={false}
+        initialPhotoFile={null}
+        onGenerate={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(document.querySelector(".upload-preview-shell img")).toBeNull();
+    expect(screen.getByRole("button", { name: "Создать" })).toBeDisabled();
+  });
 });
