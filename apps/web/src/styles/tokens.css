@@ -189,12 +189,18 @@
   --cmp-motion-delay-1: 0.15s;
   --cmp-motion-delay-2: 0.3s;
   --cmp-motion-reduced: 0.01ms;
+  --cmp-motion-overlay-enter: 0.24s;
+  --cmp-motion-modal-enter: 0.22s;
+  --cmp-motion-popover-enter: 0.18s;
 
   --cmp-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --cmp-ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
   --cmp-ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
   --cmp-ease-pulse: ease-in-out;
   --cmp-ease-linear: linear;
+
+  --cmp-motion-offset-sm: 6px;
+  --cmp-motion-offset-md: 10px;
 
   --cmp-z-base: 1;
   --cmp-z-selected: 3;
@@ -247,6 +253,19 @@
   --cmp-space-80: 80px;
   --cmp-space-90: 90px;
   --cmp-size-hairline: 0.5px;
+
+  --cmp-state-opacity-muted: 0.72;
+  --cmp-state-opacity-inactive: 0.7;
+  --cmp-state-opacity-idle: 0.9;
+  --cmp-state-opacity-disabled: 0.55;
+  --cmp-state-opacity-arrow: 0.3;
+
+  --cmp-state-scale-press-sm: 0.98;
+  --cmp-state-scale-press-md: 0.97;
+  --cmp-state-scale-press-lg: 0.95;
+  --cmp-state-scale-press-xl: 0.93;
+  --cmp-state-scale-pulse-min: 0.8;
+  --cmp-state-scale-selected: 1.01;
 
   --cmp-radius-card: var(--pr-radius-6);
   --cmp-radius-control: var(--pr-radius-4);
