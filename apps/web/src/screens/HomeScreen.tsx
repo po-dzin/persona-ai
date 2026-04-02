@@ -247,20 +247,19 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     const dy = e.touches[0].clientY - touchStartY.current;
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
+    const idx = allCategories.indexOf(activeCategory);
+    const atLeftEdge = idx <= 0 && dx > 0;
+    const atRightEdge = idx >= allCategories.length - 1 && dx < 0;
     if (!isSwipeGestureRef.current) {
       if (absDx < 10) return;
       if (absDy > absDx * 0.8) return;
+      if (atLeftEdge || atRightEdge) return;
       isSwipeGestureRef.current = true;
       setIsDragging(true);
     }
     if (!isSwipeGestureRef.current) return;
+    if (atLeftEdge || atRightEdge) return;
     e.preventDefault();
-    const idx = allCategories.indexOf(activeCategory);
-    if ((dx < 0 && idx >= allCategories.length - 1) || (dx > 0 && idx <= 0)) {
-      dragOffsetRef.current = 0;
-      setDragOffsetPx(0);
-      return;
-    }
     const width = panelsRef.current?.clientWidth || 1;
     const clamped = Math.max(-width, Math.min(width, dx));
     dragOffsetRef.current = clamped;

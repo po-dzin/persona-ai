@@ -508,15 +508,15 @@ export function App() {
 
   const openCreate = () => {
     cancelPendingScreenTransition();
+    // If already in create flow, don't reset — user stays where they are
+    if (flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)) return;
+
     // Photo viewer must not stay on top of create flow.
     setViewerOpen(false);
     setPurchaseOpen(false);
     setStylePreviewOpen(false);
     setCategoryOpen(false);
     setModelsOpen(false);
-
-    // If already in create flow, don't reset — user stays where they are
-    if (flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)) return;
 
     // Reset all create-flow state so each session starts clean
     setCreateActionLocked(false);

@@ -60,15 +60,28 @@ export function FlowUploadScreen({
 
 
   useEffect(() => {
-    if (!isOpen || !initialPhotoFile) return;
+    if (!isOpen) return;
+
+    if (!initialPhotoFile) {
+      setPhoto(null);
+      setValidationError(null);
+      setPhotoUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+      return;
+    }
+
     const mime = (initialPhotoFile.type || "").toLowerCase();
     if (!["image/jpeg", "image/png"].includes(mime)) return;
     if (initialPhotoFile.size > MAX_FILE_SIZE_BYTES) return;
 
     setValidationError(null);
     setPhoto(initialPhotoFile);
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
-    setPhotoUrl(URL.createObjectURL(initialPhotoFile));
+    setPhotoUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(initialPhotoFile);
+    });
   }, [isOpen, initialPhotoFile]);
 
   if (!isOpen) return null;
@@ -76,7 +89,7 @@ export function FlowUploadScreen({
   return (
     <div className="overlay-screen">
       {/* Header */}
-      <div className="flow-top flow-top-upload">
+      <div className="flow-top">
         <button className="flow-back" onClick={onBack} aria-label="Назад">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

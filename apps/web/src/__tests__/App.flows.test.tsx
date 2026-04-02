@@ -232,4 +232,22 @@ describe("App flows", () => {
     expect(await screen.findByRole("button", { name: "Кастом" })).toBeInTheDocument();
     expect(screen.queryByText("Запрос")).not.toBeInTheDocument();
   });
+
+  it("keeps style preview open when create tab is tapped again inside create flow", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+    const styleButtons = screen.getAllByRole("button", { name: /Голливуд/ });
+    await user.click(styleButtons[styleButtons.length - 1]);
+    expect(await screen.findByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
+
+    const tabBarCreate = document.querySelector(".tab-bar .tab-ai") as HTMLButtonElement | null;
+    expect(tabBarCreate).toBeTruthy();
+    await user.click(tabBarCreate as HTMLButtonElement);
+
+    expect(screen.getByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
+    expect(screen.queryByText("2/2")).not.toBeInTheDocument();
+  });
 });

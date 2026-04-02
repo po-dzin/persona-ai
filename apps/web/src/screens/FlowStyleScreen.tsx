@@ -75,6 +75,7 @@ export function FlowStyleScreen({
     [prefersReducedMotion],
   );
   const inputRef = useRef<HTMLInputElement>(null);
+  const wasOpenRef = useRef(false);
 
   const stylesByCategory = useMemo(() => {
     const grouped: Record<string, StyleItem[]> = {};
@@ -90,17 +91,19 @@ export function FlowStyleScreen({
   }, [styles]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    const opening = isOpen && !wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+    if (!opening) return;
     setTab(initialTab);
     setCustomPrompt(initialCustomPrompt);
     setCustomModel(initialCustomModelId ?? "nano-banana-v1");
     setCustomPhoto(null);
     setCustomPhotoError(null);
-    if (customPhotoUrl) {
-      URL.revokeObjectURL(customPhotoUrl);
-      setCustomPhotoUrl(null);
-    }
-  }, [isOpen, initialTab, initialCustomPrompt, initialCustomModelId, models]);
+    setCustomPhotoUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }, [isOpen, initialTab, initialCustomPrompt, initialCustomModelId]);
 
   const pickPhoto = () => inputRef.current?.click();
 

@@ -143,4 +143,37 @@ describe("FlowStyleScreen", () => {
       }),
     );
   });
+
+  it("keeps custom input state when parent rerenders with new models array", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <FlowStyleScreen
+        isOpen
+        styles={FALLBACK_STYLES}
+        models={FALLBACK_MODELS}
+        selectedStyle={FALLBACK_STYLES[0]}
+        onSelectStyle={vi.fn()}
+        onContinue={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Кастом" }));
+    await user.type(screen.getByPlaceholderText("Опишите желаемый стиль фотосессии..."), "retain me");
+
+    rerender(
+      <FlowStyleScreen
+        isOpen
+        styles={FALLBACK_STYLES}
+        models={[...FALLBACK_MODELS]}
+        selectedStyle={FALLBACK_STYLES[0]}
+        onSelectStyle={vi.fn()}
+        onContinue={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Кастом" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByPlaceholderText("Опишите желаемый стиль фотосессии...")).toHaveValue("retain me");
+  });
 });
