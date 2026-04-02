@@ -42,6 +42,9 @@ declare global {
         contentSafeAreaInset?: { top: number; bottom: number; left: number; right: number };
         onEvent?(event: string, callback: () => void): void;
         openInvoice?(url: string, callback?: (status: string) => void): void;
+        disableVerticalSwipes?(): void;
+        enableVerticalSwipes?(): void;
+        isVerticalSwipesEnabled?: boolean;
       };
     };
   }
@@ -164,6 +167,12 @@ export function App() {
     const liveTgInit = window.Telegram?.WebApp ?? tg;
     liveTgInit?.ready();
     liveTgInit?.expand();
+    liveTgInit?.disableVerticalSwipes?.();
+    try {
+      if (liveTgInit) liveTgInit.isVerticalSwipesEnabled = false;
+    } catch {
+      // no-op: some clients expose read-only API surface
+    }
 
     // Re-read TG user after ready() in case it was populated lazily.
     const u = readTelegramUser();
@@ -263,11 +272,15 @@ export function App() {
       window.removeEventListener("focusout", applyKeyboardInset);
       window.visualViewport?.removeEventListener("resize", applyKeyboardInset);
       window.visualViewport?.removeEventListener("scroll", applyKeyboardInset);
+      document.removeEventListener("gesturestart", preventGesture);
+      document.removeEventListener("gesturechange", preventGesture);
+      document.removeEventListener("gestureend", preventGesture);
+      document.removeEventListener("touchmove", preventPinchTouchMove);
     };
   }, [refreshProfile]);
 
   const { styles, models, packages } = useCatalog();
-  const { wallet, photos, setPhotos, refresh } = useWalletAndPhotos(userId);
+  const { wallet, photos, setWallet, setPhotos, refresh } = useWalletAndPhotos(userId);
 
   useEffect(() => {
     refreshProfile();
@@ -357,8 +370,39 @@ export function App() {
   const sharedPreviewOrderRef = useRef<string | null>(null);
   const failedSeededRef = useRef(false);
   const notifiedFailedOrdersRef = useRef<Set<string>>(new Set());
+  const pendingChargeByOrderRef = useRef<Map<string, number>>(new Map());
 
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
+  const hasEnoughCoinsForModel = useCallback((modelId: string) => {
+    const cost = models.find((m) => m.id === modelId)?.coins ?? 0;
+    if (wallet.freeCreditAvailable) return true;
+    return wallet.paidCredits >= cost;
+  }, [models, wallet.freeCreditAvailable, wallet.paidCredits]);
+
+  const chargeCoinsOptimistically = useCallback((orderId: string, cost: number | null | undefined) => {
+    const normalizedCost = typeof cost === "number" && cost > 0 ? Math.round(cost) : 0;
+    if (!orderId || normalizedCost <= 0) return;
+    if (pendingChargeByOrderRef.current.has(orderId)) return;
+    pendingChargeByOrderRef.current.set(orderId, normalizedCost);
+    setWallet((prev) => ({
+      ...prev,
+      paidCredits: Math.max(0, prev.paidCredits - normalizedCost),
+    }));
+  }, [setWallet]);
+
+  const settleOptimisticCharge = useCallback((orderId: string, finalCost?: number | null) => {
+    if (!orderId) return;
+    const charged = pendingChargeByOrderRef.current.get(orderId);
+    if (typeof charged !== "number") return;
+    pendingChargeByOrderRef.current.delete(orderId);
+    const normalizedFinal = typeof finalCost === "number" && finalCost > 0 ? Math.round(finalCost) : 0;
+    const delta = charged - normalizedFinal;
+    if (delta === 0) return;
+    setWallet((prev) => ({
+      ...prev,
+      paidCredits: Math.max(0, prev.paidCredits + delta),
+    }));
+  }, [setWallet]);
 
   const cancelPendingScreenTransition = useCallback(() => {
     if (screenTransitionTimerRef.current) {
@@ -610,6 +654,10 @@ export function App() {
 
     // Custom: move to photos immediately, upload/generate in background.
     if (!payload.photoFile) return;
+    if (!hasEnoughCoinsForModel(payload.modelId)) {
+      setPaywallModalOpen(true);
+      return;
+    }
     if (createActionLocked) return;
     setCreateActionLocked(true);
     transitionToScreen("photos");
@@ -620,6 +668,7 @@ export function App() {
     });
     let generationAccepted = false;
     const expectedCost = models.find((m) => m.id === payload.modelId)?.coins ?? null;
+    chargeCoinsOptimistically(optimisticId, expectedCost);
     setLastChargedCoins(expectedCost);
     setQueuedModalOpen(true);
 
@@ -630,6 +679,7 @@ export function App() {
       } catch {
         // upload error is already set in lastError
         removeOptimisticGeneration(optimisticId);
+        settleOptimisticCharge(optimisticId, null);
         setQueuedModalOpen(false);
         setCreateActionLocked(false);
         return;
@@ -640,12 +690,14 @@ export function App() {
           prompt: payload.prompt, aspectRatio: payload.aspectRatio },
         async (response) => {
           if (response.result === "paywall_required") {
+            settleOptimisticCharge(optimisticId, null);
             setQueuedModalOpen(false);
             setPaywallModalOpen(true);
             return;
           }
           generationAccepted = true;
           replaceOptimisticGeneration(optimisticId, response);
+          settleOptimisticCharge(optimisticId, response.order.creditCost);
           setLastChargedCoins(response.order.creditCost);
           refreshProfile();
           await refresh();
@@ -653,6 +705,7 @@ export function App() {
         async () => {
           if (!generationAccepted) {
             removeOptimisticGeneration(optimisticId);
+            settleOptimisticCharge(optimisticId, null);
           }
           if (!generationAccepted) setQueuedModalOpen(false);
           setCreateActionLocked(false);
@@ -664,6 +717,10 @@ export function App() {
 
   const handleGenerate = async (photoFile?: File | null) => {
     if (!selectedModelId || !photoFile) return;
+    if (!hasEnoughCoinsForModel(selectedModelId)) {
+      setPaywallModalOpen(true);
+      return;
+    }
     if (createActionLocked) return;
     setCreateActionLocked(true);
 
@@ -675,6 +732,7 @@ export function App() {
       prompt: selectedPrompt,
     });
     let generationAccepted = false;
+    chargeCoinsOptimistically(optimisticId, selectedModelCost);
     setLastChargedCoins(selectedModelCost);
     setQueuedModalOpen(true);
 
@@ -689,6 +747,7 @@ export function App() {
     } catch {
       // upload error already in lastError
       removeOptimisticGeneration(optimisticId);
+      settleOptimisticCharge(optimisticId, null);
       setQueuedModalOpen(false);
       setCreateActionLocked(false);
       return;
@@ -706,12 +765,14 @@ export function App() {
       },
       async (response) => {
         if (response.result === "paywall_required") {
+          settleOptimisticCharge(optimisticId, null);
           setQueuedModalOpen(false);
           setPaywallModalOpen(true);
           return;
         }
         generationAccepted = true;
         replaceOptimisticGeneration(optimisticId, response);
+        settleOptimisticCharge(optimisticId, response.order.creditCost);
         setLastChargedCoins(response.order.creditCost);
         refreshProfile();
         await refresh();
@@ -719,6 +780,7 @@ export function App() {
       async () => {
         if (!generationAccepted) {
           removeOptimisticGeneration(optimisticId);
+          settleOptimisticCharge(optimisticId, null);
         }
         if (!generationAccepted) setQueuedModalOpen(false);
         setCreateActionLocked(false);
@@ -1049,3 +1111,16 @@ export function App() {
     </main>
   );
 }
+    // Disable pinch zoom inside mini app webview to keep layout stable.
+    const preventGesture = (event: Event) => {
+      event.preventDefault();
+    };
+    const preventPinchTouchMove = (event: TouchEvent) => {
+      if (event.touches.length > 1) {
+        event.preventDefault();
+      }
+    };
+    document.addEventListener("gesturestart", preventGesture, { passive: false });
+    document.addEventListener("gesturechange", preventGesture, { passive: false });
+    document.addEventListener("gestureend", preventGesture, { passive: false });
+    document.addEventListener("touchmove", preventPinchTouchMove, { passive: false });

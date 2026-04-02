@@ -20,7 +20,7 @@ export function TabBar({ activeScreen, isCreateActive, photosBadge, onChange, on
         </svg>
       </button>
 
-      <button className={`tab-item ${screen("photos")}`} onClick={() => onChange("photos")} aria-label="Мои фото">
+      <button className={`tab-item tab-photos ${screen("photos")}`} onClick={() => onChange("photos")} aria-label="Мои фото">
         <div className="tab-icon-wrap">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/>

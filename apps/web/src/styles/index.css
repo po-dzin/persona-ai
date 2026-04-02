@@ -18,6 +18,7 @@ html, body, #root {
   background: var(--sem-color-bg-body);
   height: 100%;
   overflow: hidden;
+  overscroll-behavior-y: none;
   color: var(--sem-color-text-primary);
   -webkit-font-smoothing: antialiased;
 }
@@ -855,7 +856,8 @@ button, a, [role="button"] { touch-action: manipulation; }
 .tab-icon-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
 .tab-badge {
   position: absolute;
-  top: -var(--cmp-space-5); right: -var(--cmp-space-8);
+  top: calc(-1 * var(--cmp-space-6));
+  right: calc(-1 * var(--cmp-space-7));
   background: var(--sem-color-danger);
   color: var(--sem-color-text-inverse);
   font-size: var(--cmp-type-micro-size);
@@ -865,6 +867,10 @@ button, a, [role="button"] { touch-action: manipulation; }
   display: flex; align-items: center; justify-content: center;
   padding: 0 var(--cmp-space-4);
   border: var(--cmp-space-2) solid var(--sem-color-bg-primary);
+}
+.tab-photos .tab-icon-wrap {
+  width: var(--cmp-space-24);
+  height: var(--cmp-space-24);
 }
 .tab-ai-wrap {
   display: flex;
@@ -1005,13 +1011,16 @@ button, a, [role="button"] { touch-action: manipulation; }
 .custom-field { margin-bottom: var(--cmp-space-14); }
 .overlay-screen-keyboard-active .custom-field-prompt.is-focused {
   position: sticky;
-  bottom: calc(var(--keyboard-inset, var(--cmp-space-0)) + var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--cmp-space-0))) + var(--cmp-space-8));
+  bottom: 0;
   z-index: var(--cmp-z-sticky);
   margin: 0 calc(-1 * var(--cmp-space-page-edge));
   padding: var(--cmp-space-8) var(--cmp-space-page-edge) var(--cmp-space-10);
   background: linear-gradient(180deg, var(--sem-color-bg-primary), var(--sem-color-bg-primary));
   border-top: var(--cmp-size-hairline) solid var(--sem-border-default);
   border-bottom: var(--cmp-size-hairline) solid var(--sem-border-default);
+}
+.overlay-screen-keyboard-active {
+  padding-bottom: 0;
 }
 .custom-label { font-size: var(--cmp-type-label-md-size); font-weight: 600; color: var(--sem-color-text-secondary); margin-bottom: var(--cmp-space-6); }
 .custom-select {
