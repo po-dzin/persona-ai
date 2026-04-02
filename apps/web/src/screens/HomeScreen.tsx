@@ -44,9 +44,19 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   const [transitionDirection, setTransitionDirection] = useState<"next" | "prev">("next");
   const [isCategoryTransitioning, setIsCategoryTransitioning] = useState(false);
   const [panelsHeight, setPanelsHeight] = useState<number | null>(null);
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
   const allCategories = useMemo(() => ["ВСЕ", ...categories], [categories]);
-  const swipeDurationMs = useMemo(() => readMotionTokenMs("--cmp-motion-swipe", 280), []);
-  const transitionLockMs = useMemo(() => readMotionTokenMs("--cmp-motion-swipe-lock", 320), []);
+  const swipeDurationMs = useMemo(
+    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-swipe", 280)),
+    [prefersReducedMotion],
+  );
+  const transitionLockMs = useMemo(
+    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-swipe-lock", 320)),
+    [prefersReducedMotion],
+  );
   const tabsRef = useRef<HTMLDivElement>(null);
   const panelsRef = useRef<HTMLDivElement>(null);
   const panelRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -80,6 +90,12 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   }, [activeCategory]);
 
   useLayoutEffect(() => {
+    if (prefersReducedMotion) {
+      prevCategoryRef.current = activeCategory;
+      setPanelsHeight(null);
+      return;
+    }
+
     const prevCategory = prevCategoryRef.current;
     const prevPanel = panelRefs.current[prevCategory];
     const nextPanel = panelRefs.current[activeCategory];
@@ -104,7 +120,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     heightTimerRef.current = window.setTimeout(() => {
       setPanelsHeight(null);
     }, swipeDurationMs);
-  }, [activeCategory, swipeDurationMs]);
+  }, [activeCategory, swipeDurationMs, prefersReducedMotion]);
 
   useEffect(() => {
     return () => {
@@ -118,8 +134,12 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   useEffect(() => {
     if (!tabsRef.current) return;
     const active = tabsRef.current.querySelector(".category-tab-link.active") as HTMLElement | null;
-    active?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-  }, [activeCategory]);
+    active?.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeCategory, prefersReducedMotion]);
 
   const setCategory = (nextCategory: string) => {
     if (nextCategory === activeCategory || isCategoryTransitioning) return;
@@ -128,11 +148,15 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     if (currentIdx >= 0 && nextIdx >= 0) {
       setTransitionDirection(nextIdx > currentIdx ? "next" : "prev");
     }
-    setIsCategoryTransitioning(true);
-    if (categoryTransitionTimerRef.current) window.clearTimeout(categoryTransitionTimerRef.current);
-    categoryTransitionTimerRef.current = window.setTimeout(() => {
+    if (transitionLockMs > 0) {
+      setIsCategoryTransitioning(true);
+      if (categoryTransitionTimerRef.current) window.clearTimeout(categoryTransitionTimerRef.current);
+      categoryTransitionTimerRef.current = window.setTimeout(() => {
+        setIsCategoryTransitioning(false);
+      }, transitionLockMs);
+    } else {
       setIsCategoryTransitioning(false);
-    }, transitionLockMs);
+    }
     setActiveCategory(nextCategory);
   };
 
