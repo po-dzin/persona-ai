@@ -37,8 +37,18 @@ export function PhotoViewerScreen({
   const [menuOpen, setMenuOpen] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
-  const copyToastDurationMs = useMemo(() => readMotionTokenMs("--cmp-motion-feedback-toast", 1400), []);
-  const externalAppHandoffMs = useMemo(() => readMotionTokenMs("--cmp-motion-external-app-handoff", 260), []);
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }, []);
+  const copyToastDurationMs = useMemo(
+    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-feedback-toast", 1400)),
+    [prefersReducedMotion],
+  );
+  const externalAppHandoffMs = useMemo(
+    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-external-app-handoff", 260)),
+    [prefersReducedMotion],
+  );
 
   const url = photo?.resultUrl || "";
   const prompt = photo?.prompt || "Промпт недоступен";
