@@ -172,7 +172,12 @@ export function PhotoViewerScreen({
         <div className="viewer-prompt-block">
           <div className="viewer-prompt-header">
             <div className="viewer-prompt-label">Запрос</div>
-            <button className={`viewer-copy-btn${promptCopied ? " copied" : ""}`} onClick={handleCopyPrompt} title="Копировать промпт">
+            <button
+              className={`viewer-copy-btn${promptCopied ? " copied" : ""}`}
+              onClick={handleCopyPrompt}
+              title="Копировать промпт"
+              aria-label="Копировать промпт"
+            >
               {promptCopied ? (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
