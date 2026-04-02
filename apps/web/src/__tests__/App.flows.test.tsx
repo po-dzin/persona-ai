@@ -219,7 +219,10 @@ describe("App flows", () => {
     render(<App />);
 
     await user.click(screen.getByRole("button", { name: "Мои фото" }));
-    const hollywoodButtons = await screen.findAllByRole("button", { name: "Голливуд" });
+    await waitFor(() => {
+      expect(document.querySelector(".photos-grid .photo-item")).toBeTruthy();
+    });
+    const hollywoodButtons = screen.getAllByRole("button", { name: "Голливуд" });
     const photoButton = hollywoodButtons.find((btn) => btn.classList.contains("photo-item"));
     expect(photoButton).toBeTruthy();
     await user.click(photoButton as HTMLButtonElement);

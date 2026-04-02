@@ -39,6 +39,64 @@ describe("FlowStyleScreen", () => {
     );
   });
 
+  it("keeps the create flow section order stable across styles and custom tabs", async () => {
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <FlowStyleScreen
+        isOpen
+        styles={FALLBACK_STYLES}
+        models={FALLBACK_MODELS}
+        selectedStyle={FALLBACK_STYLES[0]}
+        onSelectStyle={vi.fn()}
+        onContinue={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const flowTop = container.querySelector(".flow-top");
+    const flowTabs = container.querySelector(".flow-tabs");
+    const sectionHeaders = container.querySelectorAll(".section-header");
+
+    expect(flowTop).toBeTruthy();
+    expect(flowTabs).toBeTruthy();
+    expect(flowTop?.nextElementSibling).toBe(flowTabs);
+    expect(flowTop).toHaveTextContent("Создать");
+    expect(within(flowTabs as HTMLElement).getAllByRole("button").map((button) => button.textContent)).toEqual([
+      "Стили",
+      "Кастом",
+    ]);
+    expect(Array.from(sectionHeaders, (header) => header.textContent)).toEqual([
+      "Тренды",
+      "Бизнес и карьера",
+      "Лайфстайл",
+      "Арт и креатив",
+      "Особый повод",
+    ]);
+    expect(container.querySelector(".section-header")?.parentElement).toBe(
+      flowTabs?.nextElementSibling,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Кастом" }));
+
+    const customContent = container.querySelector(".custom-content");
+    const customBottomBar = container.querySelector(".flow-bottom-bar.flow-bottom-bar-inline");
+    expect(customContent).toBeTruthy();
+    expect(customBottomBar).toBeTruthy();
+    expect(flowTabs?.nextElementSibling).toBe(customContent);
+    expect(customContent?.nextElementSibling).toBe(customBottomBar);
+
+    const customFields = customContent?.children ?? [];
+    expect(customFields).toHaveLength(4);
+    expect(customFields[0]).toHaveTextContent("Модель");
+    expect(customFields[1]).toHaveTextContent("Фото");
+    expect(customFields[2]).toHaveTextContent("Описание стиля");
+    expect(customFields[3]).toHaveTextContent("Соотношение сторон");
+    expect(customFields[1].querySelector('input[type="file"]')).toBeTruthy();
+    expect(customFields[1].querySelector(".upload-area")).toBeTruthy();
+    expect(within(customBottomBar as HTMLElement).getByRole("button", { name: "Создать" })).toBeDisabled();
+  });
+
   it("enables create in custom tab only after valid prompt and photo, then calls onContinue", async () => {
     const user = userEvent.setup();
     const onContinue = vi.fn();

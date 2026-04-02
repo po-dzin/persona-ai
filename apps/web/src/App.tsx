@@ -4,7 +4,8 @@ import { Modal } from "./components/Modal";
 import { TabBar } from "./components/TabBar";
 import { useCatalog } from "./hooks/useCatalog";
 import { useGenerateFlow } from "./hooks/useGenerateFlow";
-import { useScreen } from "./hooks/useScreen";
+import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
+import { useScreen, type BaseScreen } from "./hooks/useScreen";
 import { useWalletAndPhotos } from "./hooks/useWalletAndPhotos";
 import { BalanceScreen } from "./screens/BalanceScreen";
 import { CategoryScreen } from "./screens/CategoryScreen";
@@ -22,6 +23,7 @@ import type { StyleItem } from "./data/styles";
 import type { SourceTab } from "../../../../shared/contracts/ui";
 import { createPurchaseInvoice, deletePhoto, getPhotoShareLink, getProfile, getSharedPhoto, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
 import { triggerHaptic } from "./utils/haptics";
+import { readMotionTokenMs } from "./utils/motionTokens";
 
 // Telegram WebApp integration
 declare global {
@@ -284,6 +286,12 @@ export function App() {
     modelsOpen,
     setModelsOpen,
   } = useScreen();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const screenHandoffDelayMs = useMemo(
+    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-external-app-handoff", 260)),
+    [prefersReducedMotion],
+  );
+  const screenTransitionTimerRef = useRef<number | null>(null);
 
   const [selectedStyle, setSelectedStyle] = useState<StyleItem | null>(styles[0] || null);
   const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v1");
@@ -351,6 +359,59 @@ export function App() {
   const notifiedFailedOrdersRef = useRef<Set<string>>(new Set());
 
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
+
+  const cancelPendingScreenTransition = useCallback(() => {
+    if (screenTransitionTimerRef.current) {
+      window.clearTimeout(screenTransitionTimerRef.current);
+      screenTransitionTimerRef.current = null;
+    }
+  }, []);
+
+  const closeTransientLayers = useCallback(() => {
+    setFlowStyleOpen(false);
+    setFlowUploadOpen(false);
+    setPrefilledUploadPhoto(null);
+    setStylePreviewOpen(false);
+    setCategoryOpen(false);
+    setPurchaseOpen(false);
+    setViewerOpen(false);
+    setModelsOpen(false);
+    setCreateActionLocked(false);
+  }, [
+    setFlowStyleOpen,
+    setFlowUploadOpen,
+    setPrefilledUploadPhoto,
+    setStylePreviewOpen,
+    setCategoryOpen,
+    setPurchaseOpen,
+    setViewerOpen,
+    setModelsOpen,
+    setCreateActionLocked,
+  ]);
+
+  const transitionToScreen = useCallback(
+    (screen: BaseScreen, options?: { closeTransientLayers?: boolean }) => {
+      if (options?.closeTransientLayers ?? true) {
+        closeTransientLayers();
+      }
+      cancelPendingScreenTransition();
+      if (screenHandoffDelayMs <= 0) {
+        setActiveScreen(screen);
+        return;
+      }
+      screenTransitionTimerRef.current = window.setTimeout(() => {
+        setActiveScreen(screen);
+        screenTransitionTimerRef.current = null;
+      }, screenHandoffDelayMs);
+    },
+    [cancelPendingScreenTransition, closeTransientLayers, screenHandoffDelayMs, setActiveScreen],
+  );
+
+  useEffect(() => {
+    return () => {
+      cancelPendingScreenTransition();
+    };
+  }, [cancelPendingScreenTransition]);
 
   useEffect(() => {
     const failedOrderIds = photos.filter((p) => p.status === "failed").map((p) => p.orderId);
@@ -446,6 +507,7 @@ export function App() {
   }, [setPhotos]);
 
   const openCreate = () => {
+    cancelPendingScreenTransition();
     // Photo viewer must not stay on top of create flow.
     setViewerOpen(false);
     setPurchaseOpen(false);
@@ -550,8 +612,7 @@ export function App() {
     if (!payload.photoFile) return;
     if (createActionLocked) return;
     setCreateActionLocked(true);
-    setFlowStyleOpen(false);
-    setActiveScreen("photos");
+    transitionToScreen("photos");
     const optimisticId = addOptimisticGeneration({
       styleCode: "custom",
       modelId: payload.modelId,
@@ -606,9 +667,8 @@ export function App() {
     if (createActionLocked) return;
     setCreateActionLocked(true);
 
-    // Immediately switch to photos and show queued modal.
-    setFlowUploadOpen(false);
-    setActiveScreen("photos");
+    // Switch to photos first and keep generation queued in the background.
+    transitionToScreen("photos");
     const optimisticId = addOptimisticGeneration({
       styleCode: selectedStyle?.id || "hollywood",
       modelId: selectedModelId,
@@ -943,16 +1003,7 @@ export function App() {
               return next;
             });
           }
-          setFlowStyleOpen(false);
-          setFlowUploadOpen(false);
-          setPrefilledUploadPhoto(null);
-          setStylePreviewOpen(false);
-          setCategoryOpen(false);
-          setPurchaseOpen(false);
-          setViewerOpen(false);
-          setModelsOpen(false);
-          setCreateActionLocked(false);
-          setActiveScreen(screen);
+          transitionToScreen(screen);
         }}
         onOpenCreate={openCreate}
       />

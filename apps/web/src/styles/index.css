@@ -278,25 +278,82 @@ button, a, [role="button"] { touch-action: manipulation; }
   position: relative;
   overflow: hidden;
   transition: height var(--cmp-motion-swipe) var(--cmp-ease-standard);
+  --home-swipe-ratio: 0;
 }
 .home-styles-panel {
   position: absolute;
   inset: 0;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transform: translateX(var(--cmp-space-10));
-  transition: opacity var(--cmp-motion-swipe) var(--cmp-ease-standard), transform var(--cmp-motion-swipe) var(--cmp-ease-standard);
+  transform: translateX(0);
+  transition: transform var(--cmp-motion-swipe) var(--cmp-ease-standard);
   will-change: transform, opacity;
 }
-.home-styles-panels.dir-prev .home-styles-panel {
-  transform: translateX(-var(--cmp-space-10));
+.home-styles-panel.is-active,
+.home-styles-panel.is-adjacent-prev,
+.home-styles-panel.is-adjacent-next,
+.home-styles-panel.is-outgoing {
+  visibility: visible;
 }
 .home-styles-panel.is-active {
   position: relative;
   inset: auto;
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(0);
+  z-index: var(--cmp-z-base);
+}
+.home-styles-panel.is-adjacent-next {
+  transform: translateX(100%);
+  z-index: var(--cmp-z-base);
+}
+.home-styles-panel.is-adjacent-prev {
+  transform: translateX(-100%);
+  z-index: var(--cmp-z-base);
+}
+.home-styles-panel.is-outgoing {
+  opacity: 1;
+  z-index: var(--cmp-z-selected);
+}
+.home-styles-panels.is-dragging .home-styles-panel {
+  transition: none;
+}
+.home-styles-panels.is-dragging .home-styles-panel.is-active {
+  transform: translateX(calc(var(--home-swipe-ratio) * 100%));
+}
+.home-styles-panels.is-dragging .home-styles-panel.is-adjacent-next {
+  transform: translateX(calc((1 + var(--home-swipe-ratio)) * 100%));
+}
+.home-styles-panels.is-dragging .home-styles-panel.is-adjacent-prev {
+  transform: translateX(calc((-1 + var(--home-swipe-ratio)) * 100%));
+}
+.home-styles-panels.is-transitioning .home-styles-panel.is-outgoing-next {
+  animation: homePanelLeaveToLeft var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
+}
+.home-styles-panels.is-transitioning .home-styles-panel.is-outgoing-prev {
+  animation: homePanelLeaveToRight var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
+}
+.home-styles-panels.is-transitioning .home-styles-panel.is-entering-next {
+  animation: homePanelEnterFromRight var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
+}
+.home-styles-panels.is-transitioning .home-styles-panel.is-entering-prev {
+  animation: homePanelEnterFromLeft var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
+}
+@keyframes homePanelEnterFromRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes homePanelEnterFromLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes homePanelLeaveToLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+@keyframes homePanelLeaveToRight {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
 }
 .home-styles-grid {
   animation: none;
