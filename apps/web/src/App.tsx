@@ -336,6 +336,7 @@ export function App() {
 
   const [queuedModalOpen, setQueuedModalOpen] = useState(false);
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
+  const [asyncFailError, setAsyncFailError] = useState<string | null>(null);
   const [createActionLocked, setCreateActionLocked] = useState(false);
   const [paywallModalOpen, setPaywallModalOpen] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
@@ -346,8 +347,23 @@ export function App() {
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const appliedSharePresetRef = useRef(false);
   const sharedPreviewOrderRef = useRef<string | null>(null);
+  const failedSeededRef = useRef(false);
+  const notifiedFailedOrdersRef = useRef<Set<string>>(new Set());
 
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
+
+  useEffect(() => {
+    const failedOrderIds = photos.filter((p) => p.status === "failed").map((p) => p.orderId);
+    if (!failedSeededRef.current) {
+      notifiedFailedOrdersRef.current = new Set(failedOrderIds);
+      failedSeededRef.current = true;
+      return;
+    }
+    const unseenFailed = failedOrderIds.find((orderId) => !notifiedFailedOrdersRef.current.has(orderId));
+    if (!unseenFailed) return;
+    notifiedFailedOrdersRef.current.add(unseenFailed);
+    setAsyncFailError("Генерация завершилась с технической ошибкой. Монеты возвращены автоматически.");
+  }, [photos]);
 
   useEffect(() => {
     let cancelled = false;
@@ -571,6 +587,7 @@ export function App() {
           replaceOptimisticGeneration(optimisticId, response);
           setLastChargedCoins(response.order.creditCost);
           refreshProfile();
+          await refresh();
         },
         async () => {
           if (!generationAccepted) {
@@ -637,6 +654,7 @@ export function App() {
         replaceOptimisticGeneration(optimisticId, response);
         setLastChargedCoins(response.order.creditCost);
         refreshProfile();
+        await refresh();
       },
       async () => {
         if (!generationAccepted) {
@@ -968,10 +986,13 @@ export function App() {
       />
 
       <Modal
-        isOpen={Boolean(lastError)}
+        isOpen={Boolean(lastError || asyncFailError)}
         title="Ошибка"
-        description={lastError || undefined}
-        onClose={clearError}
+        description={lastError || asyncFailError || undefined}
+        onClose={() => {
+          clearError();
+          setAsyncFailError(null);
+        }}
         isError={true}
       />
     </main>

@@ -87,7 +87,7 @@ export function PhotoViewerScreen({
           const imageBlob = await fetch(url).then((r) => r.blob());
           const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
           const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
-          const payload = { text: SHARE_BRAND_TEXT, url: homeAppLink, files: [file] };
+          const payload = { text: `${SHARE_BRAND_TEXT}\n${homeAppLink}`.trim(), files: [file] };
           if (!navigator.canShare || navigator.canShare(payload)) {
             await navigator.share(payload);
             closeAll();
@@ -98,8 +98,9 @@ export function PhotoViewerScreen({
         }
       }
 
-      const text = encodeURIComponent(SHARE_BRAND_TEXT);
-      const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(homeAppLink)}&text=${text}`;
+      const text = encodeURIComponent(`${SHARE_BRAND_TEXT}\n${homeAppLink}`.trim());
+      const telegramUrl = url || homeAppLink;
+      const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(telegramUrl)}&text=${text}`;
       const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (url: string) => void } | undefined;
       if (liveTg?.openTelegramLink) {
         liveTg.openTelegramLink(targetUrl);
@@ -167,7 +168,7 @@ export function PhotoViewerScreen({
   };
 
   return (
-    <div className="overlay-screen" onClick={shareOpen || menuOpen ? closeAll : undefined}>
+    <div className="overlay-screen photo-viewer-screen" onClick={shareOpen || menuOpen ? closeAll : undefined}>
       <div className="flow-top">
         <button className="flow-back" onClick={onClose} aria-label="Назад">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">

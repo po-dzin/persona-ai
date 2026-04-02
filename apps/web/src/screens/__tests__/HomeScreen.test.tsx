@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -7,20 +7,50 @@ import type { PhotoRecord } from "../../utils/api";
 import { HomeScreen } from "../HomeScreen";
 
 describe("HomeScreen", () => {
-  it("shows all styles in 'ВСЕ' and filters by selected category", async () => {
+  it("keeps the category rail and panel filtering contract stable", async () => {
     const user = userEvent.setup();
     const onPreviewStyle = vi.fn();
 
-    render(<HomeScreen styles={FALLBACK_STYLES} photos={[]} onPreviewStyle={onPreviewStyle} />);
+    const { container } = render(
+      <HomeScreen styles={FALLBACK_STYLES} photos={[]} onPreviewStyle={onPreviewStyle} />,
+    );
 
-    expect(screen.getByRole("button", { name: "ВСЕ" })).toHaveClass("active");
-    expect(screen.getByRole("button", { name: /Голливуд/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Аниме/ })).toBeInTheDocument();
+    const categoryRail = screen.getByLabelText("Категории стилей");
+    const categoryButtons = within(categoryRail).getAllByRole("button");
 
-    await user.click(screen.getByRole("button", { name: "Бизнес и карьера" }));
+    expect(categoryButtons.map((button) => button.textContent)).toEqual([
+      "ВСЕ",
+      "Тренды",
+      "Бизнес и карьера",
+      "Лайфстайл",
+      "Арт и креатив",
+      "Особый повод",
+    ]);
+    expect(within(categoryRail).getByRole("button", { name: "ВСЕ" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
-    expect(screen.getByRole("button", { name: /Бизнес-портрет/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Аниме/ })).not.toBeInTheDocument();
+    const activePanel = container.querySelector('.home-styles-panel[aria-hidden="false"]');
+    expect(activePanel).toBeTruthy();
+    expect(within(activePanel as HTMLElement).getByRole("button", { name: "Голливуд" })).toBeInTheDocument();
+    expect(within(activePanel as HTMLElement).getByRole("button", { name: "Аниме" })).toBeInTheDocument();
+
+    await user.click(within(categoryRail).getByRole("button", { name: "Бизнес и карьера" }));
+
+    expect(within(categoryRail).getByRole("button", { name: "Бизнес и карьера" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(within(categoryRail).getByRole("button", { name: "ВСЕ" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    const businessPanel = container.querySelector('.home-styles-panel[aria-hidden="false"]');
+    expect(businessPanel).toBeTruthy();
+    expect(within(businessPanel as HTMLElement).getByRole("button", { name: "Бизнес-портрет" })).toBeInTheDocument();
+    expect(within(businessPanel as HTMLElement).queryByRole("button", { name: "Аниме" })).not.toBeInTheDocument();
   });
 
   it("calls onPreviewStyle when style card is clicked", async () => {
@@ -69,13 +99,13 @@ describe("HomeScreen", () => {
 
     const queueStack = container.querySelector(".queue-stack");
     const stickyHeader = container.querySelector(".home-sticky-header");
-    const tabsRow = container.querySelector(".category-tabs-row");
+    const tabsRow = screen.getByLabelText("Категории стилей");
     const panels = container.querySelector(".home-styles-panels");
 
     expect(queueStack).toBeTruthy();
-    expect(queueStack?.children[0]).toHaveClass("stack-back-2");
-    expect(queueStack?.children[1]).toHaveClass("stack-back-1");
-    expect(queueStack?.children[2]).toHaveClass("stack-front");
+    expect(queueStack).toHaveTextContent("В очереди");
+    expect(queueStack).toHaveTextContent("2 генерации");
+    expect(queueStack?.children).toHaveLength(3);
     expect(screen.getByText("В очереди")).toBeInTheDocument();
     expect(screen.getByText("2 генерации")).toBeInTheDocument();
 
@@ -83,8 +113,10 @@ describe("HomeScreen", () => {
     expect(queueStack?.nextElementSibling).toBe(stickyHeader);
     expect(stickyHeader?.nextElementSibling).toBe(panels);
     expect(stickyHeader).toContainElement(tabsRow);
-    expect(tabsRow?.children).toHaveLength(1 + 5);
-    expect(Array.from(tabsRow?.children ?? []).map((node) => node.textContent)).toEqual([
+
+    const tabButtons = within(tabsRow).getAllByRole("button");
+    expect(tabButtons).toHaveLength(6);
+    expect(tabButtons.map((node) => node.textContent)).toEqual([
       "ВСЕ",
       "Тренды",
       "Бизнес и карьера",
@@ -92,6 +124,10 @@ describe("HomeScreen", () => {
       "Арт и креатив",
       "Особый повод",
     ]);
+    expect(within(tabsRow).getByRole("button", { name: "ВСЕ" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(container.firstElementChild?.lastElementChild).toHaveClass("screen-tail-space");
   });
 });

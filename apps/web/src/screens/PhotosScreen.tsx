@@ -149,9 +149,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                         <path d="M9 10h.01M15 16h.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/>
                       </svg>
                     </div>
-                  ) : (
-                    <div className="photo-style-label">{style?.name || photo.styleCode}</div>
-                  )}
+                  ) : null}
                 </button>
               </div>
             );

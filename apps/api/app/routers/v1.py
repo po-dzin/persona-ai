@@ -11,6 +11,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, Response, UploadFile
 
 from app.core.auth import require_user, parse_tg_user
+from app.core.rate_limit import generate_limiter, tg_webhook_limiter, upload_limiter
 from app.core.settings import settings
 from app.models.api_models import (
     CreateOrderRequest,
@@ -110,6 +111,7 @@ async def upload_file_direct(
     filename: str = Form(...),
 ):
     """Accept a file upload directly (avoids browser CORS with R2 presigned URLs)."""
+    upload_limiter.check(request, use_user_id=True)
     allowed = {".jpg", ".jpeg", ".png", ".webp"}
     suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if suffix not in allowed:
@@ -121,6 +123,7 @@ async def upload_file_direct(
 
 @router.post("/uploads")
 def create_upload(data: UploadRequest, request: Request, user_id: str = Depends(require_user)):
+    upload_limiter.check(request, use_user_id=True)
     # Validate file extension
     allowed = {".jpg", ".jpeg", ".png", ".webp"}
     suffix = "." + data.filename.rsplit(".", 1)[-1].lower() if "." in data.filename else ""
@@ -180,6 +183,7 @@ async def generate(data: GenerateRequest, request: Request, user_id: str = Depen
     Runs provider.submit() in a thread pool so the blocking Flux polling
     (up to 120s) doesn't stall the FastAPI event loop.
     """
+    generate_limiter.check(request, use_user_id=True)
     svc = get_service(request)
     loop = asyncio.get_event_loop()
     try:
@@ -338,6 +342,7 @@ async def telegram_bot_webhook(request: Request):
     Validates X-Telegram-Bot-Api-Secret-Token header.
     Handles: /start, pre_checkout_query, successful_payment.
     """
+    tg_webhook_limiter.check(request)
     secret = settings.telegram_webhook_secret
     if secret:
         token = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")

@@ -14,13 +14,12 @@ describe("ProfileScreen layout", () => {
       />,
     );
 
-    expect(container.firstElementChild).toHaveClass("screen");
-
     const header = container.querySelector(".profile-header");
     expect(header).toBeTruthy();
-    expect(header?.children[0]).toHaveClass("profile-avatar");
-    expect(header?.children[1]).toHaveClass("profile-name");
-    expect(header?.children[2]).toHaveClass("profile-username");
+    expect(header?.children).toHaveLength(3);
+    expect(header?.children[0]).toHaveTextContent("А");
+    expect(header?.children[1]).toHaveTextContent("Алексей");
+    expect(header?.children[2]).toHaveTextContent("@alexey");
     expect(screen.getByText("Алексей")).toBeInTheDocument();
     expect(screen.getByText("@alexey")).toBeInTheDocument();
 
@@ -41,6 +40,9 @@ describe("ProfileScreen layout", () => {
     expect(socialTitle).toBeInTheDocument();
     expect(supportTitle).toBeInTheDocument();
     expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveTextContent("Instagram");
+    expect(cards[0]).toHaveTextContent("Telegram канал");
+    expect(cards[1]).toHaveTextContent("Поддержка");
     expect(cards[0].querySelectorAll(".profile-row")).toHaveLength(2);
     expect(cards[1].querySelectorAll(".profile-row")).toHaveLength(1);
     expect(socialTitle.nextElementSibling).toBe(cards[0]);

@@ -434,6 +434,37 @@ def test_gallery_does_not_leak_other_users_photos() -> None:
     assert len(photos_b) == 1 and photos_b[0]["model_id"] == "nano-banana-v2"
 
 
+def test_second_account_isolation_blocks_cross_account_reads_and_mutations() -> None:
+    client = _client()
+    owner_id, second_id = "u-second-owner", "u-second-account"
+
+    for uid in (owner_id, second_id):
+        _ensure_user(client, uid)
+        _seed_user(uid, paid_credits=50)
+
+    owner_result = _generate(client, owner_id, model_id="nano-banana-v1")
+    second_result = _generate(client, second_id, model_id="nano-banana-v2")
+    owner_order_id = owner_result["order"]["order_id"]
+    second_order_id = second_result["order"]["order_id"]
+
+    owner_history = client.get("/v1/me/history", headers=_headers(owner_id)).json()["orders"]
+    second_history = client.get("/v1/me/history", headers=_headers(second_id)).json()["orders"]
+    assert {order["order_id"] for order in owner_history} == {owner_order_id}
+    assert {order["order_id"] for order in second_history} == {second_order_id}
+
+    owner_photos = client.get("/v1/me/photos", headers=_headers(owner_id)).json()["photos"]
+    second_photos = client.get("/v1/me/photos", headers=_headers(second_id)).json()["photos"]
+    assert {photo["order_id"] for photo in owner_photos} == {owner_order_id}
+    assert {photo["order_id"] for photo in second_photos} == {second_order_id}
+
+    assert client.get(f"/v1/orders/{owner_order_id}", headers=_headers(second_id)).status_code == 403
+    assert client.post(f"/v1/me/photos/{owner_order_id}/favorite", headers=_headers(second_id)).status_code == 403
+    assert client.delete(f"/v1/me/photos/{owner_order_id}", headers=_headers(second_id)).status_code == 403
+
+    owner_photos_after = client.get("/v1/me/photos", headers=_headers(owner_id)).json()["photos"]
+    assert {photo["order_id"] for photo in owner_photos_after} == {owner_order_id}
+
+
 # ───────────────────── favorite toggle ───────────────────────────
 
 def test_favorite_toggle_flips_and_flips_back() -> None:

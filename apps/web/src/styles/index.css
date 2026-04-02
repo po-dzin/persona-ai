@@ -214,7 +214,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .category-tabs-row {
   display: flex;
   align-items: center;
-  gap: var(--cmp-space-22);
+  gap: var(--cmp-space-20);
   overflow-x: auto;
   white-space: nowrap;
   padding: var(--cmp-space-8) var(--cmp-space-page-edge) var(--cmp-space-8);
@@ -244,10 +244,15 @@ button, a, [role="button"] { touch-action: manipulation; }
   padding: var(--cmp-space-6) 0 var(--cmp-space-6);
   border-bottom: var(--cmp-space-2) solid transparent;
   cursor: pointer;
+  transition: color var(--cmp-motion-fast) var(--cmp-ease-standard), border-color var(--cmp-motion-fast) var(--cmp-ease-standard), opacity var(--cmp-motion-fast) var(--cmp-ease-standard);
+  -webkit-tap-highlight-color: transparent;
 }
 .category-tab-link.active {
   color: var(--sem-color-text-primary);
   border-bottom-color: var(--sem-color-text-primary);
+}
+.category-tab-link:active {
+  opacity: var(--cmp-state-opacity-press-soft);
 }
 
 .styles-grid-2 {
@@ -567,7 +572,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .package-info { flex: 1; min-width: 0; text-align: center; }
 .package-name { font-size: var(--cmp-type-body-md-size); font-weight: 600; color: var(--sem-color-text-primary); }
 .package-coins { font-size: var(--cmp-type-label-md-size); color: var(--sem-color-text-secondary); margin-top: var(--cmp-space-2); }
-.package-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; position: relative; }
+.package-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; }
 .package-price { font-size: var(--cmp-type-body-md-size); font-weight: 700; color: var(--sem-color-text-primary); }
 .package-bonus { font-size: var(--cmp-type-label-sm-size); font-weight: 600; color: var(--sem-color-success); margin-top: var(--cmp-size-hairline); }
 .balance-footer-copy {
@@ -646,6 +651,64 @@ button, a, [role="button"] { touch-action: manipulation; }
 .profile-row-label { font-size: var(--cmp-type-body-md-size); font-weight: 500; color: var(--sem-color-text-primary); }
 .profile-row-desc { font-size: var(--cmp-type-label-sm-size); color: var(--sem-color-text-muted); margin-top: var(--cmp-size-hairline); }
 .profile-row-arrow { flex-shrink: 0; opacity: var(--cmp-state-opacity-arrow); }
+
+.balance-screen .balance-hero {
+  padding: var(--cmp-space-16) var(--cmp-space-grid-edge) var(--cmp-space-14);
+}
+.balance-screen .balance-section-title {
+  padding: var(--cmp-space-10) var(--cmp-space-grid-edge) var(--cmp-space-10);
+}
+.balance-screen .packages-list {
+  gap: var(--cmp-space-10);
+}
+.balance-screen .package-card {
+  min-height: var(--cmp-touch-min-size);
+  -webkit-tap-highlight-color: transparent;
+}
+.balance-screen .balance-footer-copy {
+  padding: var(--cmp-space-20) var(--cmp-space-grid-edge) var(--cmp-space-6);
+}
+.balance-screen .balance-pricing-link {
+  min-height: var(--cmp-touch-min-size);
+  padding: var(--cmp-space-8) var(--cmp-space-grid-edge) var(--cmp-space-20);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profile-screen .profile-header {
+  padding: var(--cmp-space-16) var(--cmp-space-grid-edge) var(--cmp-space-16);
+}
+.profile-screen .profile-stats {
+  margin-top: var(--cmp-space-14);
+}
+.profile-screen .profile-section-title {
+  padding: var(--cmp-space-16) var(--cmp-space-grid-edge) var(--cmp-space-8);
+}
+.profile-screen .profile-row {
+  min-height: var(--cmp-touch-min-size);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.photo-viewer-screen .viewer-body {
+  padding: var(--cmp-space-12) var(--cmp-space-page-edge);
+}
+.photo-viewer-screen .viewer-prompt-block {
+  margin-bottom: var(--cmp-space-14);
+}
+.photo-viewer-screen .viewer-actions-row {
+  gap: var(--cmp-space-10);
+}
+.photo-viewer-screen .viewer-heart,
+.photo-viewer-screen .viewer-copy-btn,
+.photo-viewer-screen .viewer-btn,
+.photo-viewer-screen .viewer-icon-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+.photo-viewer-screen .viewer-btn,
+.photo-viewer-screen .viewer-icon-btn,
+.photo-viewer-screen .viewer-heart,
+.photo-viewer-screen .viewer-copy-btn {
+  min-height: var(--cmp-touch-min-size);
+}
 
 /* ─── Partner collapsible header ─── */
 .partner-collapse-header {
@@ -939,6 +1002,16 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 .custom-content { padding: 0 var(--cmp-space-page-edge); }
 .custom-field { margin-bottom: var(--cmp-space-14); }
+.overlay-screen-keyboard-active .custom-field-prompt.is-focused {
+  position: sticky;
+  bottom: calc(var(--keyboard-inset, var(--cmp-space-0)) + var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--cmp-space-0))) + var(--cmp-space-8));
+  z-index: var(--cmp-z-sticky);
+  margin: 0 calc(-1 * var(--cmp-space-page-edge));
+  padding: var(--cmp-space-8) var(--cmp-space-page-edge) var(--cmp-space-10);
+  background: linear-gradient(180deg, var(--sem-color-bg-primary), var(--sem-color-bg-primary));
+  border-top: var(--cmp-size-hairline) solid var(--sem-border-default);
+  border-bottom: var(--cmp-size-hairline) solid var(--sem-border-default);
+}
 .custom-label { font-size: var(--cmp-type-label-md-size); font-weight: 600; color: var(--sem-color-text-secondary); margin-bottom: var(--cmp-space-6); }
 .custom-select {
   width: 100%; padding: var(--cmp-space-12) var(--cmp-space-14);
@@ -1330,6 +1403,23 @@ button, a, [role="button"] { touch-action: manipulation; }
   color: var(--sem-color-text-disabled);
   font-size: var(--cmp-type-label-sm-size);
   padding: var(--cmp-space-12) var(--cmp-space-page-edge);
+}
+
+.pricing-screen .pricing-subtitle {
+  padding: var(--cmp-space-10) var(--cmp-space-page-edge) var(--cmp-space-8);
+}
+.pricing-screen .pricing-models-list,
+.pricing-screen .pricing-storage-list {
+  gap: var(--cmp-space-6);
+}
+.pricing-screen .pricing-models-list {
+  padding: var(--cmp-space-10) var(--cmp-space-page-edge);
+}
+.pricing-screen .pricing-section-title {
+  padding: var(--cmp-space-16) var(--cmp-space-page-edge) var(--cmp-space-8);
+}
+.pricing-screen .pricing-note {
+  padding: var(--cmp-space-10) var(--cmp-space-page-edge) var(--cmp-space-12);
 }
 
 /* ─── Pricing margin matrix ─── */
