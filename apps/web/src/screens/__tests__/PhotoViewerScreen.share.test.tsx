@@ -92,7 +92,9 @@ describe("PhotoViewerScreen share menu", () => {
     await user.click(screen.getByRole("button", { name: "Threads" }));
     await waitFor(() => {
       expect(openSpy).toHaveBeenCalledWith(
-        expect.stringContaining("https://www.threads.net/intent/post?text="),
+        expect.stringContaining(
+          "https://www.threads.net/intent/post?text=%D0%A1%D0%BE%D0%B7%D0%B4%D0%B0%D0%BD%D0%BE%20%D0%B2%20PersonAI%20https%3A%2F%2Fpersonai.app%2Fshare%2Ford_1",
+        ),
         "_blank",
       );
     });
@@ -122,6 +124,21 @@ describe("PhotoViewerScreen share menu", () => {
         }),
       );
     });
+  });
+
+  it("opens Instagram story camera on mobile user agents", async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "canShare", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "userAgent", { configurable: true, value: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)" });
+
+    renderViewer();
+
+    await user.click(screen.getByRole("button", { name: "Поделиться" }));
+    await user.click(screen.getByRole("button", { name: "Instagram" }));
+    expect(openSpy).toHaveBeenCalledWith("instagram://story-camera", "_blank");
   });
 
   it("calls copy-link and upload-to-bot actions", async () => {

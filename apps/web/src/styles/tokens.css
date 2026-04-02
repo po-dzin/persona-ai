@@ -342,20 +342,4 @@
   --cmp-letter-wide-md: 0.5px;
   --cmp-letter-wide-sm: 0.3px;
 
-  /* Legacy aliases used by existing styles */
-  --text-muted: var(--sem-color-text-muted);
-  --text-faint: var(--sem-color-text-tertiary);
-
-  --space-1: var(--pr-space-1);
-  --space-2: var(--pr-space-2);
-  --space-3: var(--pr-space-3);
-  --space-4: var(--pr-space-4);
-  --space-5: var(--pr-space-5);
-  --space-6: var(--pr-space-6);
-  --space-8: var(--pr-space-8);
-
-  --grid-edge: var(--cmp-space-grid-edge);
-  --grid-gap: var(--cmp-space-grid-gap);
-  --page-edge: var(--cmp-space-page-edge);
-  --card-radius: var(--cmp-radius-card);
 }
