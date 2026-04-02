@@ -41,17 +41,9 @@ def _build_photo_share_link(order: dict[str, Any], request: Request) -> str:
     parsed = urlparse(base)
     query = dict(parse_qsl(parsed.query, keep_blank_values=True))
 
-    style_code = str(order.get("style_code") or "").strip()
-    model_id = str(order.get("model_id") or "").strip()
-    prompt = str(order.get("prompt") or "").strip()
-
-    if style_code:
-        query["ref_style"] = style_code
-    if model_id:
-        query["ref_model"] = model_id
-    if prompt:
-        # Keep link reasonably short and stable.
-        query["ref_prompt"] = prompt[:280]
+    order_id = str(order.get("order_id") or "").strip()
+    if order_id:
+        query["share_order"] = order_id
 
     return urlunparse(parsed._replace(query=urlencode(query)))
 
@@ -311,6 +303,29 @@ def get_photo_share_link(order_id: str, request: Request, user_id: str = Depends
     return {
         "app_link": _build_photo_share_link(order, request),
         "result_url": order.get("result_url"),
+    }
+
+
+@router.get("/share/{order_id}")
+def get_shared_photo(order_id: str, request: Request):
+    """Public read-only shared photo payload for app deeplinks."""
+    svc = get_service(request)
+    try:
+        order = svc._find_order(order_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    if order.status != "done" or not order.result_url:
+        raise HTTPException(status_code=404, detail="photo_not_available")
+
+    serialized = svc._serialize_order(order)
+    return {
+        "order_id": serialized.get("order_id"),
+        "style_code": serialized.get("style_code"),
+        "model_id": serialized.get("model_id"),
+        "result_url": serialized.get("result_url"),
+        "created_at": serialized.get("created_at"),
+        "updated_at": serialized.get("updated_at"),
     }
 
 

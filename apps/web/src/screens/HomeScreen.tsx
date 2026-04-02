@@ -4,7 +4,7 @@ import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { readMotionTokenMs } from "../utils/motionTokens";
-import { isGeneratingPhotoStatus } from "../utils/photoStatus";
+import { isPhotoGenerating } from "../utils/photoStatus";
 
 interface HomeScreenProps {
   styles: StyleItem[];
@@ -25,7 +25,7 @@ function CameraIcon() {
 export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) {
   const styleByCode = useMemo(() => Object.fromEntries(styles.map((s) => [s.id, s])), [styles]);
   const activePhotos = useMemo(
-    () => photos.filter((p) => isGeneratingPhotoStatus(p.status)),
+    () => photos.filter((p) => isPhotoGenerating(p)),
     [photos],
   );
 
@@ -66,6 +66,11 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   const touchStartY = useRef<number | null>(null);
   const touchStartTs = useRef<number | null>(null);
   const categoryTransitionTimerRef = useRef<number | null>(null);
+  const clearTouchTracking = () => {
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchStartTs.current = null;
+  };
 
   useEffect(() => {
     if (!categories.length) {
@@ -166,6 +171,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
+    clearTouchTracking();
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     touchStartTs.current = performance.now();
@@ -177,15 +183,16 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
       touchStartY.current === null ||
       touchStartTs.current === null ||
       isCategoryTransitioning
-    ) return;
+    ) {
+      clearTouchTracking();
+      return;
+    }
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     const dt = Math.max(1, performance.now() - touchStartTs.current);
     const absDx = Math.abs(dx);
     const velocityX = absDx / dt; // px per ms
-    touchStartX.current = null;
-    touchStartY.current = null;
-    touchStartTs.current = null;
+    clearTouchTracking();
     // Trigger on either confident distance or quick flick; keep dominant horizontal axis.
     const isDominantHorizontal = Math.abs(dy) <= absDx * 0.6;
     const passesDistance = absDx >= 40;
@@ -259,6 +266,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
         style={panelsHeight !== null ? { height: `${panelsHeight}px` } : undefined}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
+        onTouchCancel={clearTouchTracking}
       >
         {allCategories.map((category) => {
           if (!visitedCategories.has(category)) return null;

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
-import { isGeneratingPhotoStatus } from "../utils/photoStatus";
+import { isPhotoGenerating } from "../utils/photoStatus";
 
 interface PhotosScreenProps {
   photos: PhotoRecord[];
@@ -19,7 +19,7 @@ function dateLabel(iso: string): string {
 export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosScreenProps) {
   const [filter, setFilter] = useState("Все");
   const [imageErrorIds, setImageErrorIds] = useState<Set<string>>(new Set());
-  const queuedCount = photos.filter((p) => isGeneratingPhotoStatus(p.status)).length;
+  const queuedCount = photos.filter((p) => isPhotoGenerating(p)).length;
   const styleByCode = useMemo(() => Object.fromEntries(styles.map((s) => [s.id, s])), [styles]);
   const filterItems = useMemo(() => ["Все", "Избранное", ...styles.map((s) => s.name)], [styles]);
 
@@ -64,7 +64,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
       ) : null}
 
       {queuedCount === 1 ? (() => {
-        const activePhoto = photos.find((p) => isGeneratingPhotoStatus(p.status))!;
+        const activePhoto = photos.find((p) => isPhotoGenerating(p))!;
         const activeStyle = styleByCode[activePhoto.styleCode];
         return (
           <div className="queue-single">
@@ -107,7 +107,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
         <div className="photos-grid">
           {datedItems.map(({ photo, showDivider, dividerLabel }) => {
             const style = styleByCode[photo.styleCode];
-            const isLoading = isGeneratingPhotoStatus(photo.status);
+            const isLoading = isPhotoGenerating(photo);
             const isFailed = photo.status === "failed";
             const bg = style?.gradient || "var(--sem-gradient-photo-fallback)";
             const isImageBroken = imageErrorIds.has(photo.orderId);
@@ -139,7 +139,6 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                   {isLoading ? (
                     <div className="photo-loading-overlay">
                       <div className="queue-dots queue-dots-running queue-dots-large"><span /><span /><span /></div>
-                      <div className="photo-loading-label">Генерация</div>
                     </div>
                   ) : isFailed ? (
                     <div className="photo-failed-overlay">

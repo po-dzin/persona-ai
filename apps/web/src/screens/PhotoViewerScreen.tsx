@@ -79,15 +79,36 @@ export function PhotoViewerScreen({
   };
 
   const handleTelegramShare = () => {
-    const text = encodeURIComponent(SHARE_BRAND_TEXT);
-    const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(appLink || url)}&text=${text}`;
-    const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (url: string) => void } | undefined;
-    if (liveTg?.openTelegramLink) {
-      liveTg.openTelegramLink(targetUrl);
-    } else {
-      window.open(targetUrl, "_blank");
-    }
-    closeAll();
+    void (async () => {
+      const shareUrl = appLink || url;
+      // Prefer sharing actual photo file + short app link caption.
+      if (navigator.share && url) {
+        try {
+          const imageBlob = await fetch(url).then((r) => r.blob());
+          const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
+          const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
+          const payload = { text: `${SHARE_BRAND_TEXT}\n${shareUrl}`.trim(), files: [file] };
+          if (!navigator.canShare || navigator.canShare(payload)) {
+            await navigator.share(payload);
+            closeAll();
+            return;
+          }
+        } catch {
+          // Fallback to Telegram deep link share below.
+        }
+      }
+
+      const telegramUrl = url || shareUrl;
+      const text = encodeURIComponent(`${SHARE_BRAND_TEXT}\n${appLink || shareUrl}`.trim());
+      const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(telegramUrl)}&text=${text}`;
+      const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (url: string) => void } | undefined;
+      if (liveTg?.openTelegramLink) {
+        liveTg.openTelegramLink(targetUrl);
+      } else {
+        window.open(targetUrl, "_blank");
+      }
+      closeAll();
+    })();
   };
 
   const handleTgStories = () => {
