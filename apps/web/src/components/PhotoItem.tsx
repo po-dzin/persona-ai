@@ -9,7 +9,7 @@ interface PhotoItemProps {
 
 export function PhotoItem({ photo, style, onOpen }: PhotoItemProps) {
   const isLoading = photo.status === "queued" || photo.status === "processing";
-  const bg = style?.gradient || "linear-gradient(145deg, #2A2A2A, #3A3A3A)";
+  const bg = style?.gradient || "var(--sem-gradient-photo-fallback)";
 
   return (
     <button className={`photo-item ${isLoading ? "loading" : ""}`} onClick={onOpen} disabled={isLoading}>

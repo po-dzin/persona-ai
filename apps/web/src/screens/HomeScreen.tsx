@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
@@ -10,6 +10,8 @@ interface HomeScreenProps {
 }
 
 const CATEGORY_ORDER = ["Тренды", "Бизнес и карьера", "Лайфстайл", "Арт и креатив", "Особый повод"];
+const CATEGORY_TRANSITION_LOCK_MS = 320;
+const CATEGORY_HEIGHT_TRANSITION_MS = 320;
 
 function CameraIcon() {
   return (
@@ -40,14 +42,26 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
   }, [byCategory]);
 
   const [activeCategory, setActiveCategory] = useState("ВСЕ");
+  const [visitedCategories, setVisitedCategories] = useState<Set<string>>(() => new Set(["ВСЕ"]));
+  const [transitionDirection, setTransitionDirection] = useState<"next" | "prev">("next");
+  const [isCategoryTransitioning, setIsCategoryTransitioning] = useState(false);
+  const [panelsHeight, setPanelsHeight] = useState<number | null>(null);
   const allCategories = useMemo(() => ["ВСЕ", ...categories], [categories]);
   const tabsRef = useRef<HTMLDivElement>(null);
+  const panelsRef = useRef<HTMLDivElement>(null);
+  const panelRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const prevCategoryRef = useRef("ВСЕ");
+  const heightRafRef = useRef<number | null>(null);
+  const heightTimerRef = useRef<number | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const touchStartTs = useRef<number | null>(null);
+  const categoryTransitionTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!categories.length) {
       setActiveCategory("ВСЕ");
+      setVisitedCategories(new Set(["ВСЕ"]));
       return;
     }
     if (activeCategory === "ВСЕ") return;
@@ -56,6 +70,50 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     }
   }, [categories, activeCategory]);
 
+  useEffect(() => {
+    setVisitedCategories((prev) => {
+      if (prev.has(activeCategory)) return prev;
+      const next = new Set(prev);
+      next.add(activeCategory);
+      return next;
+    });
+  }, [activeCategory]);
+
+  useLayoutEffect(() => {
+    const prevCategory = prevCategoryRef.current;
+    const prevPanel = panelRefs.current[prevCategory];
+    const nextPanel = panelRefs.current[activeCategory];
+    if (!nextPanel) return;
+
+    const from = prevPanel?.offsetHeight ?? nextPanel.offsetHeight;
+    const to = nextPanel.offsetHeight;
+    prevCategoryRef.current = activeCategory;
+
+    if (from === to) {
+      setPanelsHeight(null);
+      return;
+    }
+
+    setPanelsHeight(from);
+    if (heightRafRef.current) cancelAnimationFrame(heightRafRef.current);
+    heightRafRef.current = requestAnimationFrame(() => {
+      setPanelsHeight(to);
+    });
+
+    if (heightTimerRef.current) window.clearTimeout(heightTimerRef.current);
+    heightTimerRef.current = window.setTimeout(() => {
+      setPanelsHeight(null);
+    }, CATEGORY_HEIGHT_TRANSITION_MS);
+  }, [activeCategory]);
+
+  useEffect(() => {
+    return () => {
+      if (heightRafRef.current) cancelAnimationFrame(heightRafRef.current);
+      if (heightTimerRef.current) window.clearTimeout(heightTimerRef.current);
+      if (categoryTransitionTimerRef.current) window.clearTimeout(categoryTransitionTimerRef.current);
+    };
+  }, []);
+
   // Scroll active tab into view when changed by swipe
   useEffect(() => {
     if (!tabsRef.current) return;
@@ -63,31 +121,63 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
     active?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [activeCategory]);
 
+  const setCategory = (nextCategory: string) => {
+    if (nextCategory === activeCategory || isCategoryTransitioning) return;
+    const currentIdx = allCategories.indexOf(activeCategory);
+    const nextIdx = allCategories.indexOf(nextCategory);
+    if (currentIdx >= 0 && nextIdx >= 0) {
+      setTransitionDirection(nextIdx > currentIdx ? "next" : "prev");
+    }
+    setIsCategoryTransitioning(true);
+    if (categoryTransitionTimerRef.current) window.clearTimeout(categoryTransitionTimerRef.current);
+    categoryTransitionTimerRef.current = window.setTimeout(() => {
+      setIsCategoryTransitioning(false);
+    }, CATEGORY_TRANSITION_LOCK_MS);
+    setActiveCategory(nextCategory);
+  };
+
   const switchCategory = (dir: "prev" | "next") => {
     const idx = allCategories.indexOf(activeCategory);
     const next = dir === "next" ? allCategories[idx + 1] : allCategories[idx - 1];
-    if (next) setActiveCategory(next);
+    if (next) setCategory(next);
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
+    touchStartTs.current = performance.now();
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
+    if (
+      touchStartX.current === null ||
+      touchStartY.current === null ||
+      touchStartTs.current === null ||
+      isCategoryTransitioning
+    ) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
+    const dt = Math.max(1, performance.now() - touchStartTs.current);
+    const absDx = Math.abs(dx);
+    const velocityX = absDx / dt; // px per ms
     touchStartX.current = null;
     touchStartY.current = null;
-    // Only trigger on dominant horizontal swipe > 50px
-    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+    touchStartTs.current = null;
+    // Trigger on either confident distance or quick flick; keep dominant horizontal axis.
+    const isDominantHorizontal = Math.abs(dy) <= absDx * 0.6;
+    const passesDistance = absDx >= 40;
+    const passesFlick = absDx >= 24 && velocityX >= 0.35;
+    if (!isDominantHorizontal || (!passesDistance && !passesFlick)) return;
     switchCategory(dx < 0 ? "next" : "prev");
   };
 
-  const activeStyles = activeCategory === "ВСЕ"
-    ? styles
-    : (byCategory[activeCategory] || []);
+  const stylesByCategory = useMemo(() => {
+    const result: Record<string, StyleItem[]> = { ВСЕ: styles };
+    for (const category of categories) {
+      result[category] = byCategory[category] || [];
+    }
+    return result;
+  }, [styles, categories, byCategory]);
 
   return (
     <section className="screen home-screen">
@@ -120,7 +210,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
         <div className="category-tabs-row" ref={tabsRef}>
           <button
             className={"category-tab-link" + (activeCategory === "ВСЕ" ? " active" : "")}
-            onClick={() => setActiveCategory("ВСЕ")}
+            onClick={() => setCategory("ВСЕ")}
           >
             ВСЕ
           </button>
@@ -128,7 +218,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
             <button
               key={category}
               className={"category-tab-link" + (activeCategory === category ? " active" : "")}
-              onClick={() => setActiveCategory(category)}
+              onClick={() => setCategory(category)}
             >
               {category}
             </button>
@@ -137,25 +227,44 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
       </div>
 
       <div
-        className="styles-grid-2"
-        key={activeCategory}
+        className={`home-styles-panels dir-${transitionDirection}`}
+        ref={panelsRef}
+        style={panelsHeight !== null ? { height: `${panelsHeight}px` } : undefined}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {activeStyles.map((style) => (
-          <button key={style.id} className="style-card style-card-grid" onClick={() => onPreviewStyle(style)}>
-            <div className="style-preview" style={{ background: style.gradient }}>
-              {style.isTrending ? <span className="style-tag fire">Hot</span> : null}
-              {style.isNew ? <span className="style-tag new">New</span> : null}
-              <div className="style-overlay">
-                <div className="style-name">{style.name}</div>
+        {allCategories.map((category) => {
+          if (!visitedCategories.has(category)) return null;
+          const isActive = category === activeCategory;
+          const categoryStyles = stylesByCategory[category] || [];
+          return (
+            <div
+              key={category}
+              className={`home-styles-panel${isActive ? " is-active" : ""}`}
+              aria-hidden={!isActive}
+              ref={(node) => {
+                panelRefs.current[category] = node;
+              }}
+            >
+              <div className="styles-grid-2 home-styles-grid">
+                {categoryStyles.map((style) => (
+                  <button key={style.id} className="style-card style-card-grid" onClick={() => onPreviewStyle(style)}>
+                    <div className="style-preview" style={{ background: style.gradient }}>
+                      {style.isTrending ? <span className="style-tag fire">Hot</span> : null}
+                      {style.isNew ? <span className="style-tag new">New</span> : null}
+                      <div className="style-overlay">
+                        <div className="style-name">{style.name}</div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
-          </button>
-        ))}
+          );
+        })}
       </div>
 
-      <div style={{ height: 20 }} />
+      <div className="screen-tail-space" />
     </section>
   );
 }

@@ -6,6 +6,7 @@ import hmac
 import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, Response, UploadFile
 
@@ -29,6 +30,30 @@ _executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="gen-worker")
 
 def get_service(request: Request) -> VerticalSliceService:
     return request.app.state.slice_service
+
+
+def _build_photo_share_link(order: dict[str, Any], request: Request) -> str:
+    base = settings.telegram_miniapp_url.strip()
+    if not base:
+        origin = request.headers.get("origin", "").strip().rstrip("/")
+        base = origin or "https://example.com"
+
+    parsed = urlparse(base)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+
+    style_code = str(order.get("style_code") or "").strip()
+    model_id = str(order.get("model_id") or "").strip()
+    prompt = str(order.get("prompt") or "").strip()
+
+    if style_code:
+        query["ref_style"] = style_code
+    if model_id:
+        query["ref_model"] = model_id
+    if prompt:
+        # Keep link reasonably short and stable.
+        query["ref_prompt"] = prompt[:280]
+
+    return urlunparse(parsed._replace(query=urlencode(query)))
 
 
 # ──────────────────────────── catalog ────────────────────────────
@@ -268,8 +293,25 @@ def send_photo_to_telegram(order_id: str, request: Request, user_id: str = Depen
     if not order.get("result_url"):
         raise HTTPException(status_code=409, detail="photo_not_ready")
     from app.services.tg_bot import send_photo_to_user
-    send_photo_to_user(user_id, order["result_url"])
+    app_link = _build_photo_share_link(order, request)
+    send_photo_to_user(user_id, order["result_url"], app_link=app_link)
     return {"ok": True}
+
+
+@router.get("/me/photos/{order_id}/share-link")
+def get_photo_share_link(order_id: str, request: Request, user_id: str = Depends(require_user)):
+    svc = get_service(request)
+    try:
+        status = svc.order_status(order_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    order = status["order"]
+    if order["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="forbidden")
+    return {
+        "app_link": _build_photo_share_link(order, request),
+        "result_url": order.get("result_url"),
+    }
 
 
 # ──────────────────── Telegram bot webhook ────────────────────────

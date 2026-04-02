@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FALLBACK_MODELS } from "../data/models";
 import { FALLBACK_PACKAGES } from "../data/packages";
 import { FALLBACK_STYLES } from "../data/styles";
-import { getProfile, sendPhotoToTelegram, toggleFavorite } from "../utils/api";
+import { getPhotoShareLink, getProfile, sendPhotoToTelegram, toggleFavorite } from "../utils/api";
 import { App } from "../App";
 
 const refreshMock = vi.fn().mockResolvedValue([]);
@@ -63,6 +63,7 @@ vi.mock("../utils/haptics", () => ({
 }));
 
 vi.mock("../utils/api", () => ({
+  getPhotoShareLink: vi.fn(),
   getProfile: vi.fn(),
   sendPhotoToTelegram: vi.fn(),
   toggleFavorite: vi.fn(),
@@ -91,6 +92,7 @@ describe("App flows", () => {
     });
     vi.mocked(sendPhotoToTelegram).mockResolvedValue(undefined);
     vi.mocked(toggleFavorite).mockResolvedValue({ isFavorite: true });
+    vi.mocked(getPhotoShareLink).mockResolvedValue({ appLink: "https://persona.example/app?ref_style=hollywood" });
   });
   it("restores last screen from localStorage", async () => {
     localStorage.setItem("persona_last_screen", "balance");
@@ -198,5 +200,33 @@ describe("App flows", () => {
 
     expect(screen.getByText("Генерация")).toBeInTheDocument();
     expect(screen.queryByText("Генерация...")).not.toBeInTheDocument();
+  });
+
+  it("opens create flow from tab bar even when photo viewer is open", async () => {
+    const user = userEvent.setup();
+    photosState = [{
+      orderId: "ord-done-1",
+      styleCode: "hollywood",
+      modelId: "nano-banana-v1",
+      status: "done",
+      prompt: "cinematic portrait",
+      resultUrl: "https://example.com/result.jpg",
+      isFavorite: false,
+      createdAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
+      updatedAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
+    }];
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Мои фото" }));
+    const hollywoodButtons = await screen.findAllByRole("button", { name: "Голливуд" });
+    const photoButton = hollywoodButtons.find((btn) => btn.classList.contains("photo-item"));
+    expect(photoButton).toBeTruthy();
+    await user.click(photoButton as HTMLButtonElement);
+    expect(await screen.findByText("Запрос")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+    expect(await screen.findByRole("button", { name: "Кастом" })).toBeInTheDocument();
+    expect(screen.queryByText("Запрос")).not.toBeInTheDocument();
   });
 });

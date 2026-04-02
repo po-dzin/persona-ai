@@ -23,11 +23,11 @@ const PACKAGE_ICONS: Record<string, string> = {
 };
 
 const PACKAGE_ICON_BG: Record<string, string> = {
-  STARTER: "rgba(255,214,102,0.1)",
-  BASIC: "rgba(255,214,102,0.12)",
-  POPULAR: "rgba(167,139,250,0.12)",
-  PRO: "rgba(56,190,255,0.12)",
-  ULTRA: "rgba(74,222,128,0.12)",
+  STARTER: "var(--sem-color-package-icon-starter)",
+  BASIC: "var(--sem-color-package-icon-basic)",
+  POPULAR: "var(--sem-color-package-icon-popular)",
+  PRO: "var(--sem-color-package-icon-pro)",
+  ULTRA: "var(--sem-color-package-icon-ultra)",
 };
 
 export function BalanceScreen({ credits, packages, onSelectPackage, onOpenPricing }: BalanceScreenProps) {
@@ -51,7 +51,7 @@ export function BalanceScreen({ credits, packages, onSelectPackage, onOpenPricin
               onClick={() => onSelectPackage(pkg)}
             >
               {isFeatured ? <div className="package-featured-tag">Популярное</div> : null}
-              <div className="package-icon" style={{ background: PACKAGE_ICON_BG[pkg.code] ?? "rgba(255,214,102,0.1)" }}>
+              <div className="package-icon" style={{ background: PACKAGE_ICON_BG[pkg.code] ?? "var(--sem-color-package-icon-fallback)" }}>
                 {PACKAGE_ICONS[pkg.code] ?? "🪙"}
               </div>
               <div className="package-info">

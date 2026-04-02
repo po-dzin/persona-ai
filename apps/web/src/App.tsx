@@ -20,7 +20,7 @@ import { StylePreviewScreen } from "./screens/StylePreviewScreen";
 import type { PackageItem } from "./data/packages";
 import type { StyleItem } from "./data/styles";
 import type { SourceTab } from "../../../../shared/contracts/ui";
-import { createPurchaseInvoice, deletePhoto, getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
+import { createPurchaseInvoice, deletePhoto, getPhotoShareLink, getProfile, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
 import { triggerHaptic } from "./utils/haptics";
 
 // Telegram WebApp integration
@@ -47,7 +47,7 @@ declare global {
 
 const tg = window.Telegram?.WebApp;
 type TgUser = { id: number; first_name?: string; username?: string; photo_url?: string };
-const PUBLIC_RESULTS_BASE_URL = "https://pub-e794b2d465ca4a9fab7ca1b1151068d5.r2.dev";
+type SharePreset = { styleCode?: string; modelId?: string; prompt?: string };
 
 function parseTgUserFromInitData(initData?: string): TgUser | null {
   if (!initData) return null;
@@ -71,15 +71,23 @@ function readTelegramUser(): TgUser | null {
   return parseTgUserFromInitData(liveTg?.initData);
 }
 
-function toShareableResultUrl(rawUrl: string): string {
-  if (!rawUrl) return rawUrl;
-  const fallback = rawUrl.split("?")[0]?.split("#")[0] ?? rawUrl;
-  try {
-    const parsed = new URL(rawUrl);
-    return `${PUBLIC_RESULTS_BASE_URL}${parsed.pathname}`;
-  } catch {
-    return fallback;
-  }
+function readSharePresetFromUrl(): SharePreset | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const styleCode = params.get("ref_style")?.trim() || undefined;
+  const modelId = params.get("ref_model")?.trim() || undefined;
+  const prompt = params.get("ref_prompt")?.trim() || undefined;
+  if (!styleCode && !modelId && !prompt) return null;
+  return { styleCode, modelId, prompt };
+}
+
+function clearSharePresetFromUrl() {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.searchParams.delete("ref_style");
+  url.searchParams.delete("ref_model");
+  url.searchParams.delete("ref_prompt");
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 const _tgUserSnapshot = readTelegramUser();
@@ -253,6 +261,7 @@ export function App() {
   const [selectedSourceTab, setSelectedSourceTab] = useState<SourceTab>("styles");
   const [prefilledUploadPhoto, setPrefilledUploadPhoto] = useState<File | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<PhotoRecord | null>(null);
+  const [selectedPhotoShareLink, setSelectedPhotoShareLink] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Тренды");
   const [selectedPackage, setSelectedPackage] = useState<PackageItem | null>(null);
   const favoriteOrderIds = useMemo(
@@ -288,8 +297,30 @@ export function App() {
   const [stylePreviewBackToFlow, setStylePreviewBackToFlow] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
+  const appliedSharePresetRef = useRef(false);
 
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedPhoto?.orderId) {
+      setSelectedPhotoShareLink("");
+      return () => {
+        cancelled = true;
+      };
+    }
+    void (async () => {
+      try {
+        const share = await getPhotoShareLink(selectedPhoto.orderId);
+        if (!cancelled) setSelectedPhotoShareLink(share.appLink);
+      } catch {
+        if (!cancelled) setSelectedPhotoShareLink(window.location.origin);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPhoto?.orderId]);
 
   const addOptimisticGeneration = useCallback((payload: {
     styleCode: string;
@@ -320,6 +351,13 @@ export function App() {
   }, [setPhotos]);
 
   const openCreate = () => {
+    // Photo viewer must not stay on top of create flow.
+    setViewerOpen(false);
+    setPurchaseOpen(false);
+    setStylePreviewOpen(false);
+    setCategoryOpen(false);
+    setModelsOpen(false);
+
     // If already in create flow, don't reset — user stays where they are
     if (flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)) return;
 
@@ -334,9 +372,46 @@ export function App() {
     setSelectedAspectRatio("1:1");
     setSelectedSourceTab("styles");
     setFlowUploadOpen(false);
-    setModelsOpen(false);
     setFlowStyleOpen(true);
   };
+
+  useEffect(() => {
+    if (appliedSharePresetRef.current) return;
+    if (!styles.length || !models.length) return;
+
+    const preset = readSharePresetFromUrl();
+    if (!preset) return;
+    appliedSharePresetRef.current = true;
+
+    const sharedStyle = preset.styleCode
+      ? styles.find((style) => style.id === preset.styleCode) || null
+      : null;
+    const sharedModel = preset.modelId && models.some((model) => model.id === preset.modelId)
+      ? preset.modelId
+      : models[0]?.id || "nano-banana-v1";
+    const sharedPrompt = preset.prompt?.trim() || "";
+
+    if (sharedStyle) setSelectedStyle(sharedStyle);
+    setSelectedModelId(sharedModel);
+    if (sharedPrompt) {
+      setSelectedPrompt(sharedPrompt);
+      setFlowInitialTab("custom");
+      setFlowInitialCustomPrompt(sharedPrompt);
+      setFlowInitialCustomModelId(sharedModel);
+      setSelectedSourceTab("custom");
+    } else if (sharedStyle) {
+      setSelectedPrompt(sharedStyle.promptTemplate);
+      setFlowInitialTab("styles");
+      setSelectedSourceTab("styles");
+    }
+
+    setFlowUploadOpen(false);
+    setStylePreviewOpen(false);
+    setCategoryOpen(false);
+    setActiveScreen("home");
+    setFlowStyleOpen(true);
+    clearSharePresetFromUrl();
+  }, [styles, models]);
 
   const applyStyleSelection = (style: StyleItem) => {
     setSelectedStyle(style);
@@ -572,22 +647,15 @@ export function App() {
     }
   }, [selectedPhoto]);
 
-  const handleSharePhoto = async () => {
-    if (!selectedPhoto?.resultUrl) return;
-    const shareUrl = toShareableResultUrl(selectedPhoto.resultUrl);
-    const shareData = {
-      title: "Persona photo",
-      text: "Сгенерировано в Persona",
-      url: shareUrl,
-    };
+  const handleCopyPhotoLink = async () => {
+    if (!selectedPhoto) return;
     try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        return;
+      const share = await getPhotoShareLink(selectedPhoto.orderId);
+      if (share.appLink) {
+        await navigator.clipboard.writeText(share.appLink);
       }
-      await navigator.clipboard.writeText(shareUrl);
     } catch {
-      // User canceled share or clipboard is unavailable.
+      // ignore clipboard/network errors
     }
   };
 
@@ -696,6 +764,7 @@ export function App() {
       <PhotoViewerScreen
         isOpen={viewerOpen}
         photo={selectedPhoto}
+        appLink={selectedPhotoShareLink || window.location.origin}
         style={selectedPhoto ? stylesById[selectedPhoto.styleCode] : undefined}
         isFavorite={selectedPhoto ? favoriteOrderIds.has(selectedPhoto.orderId) : false}
         onClose={() => setViewerOpen(false)}
@@ -704,9 +773,7 @@ export function App() {
           if (selectedPhoto) void handleToggleFavorite(selectedPhoto.orderId);
         }}
         onDownload={handleDownloadPhoto}
-        onShare={() => {
-          void handleSharePhoto();
-        }}
+        onCopyLink={handleCopyPhotoLink}
         onUseAsReference={handleUseAsReference}
         onDeletePhoto={() => { void handleDeletePhoto(); }}
       />

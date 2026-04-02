@@ -103,26 +103,21 @@ export function FlowUploadScreen({
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png"
-        style={{ display: "none" }}
+        className="hidden-file-input"
         onChange={handleFile}
       />
 
       {/* Upload area / photo preview */}
       {photoUrl ? (
-        <div className="upload-area" style={{ border: "none", padding: 0, margin: "16px 20px 0", borderRadius: 20, overflow: "hidden", position: "relative", background: "var(--sem-color-bg-body)" }}>
+        <div className="upload-area upload-preview-shell">
           <img
             src={photoUrl}
             alt="preview"
-            style={{ width: "100%", maxHeight: "65vh", objectFit: "contain", display: "block" }}
+            className="fill-image-contain"
           />
           <button
             onClick={pickPhoto}
-            style={{
-              position: "absolute", bottom: 12, right: 12,
-              background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)",
-              border: "none", color: "white", fontSize: 12, fontWeight: 600,
-              padding: "7px 14px", borderRadius: 20, cursor: "pointer",
-            }}
+            className="upload-preview-edit-btn"
           >
             Изменить
           </button>
@@ -142,23 +137,23 @@ export function FlowUploadScreen({
       )}
 
       {validationError ? (
-        <div style={{ margin: "10px 20px 0", fontSize: 12, color: "var(--sem-color-danger)" }}>
+        <div className="form-error-inline">
           {validationError}
         </div>
       ) : null}
 
-      <div className="flow-helper-note flow-helper-note-under-upload" style={{ marginLeft: 20, marginRight: 20 }}>
+      <div className="flow-helper-note flow-helper-note-under-upload flow-helper-note-edges">
         <div>Лучше работают четкие портреты с хорошим освещением</div>
       </div>
 
       {/* Prompt preview */}
       {showPromptBlock && (prompt || selectedStyle?.promptTemplate) ? (
-        <div style={{ margin: "12px 20px 0", background: "var(--sem-color-bg-surface)", borderRadius: 12, padding: "10px 14px" }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--sem-color-text-muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>Промпт</div>
-          <div style={{ fontSize: 12, color: "var(--sem-color-text-secondary)", lineHeight: 1.5 }}>
+        <div className="upload-prompt-preview">
+          <div className="upload-prompt-preview-label">Промпт</div>
+          <div className="upload-prompt-preview-text">
             {prompt || selectedStyle?.promptTemplate}
           </div>
-          <div style={{ fontSize: 10, color: "var(--sem-color-text-muted)", marginTop: 6 }}>
+          <div className="upload-prompt-preview-meta">
             Формат: {aspectRatio}
           </div>
         </div>

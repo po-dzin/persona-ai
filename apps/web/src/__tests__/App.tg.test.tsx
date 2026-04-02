@@ -12,7 +12,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getProfile, sendPhotoToTelegram, toggleFavorite } from "../utils/api";
+import { getPhotoShareLink, getProfile, sendPhotoToTelegram, toggleFavorite } from "../utils/api";
 
 import { FALLBACK_MODELS } from "../data/models";
 import { FALLBACK_PACKAGES } from "../data/packages";
@@ -54,6 +54,7 @@ vi.mock("../utils/haptics", () => ({ triggerHaptic: vi.fn() }));
 
 // Profile returns no name/username so TG user values show through as fallback
 vi.mock("../utils/api", () => ({
+  getPhotoShareLink: vi.fn(),
   getProfile: vi.fn(),
   sendPhotoToTelegram: vi.fn(),
   toggleFavorite: vi.fn(),
@@ -106,6 +107,7 @@ beforeEach(() => {
     generationsCount: 0,
     referralsCount: 0,
   });
+  vi.mocked(getPhotoShareLink).mockResolvedValue({ appLink: "https://persona.example/app?ref_style=hollywood" });
   vi.mocked(sendPhotoToTelegram).mockResolvedValue(undefined);
   vi.mocked(toggleFavorite).mockResolvedValue({ isFavorite: true });
 });

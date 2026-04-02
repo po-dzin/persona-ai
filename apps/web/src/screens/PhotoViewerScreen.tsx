@@ -3,29 +3,17 @@ import { useEffect, useState } from "react";
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
 
-const PUBLIC_RESULTS_BASE_URL = "https://pub-e794b2d465ca4a9fab7ca1b1151068d5.r2.dev";
-
-function toShareableResultUrl(rawUrl: string): string {
-  if (!rawUrl) return rawUrl;
-  const fallback = rawUrl.split("?")[0]?.split("#")[0] ?? rawUrl;
-  try {
-    const parsed = new URL(rawUrl);
-    return `${PUBLIC_RESULTS_BASE_URL}${parsed.pathname}`;
-  } catch {
-    return fallback;
-  }
-}
-
 interface PhotoViewerScreenProps {
   isOpen: boolean;
   photo: PhotoRecord | null;
+  appLink?: string;
   style?: StyleItem;
   isFavorite: boolean;
   onClose: () => void;
   onSendToTelegram: () => void;
   onToggleFavorite: () => void;
   onDownload: () => void;
-  onShare: () => void;
+  onCopyLink: () => void | Promise<void>;
   onUseAsReference: () => void;
   onDeletePhoto: () => void;
 }
@@ -33,13 +21,14 @@ interface PhotoViewerScreenProps {
 export function PhotoViewerScreen({
   isOpen,
   photo,
+  appLink = "",
   style,
   isFavorite,
   onClose,
   onSendToTelegram,
   onToggleFavorite,
   onDownload,
-  onShare,
+  onCopyLink,
   onUseAsReference,
   onDeletePhoto,
 }: PhotoViewerScreenProps) {
@@ -49,7 +38,6 @@ export function PhotoViewerScreen({
   const [imageFailed, setImageFailed] = useState(false);
 
   const url = photo?.resultUrl || "";
-  const shareUrl = toShareableResultUrl(url);
   const prompt = photo?.prompt || "Промпт недоступен";
 
   const closeAll = () => { setShareOpen(false); setMenuOpen(false); };
@@ -74,40 +62,68 @@ export function PhotoViewerScreen({
     window.setTimeout(() => setPromptCopied(false), 1400);
   };
 
-  const handleCopyLink = async () => {
-    try { await navigator.clipboard.writeText(shareUrl); } catch { /* unavailable */ }
+  const handleCopyLink = () => {
+    onCopyLink();
+    closeAll();
+  };
+
+  const handleTelegramShare = () => {
+    const text = encodeURIComponent("Сгенерировано в PersonAI");
+    const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(appLink || url)}&text=${text}`;
+    const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (url: string) => void } | undefined;
+    if (liveTg?.openTelegramLink) {
+      liveTg.openTelegramLink(targetUrl);
+    } else {
+      window.open(targetUrl, "_blank");
+    }
     closeAll();
   };
 
   const handleTgStories = () => {
-    window.open(`tg://stories/post?url=${encodeURIComponent(shareUrl)}`, "_blank");
+    window.open(`tg://stories/post?url=${encodeURIComponent(url)}`, "_blank");
     closeAll();
   };
 
-  const handleTgDM = () => {
+  const handleUploadToBot = () => {
     onSendToTelegram();
     closeAll();
   };
 
   const handleInstagram = () => {
-    window.open(`instagram://library`, "_blank");
+    const igComposeUrl = "instagram://camera";
+    const igAppUrl = "instagram://app";
+    const fallbackWeb = "https://instagram.com/";
+    const popup = window.open(igComposeUrl, "_blank");
+    window.setTimeout(() => {
+      if (popup && !popup.closed) return;
+      window.open(igAppUrl, "_blank");
+      window.setTimeout(() => {
+        window.open(fallbackWeb, "_blank");
+      }, 260);
+    }, 260);
     closeAll();
   };
 
   const handleThreads = () => {
-    window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareUrl)}`, "_blank");
-    closeAll();
-  };
-
-  const handleNativeShare = async () => {
-    closeAll();
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: style?.name || "Persona photo", url: shareUrl });
-      } else {
-        await navigator.clipboard.writeText(shareUrl);
+    void (async () => {
+      try {
+        if (navigator.share && url) {
+          const imageBlob = await fetch(url).then((r) => r.blob());
+          const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
+          const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
+          const payload = { text: appLink || url, files: [file] };
+          if (!navigator.canShare || navigator.canShare(payload)) {
+            await navigator.share(payload);
+            closeAll();
+            return;
+          }
+        }
+      } catch {
+        // fall through to URL intent
       }
-    } catch { /* cancelled */ }
+      window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(appLink || url)}`, "_blank");
+      closeAll();
+    })();
   };
 
   return (
@@ -196,14 +212,14 @@ export function PhotoViewerScreen({
             </button>
             {shareOpen ? (
               <div className="viewer-menu viewer-share-menu" onClick={(e) => e.stopPropagation()}>
-                <button className="viewer-menu-item" onClick={handleCopyLink}>
+                <button className="viewer-menu-item" onClick={handleTelegramShare}>
                   <span className="vmi-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </span>
-                  Копировать ссылку
+                  Telegram
                 </button>
                 <button className="viewer-menu-item" onClick={handleTgStories}>
                   <span className="vmi-icon">
@@ -213,15 +229,6 @@ export function PhotoViewerScreen({
                     </svg>
                   </span>
                   TG Stories
-                </button>
-                <button className="viewer-menu-item" onClick={handleTgDM}>
-                  <span className="vmi-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                  Telegram
                 </button>
                 <button className="viewer-menu-item" onClick={handleInstagram}>
                   <span className="vmi-icon">
@@ -243,15 +250,23 @@ export function PhotoViewerScreen({
                   </span>
                   Threads
                 </button>
-                <button className="viewer-menu-item" onClick={handleNativeShare}>
+                <button className="viewer-menu-item" onClick={handleCopyLink}>
                   <span className="vmi-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <circle cx="6" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.8"/>
-                      <circle cx="12" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.8"/>
-                      <circle cx="18" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.8"/>
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </span>
-                  Другие
+                  Копировать ссылку
+                </button>
+                <button className="viewer-menu-item" onClick={handleUploadToBot}>
+                  <span className="vmi-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </span>
+                  Выгрузить в бот
                 </button>
               </div>
             ) : null}

@@ -5,37 +5,105 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const webRoot = path.resolve(__dirname, "..");
-const srcStylesRoot = path.join(webRoot, "src", "styles");
+const srcRoot = path.join(webRoot, "src");
 const baselinePath = path.join(__dirname, "token-drift-baseline.json");
 
 const COLOR_LITERAL_RE = /#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/g;
+const HARDCODED_CSS_RE = /(padding|margin|gap|font-size|letter-spacing|line-height)\s*:\s*[^;]*\d+px/g;
+const HARDCODED_TSX_RE = /(padding|margin|gap|fontSize|letterSpacing|lineHeight)\s*:\s*("[^"]*\d+px"|'[^']*\d+px'|\d+(?:\.\d+)?)/g;
+const INLINE_STYLE_RE = /style=\{\{([\s\S]*?)\}\}/g;
 
 function walk(dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   const files = [];
+
   for (const entry of entries) {
     const abs = path.join(dir, entry.name);
     if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name === "dist") continue;
       files.push(...walk(abs));
-    } else if (entry.isFile() && entry.name.endsWith(".css") && entry.name !== "tokens.css") {
+      continue;
+    }
+    if (!entry.isFile()) continue;
+
+    if (entry.name.endsWith(".css") || entry.name.endsWith(".ts") || entry.name.endsWith(".tsx") || entry.name.endsWith(".js") || entry.name.endsWith(".jsx")) {
       files.push(abs);
     }
   }
+
   return files;
 }
 
+function relPath(filePath) {
+  return path.relative(webRoot, filePath).replace(/\\/g, "/");
+}
+
+function normalizeSnippet(value) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function isAllowedInlineStyle(snippet) {
+  const normalized = normalizeSnippet(snippet);
+  const allowedPatterns = [
+    "style.gradient",
+    "background: bg",
+    "selectedStyle?.gradient",
+    "PACKAGE_ICON_BG",
+    "${size.width}px",
+    "${size.height}px",
+    "var(--sem-gradient-photo-fallback)",
+    "var(--sem-color-package-icon-fallback)",
+    "panelsHeight",
+  ];
+
+  return allowedPatterns.some((pattern) => normalized.includes(pattern));
+}
+
 function collectEntries() {
-  const files = walk(srcStylesRoot);
+  const files = walk(srcRoot);
   const entries = {};
 
   for (const filePath of files) {
+    const rel = relPath(filePath);
     const raw = fs.readFileSync(filePath, "utf8");
-    const rel = path.relative(webRoot, filePath).replace(/\\/g, "/");
-    const matches = raw.match(COLOR_LITERAL_RE) ?? [];
+    const isTokensFile = rel === "src/styles/tokens.css";
+    const isCss = rel.endsWith(".css");
+    const isCode = /\.(ts|tsx|js|jsx)$/.test(rel);
 
-    for (const match of matches) {
-      const key = `${rel}::${match}`;
-      entries[key] = (entries[key] ?? 0) + 1;
+    if (isCss && !isTokensFile) {
+      const colorMatches = raw.match(COLOR_LITERAL_RE) ?? [];
+      for (const match of colorMatches) {
+        const key = `color_literal_css::${rel}::${match}`;
+        entries[key] = (entries[key] ?? 0) + 1;
+      }
+
+      const hardcodedMatches = raw.match(HARDCODED_CSS_RE) ?? [];
+      for (const match of hardcodedMatches) {
+        const key = `hardcoded_css::${rel}::${normalizeSnippet(match)}`;
+        entries[key] = (entries[key] ?? 0) + 1;
+      }
+    }
+
+    if (isCode) {
+      const colorMatches = raw.match(COLOR_LITERAL_RE) ?? [];
+      for (const match of colorMatches) {
+        const key = `color_literal_code::${rel}::${match}`;
+        entries[key] = (entries[key] ?? 0) + 1;
+      }
+
+      const hardcodedMatches = raw.match(HARDCODED_TSX_RE) ?? [];
+      for (const match of hardcodedMatches) {
+        const key = `hardcoded_code::${rel}::${normalizeSnippet(match)}`;
+        entries[key] = (entries[key] ?? 0) + 1;
+      }
+
+      let inlineMatch;
+      while ((inlineMatch = INLINE_STYLE_RE.exec(raw)) !== null) {
+        const snippet = inlineMatch[1] ?? "";
+        if (isAllowedInlineStyle(snippet)) continue;
+        const key = `inline_style_forbidden::${rel}::${normalizeSnippet(snippet)}`;
+        entries[key] = (entries[key] ?? 0) + 1;
+      }
     }
   }
 
@@ -44,14 +112,14 @@ function collectEntries() {
 
 function loadBaseline() {
   if (!fs.existsSync(baselinePath)) {
-    return { version: 1, entries: {} };
+    return { version: 2, entries: {} };
   }
   return JSON.parse(fs.readFileSync(baselinePath, "utf8"));
 }
 
 function saveBaseline(entries) {
   const baseline = {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     entries,
   };
@@ -74,16 +142,16 @@ const violations = [];
 for (const [key, count] of Object.entries(currentEntries)) {
   const allowed = baselineEntries[key];
   if (allowed === undefined) {
-    violations.push(`NEW literal: ${key} (count ${count})`);
+    violations.push(`NEW violation: ${key} (count ${count})`);
     continue;
   }
   if (count > allowed) {
-    violations.push(`INCREASED literal count: ${key} (was ${allowed}, now ${count})`);
+    violations.push(`INCREASED violation count: ${key} (was ${allowed}, now ${count})`);
   }
 }
 
 if (violations.length > 0) {
-  console.error("Token drift detected. Replace literals with tokens or refresh baseline intentionally.");
+  console.error("Token drift detected. Replace literals/hardcoded values with tokens or refresh baseline intentionally.");
   for (const line of violations) {
     console.error(`- ${line}`);
   }
