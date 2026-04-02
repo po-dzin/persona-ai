@@ -3,6 +3,19 @@ import { useEffect, useState } from "react";
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
 
+const PUBLIC_RESULTS_BASE_URL = "https://pub-e794b2d465ca4a9fab7ca1b1151068d5.r2.dev";
+
+function toShareableResultUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl;
+  const fallback = rawUrl.split("?")[0]?.split("#")[0] ?? rawUrl;
+  try {
+    const parsed = new URL(rawUrl);
+    return `${PUBLIC_RESULTS_BASE_URL}${parsed.pathname}`;
+  } catch {
+    return fallback;
+  }
+}
+
 interface PhotoViewerScreenProps {
   isOpen: boolean;
   photo: PhotoRecord | null;
@@ -36,6 +49,7 @@ export function PhotoViewerScreen({
   const [imageFailed, setImageFailed] = useState(false);
 
   const url = photo?.resultUrl || "";
+  const shareUrl = toShareableResultUrl(url);
   const prompt = photo?.prompt || "Промпт недоступен";
 
   const closeAll = () => { setShareOpen(false); setMenuOpen(false); };
@@ -61,12 +75,12 @@ export function PhotoViewerScreen({
   };
 
   const handleCopyLink = async () => {
-    try { await navigator.clipboard.writeText(url); } catch { /* unavailable */ }
+    try { await navigator.clipboard.writeText(shareUrl); } catch { /* unavailable */ }
     closeAll();
   };
 
   const handleTgStories = () => {
-    window.open(`tg://stories/post?url=${encodeURIComponent(url)}`, "_blank");
+    window.open(`tg://stories/post?url=${encodeURIComponent(shareUrl)}`, "_blank");
     closeAll();
   };
 
@@ -81,7 +95,7 @@ export function PhotoViewerScreen({
   };
 
   const handleThreads = () => {
-    window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(url)}`, "_blank");
+    window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareUrl)}`, "_blank");
     closeAll();
   };
 
@@ -89,9 +103,9 @@ export function PhotoViewerScreen({
     closeAll();
     try {
       if (navigator.share) {
-        await navigator.share({ title: style?.name || "Persona photo", url });
+        await navigator.share({ title: style?.name || "Persona photo", url: shareUrl });
       } else {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(shareUrl);
       }
     } catch { /* cancelled */ }
   };
@@ -108,12 +122,12 @@ export function PhotoViewerScreen({
         <div className="flow-step" />
       </div>
 
-      <div className="viewer-photo" style={{ background: style?.gradient || "linear-gradient(145deg, #2A2A2A, #3A3A3A)" }}>
+      <div className="viewer-photo" style={{ background: style?.gradient || "var(--sem-gradient-photo-fallback)" }}>
         {photo.resultUrl && !imageFailed ? (
           <img
             src={photo.resultUrl}
             alt={style?.name || photo.styleCode}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            className="fill-image-cover"
             onError={() => setImageFailed(true)}
           />
         ) : (
