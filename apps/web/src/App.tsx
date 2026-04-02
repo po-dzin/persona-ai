@@ -755,12 +755,9 @@ export function App() {
   }, [selectedPhoto]);
 
   const handleCopyPhotoLink = async () => {
-    if (!selectedPhoto) return;
     try {
-      const share = await getPhotoShareLink(selectedPhoto.orderId);
-      if (share.appLink) {
-        await navigator.clipboard.writeText(share.appLink);
-      }
+      const homeAppLink = `${window.location.origin}${window.location.pathname}`;
+      await navigator.clipboard.writeText(homeAppLink);
     } catch {
       // ignore clipboard/network errors
     }
