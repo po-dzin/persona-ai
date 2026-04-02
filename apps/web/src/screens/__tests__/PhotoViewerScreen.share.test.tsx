@@ -61,19 +61,21 @@ describe("PhotoViewerScreen share menu", () => {
   it("handles main share targets and keeps extra socials out of main menu", async () => {
     const user = userEvent.setup();
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    const { onSendToTelegram } = renderViewer();
 
     Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
     Object.defineProperty(navigator, "canShare", { configurable: true, value: undefined });
-
-    renderViewer();
 
     await user.click(screen.getByRole("button", { name: "Поделиться" }));
     expect(screen.queryByRole("button", { name: "X" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Facebook" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "WhatsApp" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Telegram" }));
+    expect(onSendToTelegram).not.toHaveBeenCalled();
+    expect(screen.getByText("Не удалось отправить фото")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Отправить только ссылку" }));
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining("https://t.me/share/url?url=https%3A%2F%2Fcdn.example.com%2Fphoto.jpg"),
+      expect.stringContaining("https://t.me/share/url?url=http%3A%2F%2Flocalhost%3A3000%2F"),
       "_blank",
     );
 

@@ -37,6 +37,7 @@ export function PhotoViewerScreen({
   const SHARE_BRAND_TEXT = "Создано в PersonAI ✨";
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [telegramFallbackOpen, setTelegramFallbackOpen] = useState(false);
   const [promptCopied, setPromptCopied] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -52,6 +53,7 @@ export function PhotoViewerScreen({
   const closeAll = () => {
     setShareOpen(false);
     setMenuOpen(false);
+    setTelegramFallbackOpen(false);
   };
 
   useEffect(() => {
@@ -81,34 +83,42 @@ export function PhotoViewerScreen({
 
   const handleTelegramShare = () => {
     void (async () => {
-      // One canonical share link only: app home link.
+      // For Telegram button we require photo share. No text-only fallback.
       if (navigator.share && url) {
         try {
           const imageBlob = await fetch(url).then((r) => r.blob());
           const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
           const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
-          const payload = { text: `${SHARE_BRAND_TEXT}\n${homeAppLink}`.trim(), files: [file] };
+          const payload = { text: SHARE_BRAND_TEXT, url: homeAppLink, files: [file] };
           if (!navigator.canShare || navigator.canShare(payload)) {
             await navigator.share(payload);
             closeAll();
             return;
           }
         } catch {
-          // Fallback to Telegram deep link share below.
+          // fall through to bot fallback below
         }
       }
-
-      const text = encodeURIComponent(`${SHARE_BRAND_TEXT}\n${homeAppLink}`.trim());
-      const telegramUrl = url || homeAppLink;
-      const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(telegramUrl)}&text=${text}`;
-      const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (url: string) => void } | undefined;
-      if (liveTg?.openTelegramLink) {
-        liveTg.openTelegramLink(targetUrl);
-      } else {
-        window.open(targetUrl, "_blank");
-      }
-      closeAll();
+      setShareOpen(false);
+      setTelegramFallbackOpen(true);
     })();
+  };
+
+  const handleTelegramLinkOnly = () => {
+    const text = encodeURIComponent(SHARE_BRAND_TEXT);
+    const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(homeAppLink)}&text=${text}`;
+    const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (shareUrl: string) => void } | undefined;
+    if (liveTg?.openTelegramLink) {
+      liveTg.openTelegramLink(targetUrl);
+    } else {
+      window.open(targetUrl, "_blank");
+    }
+    closeAll();
+  };
+
+  const handleTelegramBotFallback = () => {
+    onSendToTelegram();
+    closeAll();
   };
 
   const handleTgStories = () => {
@@ -168,7 +178,7 @@ export function PhotoViewerScreen({
   };
 
   return (
-    <div className="overlay-screen photo-viewer-screen" onClick={shareOpen || menuOpen ? closeAll : undefined}>
+    <div className="overlay-screen photo-viewer-screen" onClick={shareOpen || menuOpen || telegramFallbackOpen ? closeAll : undefined}>
       <div className="flow-top">
         <button className="flow-back" onClick={onClose} aria-label="Назад">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -381,6 +391,18 @@ export function PhotoViewerScreen({
           </div>
         </div>
       </div>
+      {telegramFallbackOpen ? (
+        <div className="modal-backdrop" onClick={closeAll}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="tg-fallback-title">
+            <div className="modal-icon" aria-hidden="true">✨</div>
+            <div className="modal-title" id="tg-fallback-title">Не удалось отправить фото</div>
+            <div className="modal-desc">Выберите, как продолжить:</div>
+            <button className="modal-btn primary" onClick={handleTelegramLinkOnly}>Отправить только ссылку</button>
+            <button className="modal-btn primary" onClick={handleTelegramBotFallback}>Выгрузить в бот</button>
+            <button className="modal-btn" onClick={closeAll}>Отмена</button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
