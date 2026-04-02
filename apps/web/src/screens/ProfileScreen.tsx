@@ -20,7 +20,7 @@ export function ProfileScreen({ credits, generations, firstName, username, avata
       <div className="profile-header">
         <div className="profile-avatar">
           {avatarUrl
-            ? <img src={avatarUrl} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }} />
+            ? <img src={avatarUrl} alt={displayName} className="profile-avatar-image" />
             : _initials(displayName)
           }
         </div>
@@ -42,11 +42,11 @@ export function ProfileScreen({ credits, generations, firstName, username, avata
       <div className="profile-section-title">Мы в соцсетях</div>
       <div className="profile-card">
         <div className="profile-row">
-          <div className="profile-row-icon" style={{ background: "rgba(225,48,108,0.12)" }}>
+          <div className="profile-row-icon profile-row-icon-instagram">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="2" y="2" width="20" height="20" rx="5" stroke="#E1306C" strokeWidth="2"/>
-              <circle cx="12" cy="12" r="5" stroke="#E1306C" strokeWidth="2"/>
-              <circle cx="17.5" cy="6.5" r="1.5" fill="#E1306C"/>
+              <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2"/>
+              <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor"/>
             </svg>
           </div>
           <div className="profile-row-text">
@@ -58,7 +58,7 @@ export function ProfileScreen({ credits, generations, firstName, username, avata
           </svg>
         </div>
         <div className="profile-row">
-          <div className="profile-row-icon" style={{ background: "rgba(56,136,255,0.12)" }}>
+          <div className="profile-row-icon profile-row-icon-telegram">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="var(--sem-color-info)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -76,7 +76,7 @@ export function ProfileScreen({ credits, generations, firstName, username, avata
       <div className="profile-section-title">Помощь</div>
       <div className="profile-card">
         <div className="profile-row">
-          <div className="profile-row-icon" style={{ background: "rgba(255,255,255,0.05)" }}>
+          <div className="profile-row-icon profile-row-icon-support">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="var(--sem-color-text-secondary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -91,7 +91,7 @@ export function ProfileScreen({ credits, generations, firstName, username, avata
         </div>
       </div>
 
-      <div style={{ height: 20 }} />
+      <div className="screen-tail-space" />
     </section>
   );
 }

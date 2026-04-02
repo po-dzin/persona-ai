@@ -107,10 +107,10 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
           {datedItems.map(({ photo, showDivider, dividerLabel }) => {
             const style = styleByCode[photo.styleCode];
             const isLoading = photo.status === "queued" || photo.status === "processing";
-            const bg = style?.gradient || "linear-gradient(145deg, #2A2A2A, #3A3A3A)";
+            const bg = style?.gradient || "var(--sem-gradient-photo-fallback)";
             const isImageBroken = imageErrorIds.has(photo.orderId);
             return (
-              <div key={photo.orderId} style={{ display: "contents" }}>
+              <div key={photo.orderId} className="display-contents">
                 {showDivider ? <div className="photo-date-divider">{dividerLabel}</div> : null}
                 <button
                   className="photo-item"
@@ -120,10 +120,9 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                 >
                   {photo.resultUrl && !isLoading && !isImageBroken ? (
                     <img
-                      className="photo-bg"
+                      className="photo-bg fill-image-cover"
                       src={photo.resultUrl}
                       alt={style?.name || photo.styleCode}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
                       onError={() => {
                         setImageErrorIds((prev) => {
                           const next = new Set(prev);
@@ -136,9 +135,9 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                     <div className="photo-bg" style={{ background: bg }} />
                   )}
                   {isLoading ? (
-                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <div className="photo-loading-overlay">
                       <div className="queue-dots"><span /><span /><span /></div>
-                      <div style={{ fontSize: 10, color: "var(--sem-color-text-muted)", fontWeight: 500 }}>Генерация</div>
+                      <div className="photo-loading-label">Генерация</div>
                     </div>
                   ) : (
                     <div className="photo-style-label">{style?.name || photo.styleCode}</div>
@@ -149,7 +148,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
           })}
         </div>
       )}
-      <div style={{ height: 20 }} />
+      <div className="screen-tail-space" />
     </section>
   );
 }
