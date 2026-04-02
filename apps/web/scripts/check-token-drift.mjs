@@ -91,18 +91,30 @@ function collectMotionViolations(raw, rel) {
 function isAllowedInlineStyle(snippet) {
   const normalized = normalizeSnippet(snippet);
   const allowedPatterns = [
-    "style.gradient",
-    "background: bg",
-    "selectedStyle?.gradient",
-    "PACKAGE_ICON_BG",
-    "${size.width}px",
-    "${size.height}px",
-    "var(--sem-gradient-photo-fallback)",
-    "var(--sem-color-package-icon-fallback)",
-    "panelsHeight",
+    /background:\s*style\.gradient/,
+    /background:\s*style\?\.gradient\s*\|\|\s*"var\(--sem-gradient-photo-fallback\)"/,
+    /background:\s*selectedStyle\?\.gradient\s*\|\|\s*"var\(--sem-color-bg-elevated\)"/,
+    /background:\s*bg/,
+    /background:\s*PACKAGE_ICON_BG\[pkg\.code\]\s*\?\?\s*"var\(--sem-color-package-icon-fallback\)"/,
+    /width:\s*`\$\{size\.width\}px`/,
+    /height:\s*`\$\{size\.height\}px`/,
   ];
 
-  return allowedPatterns.some((pattern) => normalized.includes(pattern));
+  return allowedPatterns.some((pattern) => pattern.test(normalized));
+}
+
+function isAllowedInlineStylePropLine(line) {
+  const normalized = normalizeSnippet(line);
+  const allowedLinePatterns = [
+    /style=\{\{\s*background:\s*style\.gradient\s*\}\}/,
+    /style=\{\{\s*background:\s*style\?\.gradient\s*\|\|\s*"var\(--sem-gradient-photo-fallback\)"\s*\}\}/,
+    /style=\{\{\s*background:\s*selectedStyle\?\.gradient\s*\|\|\s*"var\(--sem-color-bg-elevated\)"\s*\}\}/,
+    /style=\{\{\s*background:\s*bg\s*\}\}/,
+    /style=\{\{\s*background:\s*PACKAGE_ICON_BG\[pkg\.code\]\s*\?\?\s*"var\(--sem-color-package-icon-fallback\)"\s*\}\}/,
+    /style=\{\{\s*width:\s*`\$\{size\.width\}px`,\s*height:\s*`\$\{size\.height\}px`\s*\}\}/,
+    /style=\{panelsHeight !== null \? \{ height: `\$\{panelsHeight\}px` \} : undefined\}/,
+  ];
+  return allowedLinePatterns.some((pattern) => pattern.test(normalized));
 }
 
 function collectEntries() {
@@ -153,6 +165,15 @@ function collectEntries() {
         const snippet = inlineMatch[1] ?? "";
         if (isAllowedInlineStyle(snippet)) continue;
         const key = `inline_style_forbidden::${rel}::${normalizeSnippet(snippet)}`;
+        entries[key] = (entries[key] ?? 0) + 1;
+      }
+
+      for (const line of raw.split("\n")) {
+        const hasDomStyleObject = line.includes("style={{");
+        const hasMeasuredPanelsHeight = line.includes("style={panelsHeight");
+        if (!hasDomStyleObject && !hasMeasuredPanelsHeight) continue;
+        if (isAllowedInlineStylePropLine(line)) continue;
+        const key = `inline_style_prop_forbidden::${rel}::${normalizeSnippet(line)}`;
         entries[key] = (entries[key] ?? 0) + 1;
       }
     }
