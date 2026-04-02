@@ -215,7 +215,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
               <div className="queue-title">В очереди</div>
               <div className="queue-detail">{activePhotos.length} генерации</div>
             </div>
-            <div className="queue-dots"><span /><span /><span /></div>
+            <div className="queue-dots queue-dots-running"><span /><span /><span /></div>
           </div>
         </div>
       ) : activePhotos.length === 1 ? (
@@ -225,7 +225,7 @@ export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) 
             <div className="queue-title">{styleByCode[activePhotos[0].styleCode]?.name || activePhotos[0].styleCode}</div>
             <div className="queue-detail">Генерация</div>
           </div>
-          <div className="queue-dots"><span /><span /><span /></div>
+          <div className="queue-dots queue-dots-running"><span /><span /><span /></div>
         </div>
       ) : null}
 
