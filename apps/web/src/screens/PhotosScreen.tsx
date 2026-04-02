@@ -107,6 +107,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
           {datedItems.map(({ photo, showDivider, dividerLabel }) => {
             const style = styleByCode[photo.styleCode];
             const isLoading = photo.status === "queued" || photo.status === "processing";
+            const isFailed = photo.status === "failed";
             const bg = style?.gradient || "var(--sem-gradient-photo-fallback)";
             const isImageBroken = imageErrorIds.has(photo.orderId);
             return (
@@ -118,7 +119,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                   disabled={isLoading}
                   aria-label={isLoading ? "Генерация" : (style?.name || photo.styleCode)}
                 >
-                  {photo.resultUrl && !isLoading && !isImageBroken ? (
+                  {photo.resultUrl && !isLoading && !isFailed && !isImageBroken ? (
                     <img
                       className="photo-bg fill-image-cover"
                       src={photo.resultUrl}
@@ -138,6 +139,11 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                     <div className="photo-loading-overlay">
                       <div className="queue-dots"><span /><span /><span /></div>
                       <div className="photo-loading-label">Генерация</div>
+                    </div>
+                  ) : isFailed ? (
+                    <div className="photo-failed-overlay">
+                      <div className="photo-failed-title">Ошибка</div>
+                      <div className="photo-failed-subtitle">Генерация не удалась</div>
                     </div>
                   ) : (
                     <div className="photo-style-label">{style?.name || photo.styleCode}</div>

@@ -522,16 +522,20 @@ button, a, [role="button"] { touch-action: manipulation; }
 .package-card.featured {
   border: var(--cmp-space-2) solid var(--sem-color-accent-light);
   background: var(--sem-color-accent-soft-08);
+  box-shadow: 0 0 0 1px var(--sem-color-accent-soft-35) inset;
 }
 .package-featured-tag {
   position: absolute;
-  top: -var(--space-2); right: var(--cmp-space-14);
+  top: var(--cmp-space-6);
+  right: var(--cmp-space-10);
   background: linear-gradient(145deg, var(--sem-color-accent-light), var(--sem-color-accent-strong));
   color: white;
   font-size: var(--cmp-type-micro-size);
   font-weight: 700;
-  padding: var(--cmp-space-3) var(--cmp-space-9);
+  line-height: 1;
+  padding: var(--cmp-space-3) var(--cmp-space-8);
   border-radius: var(--space-2);
+  pointer-events: none;
 }
 .package-icon {
   width: var(--cmp-space-42); height: var(--cmp-space-42);
@@ -551,6 +555,9 @@ button, a, [role="button"] { touch-action: manipulation; }
 .package-name { font-size: var(--cmp-type-body-md-size); font-weight: 600; color: var(--sem-color-text-primary); }
 .package-coins { font-size: var(--cmp-type-label-md-size); color: var(--sem-color-text-secondary); margin-top: var(--cmp-space-2); }
 .package-right { text-align: right; flex-shrink: 0; }
+.package-card.featured .package-right {
+  padding-top: var(--cmp-space-16);
+}
 .package-price { font-size: var(--cmp-type-body-md-size); font-weight: 700; color: var(--sem-color-text-primary); }
 .package-bonus { font-size: var(--cmp-type-label-sm-size); font-weight: 600; color: var(--sem-color-success); margin-top: var(--cmp-size-hairline); }
 .balance-footer-copy {
@@ -1552,6 +1559,26 @@ button, a, [role="button"] { touch-action: manipulation; }
   position: relative;
   z-index: 1;
 }
+ .photo-failed-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--cmp-space-2);
+  padding: var(--cmp-space-10);
+  background: linear-gradient(180deg, var(--pr-scrim-22), var(--pr-scrim-60));
+ }
+ .photo-failed-title {
+  font-size: var(--cmp-type-label-md-size);
+  font-weight: 700;
+  color: var(--sem-color-danger-soft);
+ }
+ .photo-failed-subtitle {
+  font-size: var(--cmp-type-caption-size);
+  color: var(--sem-color-text-on-media-muted);
+ }
 @keyframes photoLoadingSweep {
   0% {
     transform: translateX(-25%) rotate(8deg);
