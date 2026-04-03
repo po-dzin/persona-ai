@@ -258,7 +258,7 @@ export function FlowStyleScreen({
                   <img
                     src={customPhotoUrl}
                     alt="preview"
-                    className="fill-image-cover custom-upload-preview-image"
+                    className="fill-image-contain custom-upload-preview-image"
                   />
                   <button
                     onClick={pickPhoto}

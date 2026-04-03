@@ -451,7 +451,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   padding: 0 var(--cmp-space-grid-edge);
 }
 .photo-item {
-  aspect-ratio: 3/4;
+  aspect-ratio: auto;
   position: relative;
   overflow: hidden;
   cursor: pointer;
@@ -473,7 +473,24 @@ button, a, [role="button"] { touch-action: manipulation; }
   opacity: 1;
   transform: scale(var(--cmp-state-scale-press-sm));
 }
-.photo-bg { position: absolute; inset: 0; border-radius: inherit; }
+.photo-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  border-radius: inherit;
+  background: var(--sem-color-bg-surface);
+}
+.photo-fallback-bg {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: inherit;
+}
+.photo-bg {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: inherit;
+}
 .photo-style-label {
   position: absolute;
   bottom: 0; left: 0; right: 0;
@@ -1243,8 +1260,15 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 /* ─── Viewer ─── */
 .viewer-photo {
-  width: calc(100% - (var(--cmp-space-page-edge) * 2)); margin: 0 var(--cmp-space-page-edge); aspect-ratio: 3/4;
+  width: calc(100% - (var(--cmp-space-page-edge) * 2)); margin: 0 var(--cmp-space-page-edge);
   position: relative; overflow: hidden; border-radius: var(--cmp-space-16);
+  background: var(--sem-color-bg-surface);
+  min-height: var(--cmp-space-120);
+}
+.viewer-photo-image {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 .viewer-photo-fallback {
   position: absolute;
@@ -1553,31 +1577,47 @@ button, a, [role="button"] { touch-action: manipulation; }
   padding: var(--cmp-space-14);
 }
 .purchase-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--cmp-space-12);
   align-items: center;
-  justify-content: space-between;
   padding: var(--cmp-space-8) var(--cmp-space-2);
 }
 .purchase-row + .purchase-row { border-top: var(--cmp-size-hairline) solid var(--sem-border-default); }
-.purchase-row-label { font-size: var(--cmp-type-label-md-size); color: var(--sem-color-text-tertiary); }
-.purchase-row-value { font-size: var(--cmp-type-body-md-size); font-weight: 600; color: var(--sem-color-text-primary); }
+.purchase-row-label { font-size: var(--cmp-type-label-md-size); color: var(--sem-color-text-tertiary); line-height: 1.2; }
+.purchase-row-value {
+  font-size: var(--cmp-type-body-md-size);
+  font-weight: 600;
+  color: var(--sem-color-text-primary);
+  line-height: 1.2;
+  text-align: right;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: var(--cmp-space-4);
+  min-width: var(--cmp-space-74);
+}
 .purchase-row-value.bonus { color: var(--sem-color-success); }
 .purchase-total {
-  margin-top: var(--cmp-space-8);
-  padding-top: var(--cmp-space-12);
+  margin-top: 0;
+  padding-top: var(--cmp-space-8);
   border-top: var(--cmp-size-hairline) solid var(--sem-border-hover);
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--cmp-space-12);
   align-items: center;
-  justify-content: space-between;
 }
 .purchase-total-label { font-size: var(--cmp-type-body-md-size); font-weight: 700; color: var(--sem-color-text-inverse); }
-.purchase-total-value { font-size: var(--cmp-type-title-md-size); font-weight: 700; color: var(--sem-color-text-primary); line-height: 1; }
+.purchase-total-value { font-size: var(--cmp-type-title-md-size); font-weight: 700; color: var(--sem-color-text-primary); line-height: 1; text-align: right; min-width: var(--cmp-space-74); }
 .purchase-row-bonus-inline { color: var(--sem-color-success); font-size: var(--cmp-type-label-md-size); font-weight: 600; }
 .purchase-methods {
   margin: 0 var(--cmp-space-page-edge);
   display: flex;
   flex-direction: column;
   gap: var(--cmp-space-8);
+}
+.purchase-screen .flow-bottom-bar {
+  padding-top: var(--cmp-space-14);
 }
 .purchase-method-option {
   width: 100%;
@@ -1747,7 +1787,10 @@ button, a, [role="button"] { touch-action: manipulation; }
   position: relative;
 }
 .custom-upload-preview-image {
-  aspect-ratio: 4 / 5;
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: none;
 }
 .custom-upload-empty-shell {
   margin: 0;

@@ -194,7 +194,7 @@ export function PhotoViewerScreen({
           <img
             src={photo.resultUrl}
             alt={style?.name || photo.styleCode}
-            className="fill-image-cover"
+            className="fill-image-contain viewer-photo-image"
             onError={() => setImageFailed(true)}
           />
         ) : (
