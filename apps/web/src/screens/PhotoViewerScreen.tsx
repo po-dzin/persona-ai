@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { ZoomableImage } from "../components/ZoomableImage";
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
+import { getPhotoShareFile } from "../utils/api";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { readMotionTokenMs } from "../utils/motionTokens";
 
@@ -83,13 +85,26 @@ export function PhotoViewerScreen({
 
   const handleTelegramShare = () => {
     void (async () => {
-      // For Telegram button we require photo share. No text-only fallback.
-      if (navigator.share && url) {
+      // Prefer native Telegram-style share sheet with photo + app-link (without raw R2 URL).
+      if (navigator.share) {
         try {
-          const imageBlob = await fetch(url).then((r) => r.blob());
+          let imageBlob: Blob | null = null;
+          if (photo.orderId && !photo.orderId.startsWith("shared-")) {
+            try {
+              imageBlob = await getPhotoShareFile(photo.orderId);
+            } catch {
+              imageBlob = null;
+            }
+          }
+          if (!imageBlob && url) {
+            imageBlob = await fetch(url).then((r) => r.blob());
+          }
+          if (!imageBlob) {
+            throw new Error("share_photo_unavailable");
+          }
           const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
           const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
-          const payload = { text: SHARE_BRAND_TEXT, url: homeAppLink, files: [file] };
+          const payload = { text: `${SHARE_BRAND_TEXT}\n${homeAppLink}`.trim(), files: [file] };
           if (!navigator.canShare || navigator.canShare(payload)) {
             await navigator.share(payload);
             closeAll();
@@ -191,10 +206,10 @@ export function PhotoViewerScreen({
 
       <div className="viewer-photo" style={{ background: style?.gradient || "var(--sem-gradient-photo-fallback)" }}>
         {photo.resultUrl && !imageFailed ? (
-          <img
+          <ZoomableImage
             src={photo.resultUrl}
             alt={style?.name || photo.styleCode}
-            className="fill-image-contain viewer-photo-image"
+            className="viewer-photo-image"
             onError={() => setImageFailed(true)}
           />
         ) : (

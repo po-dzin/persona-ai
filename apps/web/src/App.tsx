@@ -195,6 +195,20 @@ export function App() {
       refreshProfile();
     }, 1200);
 
+    const isPhotoZoomTarget = (target: EventTarget | null) => {
+      return target instanceof Element && Boolean(target.closest("[data-photo-zoom='true']"));
+    };
+    // Keep interface stable: block browser pinch except inside dedicated photo zoom areas.
+    const preventGesture = (event: Event) => {
+      if (isPhotoZoomTarget(event.target)) return;
+      event.preventDefault();
+    };
+    const preventPinchTouchMove = (event: TouchEvent) => {
+      if (event.touches.length > 1 && !isPhotoZoomTarget(event.target)) {
+        event.preventDefault();
+      }
+    };
+
     // Calculate top/bottom insets from TG viewport and safe-area metrics.
     // Re-read window.Telegram?.WebApp dynamically — the module-scope `tg` may have
     // been evaluated before Telegram injected its SDK into window.
@@ -261,6 +275,10 @@ export function App() {
     window.addEventListener("focusout", applyKeyboardInset);
     window.visualViewport?.addEventListener("resize", applyKeyboardInset);
     window.visualViewport?.addEventListener("scroll", applyKeyboardInset);
+    document.addEventListener("gesturestart", preventGesture, { passive: false });
+    document.addEventListener("gesturechange", preventGesture, { passive: false });
+    document.addEventListener("gestureend", preventGesture, { passive: false });
+    document.addEventListener("touchmove", preventPinchTouchMove, { passive: false });
     return () => {
       clearTimeout(tUser);
       clearTimeout(tUser2);
@@ -1113,16 +1131,3 @@ export function App() {
     </main>
   );
 }
-    // Disable pinch zoom inside mini app webview to keep layout stable.
-    const preventGesture = (event: Event) => {
-      event.preventDefault();
-    };
-    const preventPinchTouchMove = (event: TouchEvent) => {
-      if (event.touches.length > 1) {
-        event.preventDefault();
-      }
-    };
-    document.addEventListener("gesturestart", preventGesture, { passive: false });
-    document.addEventListener("gesturechange", preventGesture, { passive: false });
-    document.addEventListener("gestureend", preventGesture, { passive: false });
-    document.addEventListener("touchmove", preventPinchTouchMove, { passive: false });

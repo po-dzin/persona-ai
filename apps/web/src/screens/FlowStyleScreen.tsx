@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { ZoomableImage } from "../components/ZoomableImage";
 import type { AIModel } from "../data/models";
 import type { StyleItem } from "../data/styles";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
@@ -255,10 +256,10 @@ export function FlowStyleScreen({
 
               {customPhotoUrl ? (
                 <div className="upload-area custom-upload-area custom-upload-preview-shell">
-                  <img
+                  <ZoomableImage
                     src={customPhotoUrl}
                     alt="preview"
-                    className="fill-image-contain custom-upload-preview-image"
+                    className="custom-upload-preview-image"
                   />
                   <button
                     onClick={pickPhoto}
