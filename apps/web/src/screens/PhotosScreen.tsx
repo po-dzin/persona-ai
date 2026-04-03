@@ -122,7 +122,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                 >
                   {photo.resultUrl && !isLoading && !isFailed && !isImageBroken ? (
                     <img
-                      className="photo-bg fill-image-cover"
+                      className="photo-image"
                       src={photo.resultUrl}
                       alt={style?.name || photo.styleCode}
                       onError={() => {
@@ -134,7 +134,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                       }}
                     />
                   ) : (
-                    <div className="photo-bg" style={{ background: bg }} />
+                    <div className="photo-fallback-bg" style={{ background: bg }} />
                   )}
                   {isLoading ? (
                     <div className="photo-loading-overlay">
