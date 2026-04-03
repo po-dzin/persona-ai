@@ -160,6 +160,18 @@ export async function getPhotoShareLink(orderId: string): Promise<{ appLink: str
   return { appLink: data.app_link, resultUrl: data.result_url };
 }
 
+export async function getPhotoShareFile(orderId: string): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/me/photos/${encodeURIComponent(orderId)}/share-file`, {
+    headers: {
+      "X-Telegram-Init-Data": getTgInitData(),
+    },
+  });
+  if (!res.ok) {
+    throw new Error(`share_file_failed:${res.status}`);
+  }
+  return await res.blob();
+}
+
 export async function getSharedPhoto(
   orderId: string,
 ): Promise<{

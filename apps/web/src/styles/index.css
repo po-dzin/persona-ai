@@ -1697,6 +1697,20 @@ button, a, [role="button"] { touch-action: manipulation; }
 .hidden-file-input { display: none; }
 .fill-image-cover { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fill-image-contain { width: 100%; max-height: var(--cmp-size-media-contain-max-height); object-fit: contain; display: block; }
+.zoomable-photo {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+}
+.zoomable-photo-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  transform-origin: center center;
+  will-change: transform;
+}
 
 .photo-loading-overlay {
   position: absolute;

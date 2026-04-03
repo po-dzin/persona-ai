@@ -6,6 +6,7 @@ import hmac
 import json
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
+from urllib.request import Request as UrlRequest, urlopen
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, Response, UploadFile
@@ -308,6 +309,36 @@ def get_photo_share_link(order_id: str, request: Request, user_id: str = Depends
         "app_link": _build_photo_share_link(order, request),
         "result_url": order.get("result_url"),
     }
+
+
+@router.get("/me/photos/{order_id}/share-file")
+def get_photo_share_file(order_id: str, request: Request, user_id: str = Depends(require_user)):
+    """Proxy photo bytes for share sheet to avoid client-side R2/CORS pitfalls."""
+    svc = get_service(request)
+    try:
+        status = svc.order_status(order_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    order = status["order"]
+    if order["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="forbidden")
+    result_url = str(order.get("result_url") or "").strip()
+    if not result_url:
+        raise HTTPException(status_code=409, detail="photo_not_ready")
+
+    try:
+        upstream = UrlRequest(result_url, headers={"User-Agent": "PersonAI/1.0"})
+        with urlopen(upstream, timeout=20) as resp:
+            payload = resp.read()
+            content_type = resp.headers.get_content_type() or "image/jpeg"
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="share_file_unavailable") from exc
+
+    return Response(
+        content=payload,
+        media_type=content_type,
+        headers={"Cache-Control": "private, max-age=60"},
+    )
 
 
 @router.get("/share/{order_id}")
