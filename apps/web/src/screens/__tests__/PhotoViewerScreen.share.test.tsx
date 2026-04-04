@@ -119,8 +119,7 @@ describe("PhotoViewerScreen share menu", () => {
     await waitFor(() => {
       expect(shareSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          text: "Создано в PersonAI ✨",
-          url: "http://localhost:3000/",
+          text: "Создано в PersonAI ✨\nhttp://localhost:3000/",
         }),
       );
     });

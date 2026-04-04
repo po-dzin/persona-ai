@@ -12,6 +12,7 @@ import { CategoryScreen } from "./screens/CategoryScreen";
 import { FlowStyleScreen } from "./screens/FlowStyleScreen";
 import { FlowUploadScreen } from "./screens/FlowUploadScreen";
 import { HomeScreen } from "./screens/HomeScreen";
+import { LegalDocumentScreen } from "./screens/LegalDocumentScreen";
 import { ModelsPricingScreen } from "./screens/ModelsPricingScreen";
 import { PhotosScreen } from "./screens/PhotosScreen";
 import { PhotoViewerScreen } from "./screens/PhotoViewerScreen";
@@ -54,6 +55,88 @@ declare global {
 const tg = window.Telegram?.WebApp;
 type TgUser = { id: number; first_name?: string; username?: string; photo_url?: string };
 type SharePreview = { orderId?: string };
+type LegalDocId = "privacy" | "terms" | "payments" | "disclaimer";
+
+const LEGAL_DOCS: Record<LegalDocId, { title: string; updatedAt: string; sections: Array<{ heading?: string; paragraphs: string[] }> }> = {
+  privacy: {
+    title: "Политика конфиденциальности",
+    updatedAt: "4 апреля 2026",
+    sections: [
+      {
+        heading: "Какие данные мы обрабатываем",
+        paragraphs: [
+          "Мы обрабатываем данные Telegram-профиля, технические логи использования сервиса и файлы, которые вы загружаете для генерации.",
+          "Данные используются только для работы продукта, улучшения качества сервиса и поддержки пользователей.",
+        ],
+      },
+      {
+        heading: "Хранение и удаление",
+        paragraphs: [
+          "Исходные изображения хранятся ограниченное время, достаточное для обработки и выдачи результата.",
+          "Вы можете запросить удаление данных через поддержку; критичные учетные и платежные события хранятся в объеме, требуемом законом и безопасностью.",
+        ],
+      },
+    ],
+  },
+  terms: {
+    title: "Пользовательское соглашение",
+    updatedAt: "4 апреля 2026",
+    sections: [
+      {
+        heading: "Условия использования",
+        paragraphs: [
+          "Используя сервис, вы подтверждаете, что имеете право загружать контент и не нарушаете права третьих лиц.",
+          "Запрещено использовать продукт для незаконной деятельности, спама, обхода ограничений и публикации запрещенного контента.",
+        ],
+      },
+      {
+        heading: "Ограничение доступа",
+        paragraphs: [
+          "Мы можем ограничить или приостановить доступ при нарушении правил или при рисках безопасности.",
+        ],
+      },
+    ],
+  },
+  payments: {
+    title: "Политика обработки платежей",
+    updatedAt: "4 апреля 2026",
+    sections: [
+      {
+        heading: "Платежи и начисления",
+        paragraphs: [
+          "Оплата внутри приложения выполняется через доступные платежные провайдеры платформы.",
+          "После успешной оплаты монеты начисляются на баланс аккаунта и используются для генераций по тарифам, указанным в интерфейсе.",
+        ],
+      },
+      {
+        heading: "Возвраты",
+        paragraphs: [
+          "Возвраты рассматриваются индивидуально через поддержку с учетом факта оказания услуги и правил платежного провайдера.",
+          "При технической ошибке генерации мы можем автоматически компенсировать списание в рамках внутренних правил сервиса.",
+        ],
+      },
+    ],
+  },
+  disclaimer: {
+    title: "Отказ от ответственности",
+    updatedAt: "4 апреля 2026",
+    sections: [
+      {
+        heading: "Общий отказ",
+        paragraphs: [
+          "Сервис предоставляется по модели «как есть» без гарантий абсолютной бесперебойности и отсутствия ошибок.",
+          "Результаты генерации могут содержать неточности и не являются профессиональной консультацией любого вида.",
+        ],
+      },
+      {
+        heading: "Ответственность пользователя",
+        paragraphs: [
+          "Пользователь несет ответственность за законность контента, который загружает, публикует и распространяет через сервис.",
+        ],
+      },
+    ],
+  },
+};
 
 function parseTgUserFromInitData(initData?: string): TgUser | null {
   if (!initData) return null;
@@ -427,6 +510,7 @@ export function App() {
   }, [photos, renderReadyOrderIds]);
 
   const [queuedModalOpen, setQueuedModalOpen] = useState(false);
+  const [activeLegalDoc, setActiveLegalDoc] = useState<LegalDocId | null>(null);
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
   const [asyncFailError, setAsyncFailError] = useState<string | null>(null);
   const [createActionLocked, setCreateActionLocked] = useState(false);
@@ -509,6 +593,7 @@ export function App() {
       if (options?.closeTransientLayers ?? true) {
         closeTransientLayers();
       }
+      setActiveLegalDoc(null);
       cancelPendingScreenTransition();
       if (screenHandoffDelayMs <= 0) {
         setActiveScreen(screen);
@@ -622,6 +707,7 @@ export function App() {
   }, [setPhotos]);
 
   const openCreate = () => {
+    setActiveLegalDoc(null);
     cancelPendingScreenTransition();
     // If already in create flow, don't reset — user stays where they are
     if (flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)) return;
@@ -967,8 +1053,11 @@ export function App() {
 
   const handleCopyPhotoLink = async () => {
     try {
-      const homeAppLink = `${window.location.origin}${window.location.pathname}`;
-      await navigator.clipboard.writeText(homeAppLink);
+      const photoLink =
+        selectedPhoto?.resultUrl ||
+        selectedPhotoShareLink ||
+        `${window.location.origin}${window.location.pathname}`;
+      await navigator.clipboard.writeText(photoLink);
     } catch {
       // ignore clipboard/network errors
     }
@@ -1039,13 +1128,28 @@ export function App() {
         />
       ) : null}
       {activeScreen === "profile" ? (
-        <ProfileScreen
-          credits={wallet.paidCredits}
-          generations={profile?.generationsCount ?? photos.length}
-          firstName={profile?.firstName ?? tgUser?.first_name}
-          username={profile?.username ?? tgUser?.username}
-          avatarUrl={tgUser?.photo_url}
-        />
+        activeLegalDoc
+          ? (
+            <LegalDocumentScreen
+              title={LEGAL_DOCS[activeLegalDoc].title}
+              updatedAt={LEGAL_DOCS[activeLegalDoc].updatedAt}
+              sections={LEGAL_DOCS[activeLegalDoc].sections}
+              onBack={() => setActiveLegalDoc(null)}
+            />
+          )
+          : (
+            <ProfileScreen
+              credits={wallet.paidCredits}
+              generations={profile?.generationsCount ?? photos.length}
+              firstName={profile?.firstName ?? tgUser?.first_name}
+              username={profile?.username ?? tgUser?.username}
+              avatarUrl={tgUser?.photo_url}
+              onOpenPrivacyPolicy={() => setActiveLegalDoc("privacy")}
+              onOpenTermsOfService={() => setActiveLegalDoc("terms")}
+              onOpenPaymentsPolicy={() => setActiveLegalDoc("payments")}
+              onOpenDisclaimer={() => setActiveLegalDoc("disclaimer")}
+            />
+          )
       ) : null}
 
       <FlowStyleScreen

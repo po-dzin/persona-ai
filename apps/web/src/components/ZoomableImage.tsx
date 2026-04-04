@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TouchEvent } from "react";
 
 interface ZoomableImageProps {
@@ -47,6 +47,14 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
     setTy(0);
     modeRef.current = "none";
   };
+
+  useEffect(() => {
+    // New photo must always open in natural framing without inherited pan/zoom.
+    setScale(1);
+    setTx(0);
+    setTy(0);
+    modeRef.current = "none";
+  }, [src]);
 
   const toggleDoubleTapZoom = () => {
     setScale((prev) => {
