@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TouchEvent } from "react";
 
 interface ZoomableImageProps {
@@ -30,6 +30,7 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+  const imageRef = useRef<HTMLImageElement | null>(null);
 
   const pinchStartDistRef = useRef(0);
   const pinchStartScaleRef = useRef(1);
@@ -47,6 +48,19 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
     setTy(0);
     modeRef.current = "none";
   };
+
+  useEffect(() => {
+    // New photo must always open in natural framing without inherited pan/zoom.
+    setScale(1);
+    setTx(0);
+    setTy(0);
+    modeRef.current = "none";
+  }, [src]);
+
+  useEffect(() => {
+    if (!imageRef.current) return;
+    imageRef.current.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
+  }, [tx, ty, scale]);
 
   const toggleDoubleTapZoom = () => {
     setScale((prev) => {
@@ -156,12 +170,12 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
       onDoubleClick={toggleDoubleTapZoom}
     >
       <img
+        ref={imageRef}
         src={src}
         alt={alt}
         className="zoomable-photo-image"
         draggable={false}
         onError={onError}
-        style={{ transform: `translate3d(${tx}px, ${ty}px, 0) scale(${scale})` }}
       />
     </div>
   );

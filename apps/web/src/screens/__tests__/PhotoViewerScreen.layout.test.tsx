@@ -39,7 +39,7 @@ function renderViewer(overrides?: Partial<ComponentProps<typeof PhotoViewerScree
 }
 
 describe("PhotoViewerScreen layout", () => {
-  it("keeps the photo block, prompt block, and action rail order intact", () => {
+  it("keeps the photo block, actions row, and prompt block order intact", () => {
     const { container } = renderViewer();
 
     expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
@@ -61,8 +61,8 @@ describe("PhotoViewerScreen layout", () => {
     expect(promptHeader).toBeTruthy();
     expect(actionsRow).toBeTruthy();
     expect(photoBlock?.nextElementSibling).toBe(body);
-    expect(body?.children[0]).toBe(promptBlock);
-    expect(body?.children[1]).toBe(actionsRow);
+    expect(body?.children[0]).toBe(actionsRow);
+    expect(body?.children[1]).toBe(promptBlock);
     expect(within(actionsRow as HTMLElement).getAllByRole("button")).toHaveLength(3);
     expect(within(actionsRow as HTMLElement).getByRole("button", { name: "Скачать" })).toBeInTheDocument();
     expect(within(actionsRow as HTMLElement).getByRole("button", { name: "Поделиться" })).toBeInTheDocument();

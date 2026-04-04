@@ -9,6 +9,7 @@ import { isPhotoGenerating } from "../utils/photoStatus";
 interface HomeScreenProps {
   styles: StyleItem[];
   photos: PhotoRecord[];
+  generatingOrderIds?: Set<string>;
   onPreviewStyle: (style: StyleItem) => void;
 }
 
@@ -22,11 +23,11 @@ function CameraIcon() {
   );
 }
 
-export function HomeScreen({ styles, photos, onPreviewStyle }: HomeScreenProps) {
+export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle }: HomeScreenProps) {
   const styleByCode = useMemo(() => Object.fromEntries(styles.map((s) => [s.id, s])), [styles]);
   const activePhotos = useMemo(
-    () => photos.filter((p) => isPhotoGenerating(p)),
-    [photos],
+    () => photos.filter((p) => (generatingOrderIds ? generatingOrderIds.has(p.orderId) : isPhotoGenerating(p))),
+    [photos, generatingOrderIds],
   );
 
   const byCategory = useMemo(() => styles.reduce<Record<string, StyleItem[]>>((acc, s) => {

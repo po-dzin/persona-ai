@@ -34,20 +34,28 @@ describe("ProfileScreen layout", () => {
 
     const socialTitle = screen.getByText("Мы в соцсетях");
     const supportTitle = screen.getByText("Помощь");
+    const docsTitle = screen.getByText("Документы");
     const cards = container.querySelectorAll(".profile-card");
     const tail = container.querySelector(".screen-tail-space");
 
     expect(socialTitle).toBeInTheDocument();
     expect(supportTitle).toBeInTheDocument();
-    expect(cards).toHaveLength(2);
+    expect(docsTitle).toBeInTheDocument();
+    expect(cards).toHaveLength(3);
     expect(cards[0]).toHaveTextContent("Instagram");
     expect(cards[0]).toHaveTextContent("Telegram канал");
     expect(cards[1]).toHaveTextContent("Поддержка");
+    expect(cards[2]).toHaveTextContent("Политика конфиденциальности");
+    expect(cards[2]).toHaveTextContent("Пользовательское соглашение");
+    expect(cards[2]).toHaveTextContent("Политика обработки платежей");
+    expect(cards[2]).toHaveTextContent("Отказ от ответственности");
     expect(cards[0].querySelectorAll(".profile-row")).toHaveLength(2);
     expect(cards[1].querySelectorAll(".profile-row")).toHaveLength(1);
+    expect(cards[2].querySelectorAll(".profile-row")).toHaveLength(4);
     expect(socialTitle.nextElementSibling).toBe(cards[0]);
     expect(supportTitle.nextElementSibling).toBe(cards[1]);
-    expect(cards[1].nextElementSibling).toBe(tail);
+    expect(docsTitle.nextElementSibling).toBe(cards[2]);
+    expect(cards[2].nextElementSibling).toBe(tail);
     expect(container.firstElementChild?.lastElementChild).toHaveClass("screen-tail-space");
   });
 });

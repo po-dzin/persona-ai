@@ -51,6 +51,7 @@ export function PhotoViewerScreen({
   const url = photo?.resultUrl || "";
   const prompt = photo?.prompt || "Промпт недоступен";
   const homeAppLink = `${window.location.origin}${window.location.pathname}`;
+  const shareCaption = `${SHARE_BRAND_TEXT}\n${homeAppLink}`.trim();
 
   const closeAll = () => {
     setShareOpen(false);
@@ -104,12 +105,13 @@ export function PhotoViewerScreen({
           }
           const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
           const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
-          const payload = { text: `${SHARE_BRAND_TEXT}\n${homeAppLink}`.trim(), files: [file] };
-          if (!navigator.canShare || navigator.canShare(payload)) {
-            await navigator.share(payload);
-            closeAll();
-            return;
+          const filesOnlyPayload = { files: [file] };
+          if (navigator.canShare && !navigator.canShare(filesOnlyPayload)) {
+            throw new Error("share_photo_unsupported");
           }
+          await navigator.share({ files: [file], text: shareCaption });
+          closeAll();
+          return;
         } catch {
           // fall through to bot fallback below
         }
@@ -163,24 +165,24 @@ export function PhotoViewerScreen({
   const handleSystemShare = () => {
     void (async () => {
       try {
-        const shareUrl = homeAppLink;
         if (navigator.share) {
           if (url) {
             try {
               const imageBlob = await fetch(url).then((r) => r.blob());
               const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
               const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
-              const payload = { text: SHARE_BRAND_TEXT, url: shareUrl, files: [file] };
-              if (!navigator.canShare || navigator.canShare(payload)) {
-                await navigator.share(payload);
-                closeAll();
-                return;
+              const filesOnlyPayload = { files: [file] };
+              if (navigator.canShare && !navigator.canShare(filesOnlyPayload)) {
+                throw new Error("share_photo_unsupported");
               }
+              await navigator.share({ files: [file], text: shareCaption });
+              closeAll();
+              return;
             } catch {
               // fall through to URL/text-only share
             }
           }
-          await navigator.share({ text: SHARE_BRAND_TEXT, url: shareUrl });
+          await navigator.share({ text: shareCaption });
           closeAll();
           return;
         }
@@ -232,30 +234,6 @@ export function PhotoViewerScreen({
       </div>
 
       <div className="viewer-body">
-        <div className="viewer-prompt-block">
-          <div className="viewer-prompt-header">
-            <div className="viewer-prompt-label">Запрос</div>
-            <button
-              className={`viewer-copy-btn${promptCopied ? " copied" : ""}`}
-              onClick={handleCopyPrompt}
-              title="Копировать промпт"
-              aria-label="Копировать промпт"
-            >
-              {promptCopied ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.8"/>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                </svg>
-              )}
-            </button>
-          </div>
-          <div className="viewer-prompt-text">{prompt}</div>
-        </div>
-
         <div className="viewer-actions-row">
           <button className="viewer-btn primary viewer-download-btn" onClick={onDownload}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -404,6 +382,30 @@ export function PhotoViewerScreen({
               </div>
             ) : null}
           </div>
+        </div>
+
+        <div className="viewer-prompt-block">
+          <div className="viewer-prompt-header">
+            <div className="viewer-prompt-label">Запрос</div>
+            <button
+              className={`viewer-copy-btn${promptCopied ? " copied" : ""}`}
+              onClick={handleCopyPrompt}
+              title="Копировать промпт"
+              aria-label="Копировать промпт"
+            >
+              {promptCopied ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.8"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+              )}
+            </button>
+          </div>
+          <div className="viewer-prompt-text">{prompt}</div>
         </div>
       </div>
       {telegramFallbackOpen ? (
