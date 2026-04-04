@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { ZoomableImage } from "../components/ZoomableImage";
 import type { StyleItem } from "../data/styles";
 
 interface FlowUploadScreenProps {
@@ -123,10 +124,10 @@ export function FlowUploadScreen({
       {/* Upload area / photo preview */}
       {photoUrl ? (
         <div className="upload-area upload-preview-shell">
-          <img
+          <ZoomableImage
             src={photoUrl}
             alt="preview"
-            className="fill-image-contain"
+            className="upload-preview-image-real"
           />
           <button
             onClick={pickPhoto}

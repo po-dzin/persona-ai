@@ -7,6 +7,7 @@ import { isPhotoGenerating } from "../utils/photoStatus";
 interface PhotosScreenProps {
   photos: PhotoRecord[];
   styles: StyleItem[];
+  generatingOrderIds?: Set<string>;
   onOpenPhoto: (photo: PhotoRecord) => void;
   favorites: Set<string>;
 }
@@ -16,10 +17,12 @@ function dateLabel(iso: string): string {
   return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "long" });
 }
 
-export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosScreenProps) {
+export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, favorites }: PhotosScreenProps) {
   const [filter, setFilter] = useState("Все");
   const [imageErrorIds, setImageErrorIds] = useState<Set<string>>(new Set());
-  const queuedCount = photos.filter((p) => isPhotoGenerating(p)).length;
+  const isUiGenerating = (photo: PhotoRecord) =>
+    generatingOrderIds ? generatingOrderIds.has(photo.orderId) : isPhotoGenerating(photo);
+  const queuedCount = photos.filter((p) => isUiGenerating(p)).length;
   const styleByCode = useMemo(() => Object.fromEntries(styles.map((s) => [s.id, s])), [styles]);
   const filterItems = useMemo(() => ["Все", "Избранное", ...styles.map((s) => s.name)], [styles]);
 
@@ -64,7 +67,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
       ) : null}
 
       {queuedCount === 1 ? (() => {
-        const activePhoto = photos.find((p) => isPhotoGenerating(p))!;
+        const activePhoto = photos.find((p) => isUiGenerating(p))!;
         const activeStyle = styleByCode[activePhoto.styleCode];
         return (
           <div className="queue-single">
@@ -107,7 +110,8 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
         <div className="photos-grid">
           {datedItems.map(({ photo, showDivider, dividerLabel }) => {
             const style = styleByCode[photo.styleCode];
-            const isLoading = isPhotoGenerating(photo);
+            const isLoading = isUiGenerating(photo);
+            const isBackendGenerating = isPhotoGenerating(photo);
             const isFailed = photo.status === "failed";
             const bg = style?.gradient || "var(--sem-gradient-photo-fallback)";
             const isImageBroken = imageErrorIds.has(photo.orderId);
@@ -117,12 +121,12 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                 <button
                   className="photo-item"
                   onClick={() => onOpenPhoto(photo)}
-                  disabled={isLoading}
-                  aria-label={isLoading ? "Генерация" : (style?.name || photo.styleCode)}
+                  disabled={isBackendGenerating}
+                  aria-label={isBackendGenerating ? "Генерация" : (style?.name || photo.styleCode)}
                 >
                   {photo.resultUrl && !isLoading && !isFailed && !isImageBroken ? (
                     <img
-                      className="photo-image"
+                      className="photo-bg fill-image-cover"
                       src={photo.resultUrl}
                       alt={style?.name || photo.styleCode}
                       onError={() => {
@@ -134,7 +138,7 @@ export function PhotosScreen({ photos, styles, onOpenPhoto, favorites }: PhotosS
                       }}
                     />
                   ) : (
-                    <div className="photo-fallback-bg" style={{ background: bg }} />
+                    <div className="photo-bg" style={{ background: bg }} />
                   )}
                   {isLoading ? (
                     <div className="photo-loading-overlay">

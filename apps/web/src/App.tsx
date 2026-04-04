@@ -24,6 +24,7 @@ import type { SourceTab } from "../../../../shared/contracts/ui";
 import { createPurchaseInvoice, deletePhoto, getPhotoShareLink, getProfile, getSharedPhoto, sendPhotoToTelegram, toggleFavorite, type GenerateResult, type PhotoRecord, type UserProfile } from "./utils/api";
 import { triggerHaptic } from "./utils/haptics";
 import { readMotionTokenMs } from "./utils/motionTokens";
+import { isPhotoGenerating } from "./utils/photoStatus";
 
 // Telegram WebApp integration
 declare global {
@@ -346,6 +347,8 @@ export function App() {
   const [flowInitialCustomModelId, setFlowInitialCustomModelId] = useState<string | undefined>(undefined);
 
   const [seenDoneOrderIds, setSeenDoneOrderIds] = useState<Set<string>>(new Set());
+  const [renderReadyOrderIds, setRenderReadyOrderIds] = useState<Set<string>>(new Set());
+  const renderPreloadInFlightRef = useRef<Set<string>>(new Set());
   const photosSeedRef = useRef(false);
   const doneOrderIds = useMemo(
     () =>
@@ -374,6 +377,54 @@ export function App() {
       return next;
     });
   }, [activeScreen, doneOrderIds]);
+
+  // Keep "generating" UI state until image bytes are actually reachable/renderable.
+  useEffect(() => {
+    photos.forEach((photo) => {
+      const isDone = String(photo.status || "").toLowerCase() === "done";
+      if (!isDone || !photo.resultUrl) return;
+      if (renderReadyOrderIds.has(photo.orderId)) return;
+      if (renderPreloadInFlightRef.current.has(photo.orderId)) return;
+
+      renderPreloadInFlightRef.current.add(photo.orderId);
+      const img = new Image();
+      img.onload = () => {
+        renderPreloadInFlightRef.current.delete(photo.orderId);
+        setRenderReadyOrderIds((prev) => {
+          if (prev.has(photo.orderId)) return prev;
+          const next = new Set(prev);
+          next.add(photo.orderId);
+          return next;
+        });
+      };
+      img.onerror = () => {
+        // Stop endless spinners on broken image URLs.
+        renderPreloadInFlightRef.current.delete(photo.orderId);
+        setRenderReadyOrderIds((prev) => {
+          if (prev.has(photo.orderId)) return prev;
+          const next = new Set(prev);
+          next.add(photo.orderId);
+          return next;
+        });
+      };
+      img.src = photo.resultUrl;
+    });
+  }, [photos, renderReadyOrderIds]);
+
+  const uiGeneratingOrderIds = useMemo(() => {
+    const ids = new Set<string>();
+    photos.forEach((photo) => {
+      if (isPhotoGenerating(photo)) {
+        ids.add(photo.orderId);
+        return;
+      }
+      const isDone = String(photo.status || "").toLowerCase() === "done";
+      if (isDone && photo.resultUrl && !renderReadyOrderIds.has(photo.orderId)) {
+        ids.add(photo.orderId);
+      }
+    });
+    return ids;
+  }, [photos, renderReadyOrderIds]);
 
   const [queuedModalOpen, setQueuedModalOpen] = useState(false);
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
@@ -966,6 +1017,7 @@ export function App() {
         <HomeScreen
           styles={styles}
           photos={photos}
+          generatingOrderIds={uiGeneratingOrderIds}
           onPreviewStyle={handlePickStyleFromHome}
         />
       ) : null}
@@ -973,6 +1025,7 @@ export function App() {
         <PhotosScreen
           photos={photos}
           styles={styles}
+          generatingOrderIds={uiGeneratingOrderIds}
           onOpenPhoto={handleOpenPhoto}
           favorites={favoriteOrderIds}
         />

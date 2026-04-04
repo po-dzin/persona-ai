@@ -451,7 +451,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   padding: 0 var(--cmp-space-grid-edge);
 }
 .photo-item {
-  aspect-ratio: auto;
+  aspect-ratio: 3/4;
   position: relative;
   overflow: hidden;
   cursor: pointer;
@@ -473,24 +473,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   opacity: 1;
   transform: scale(var(--cmp-state-scale-press-sm));
 }
-.photo-image {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: contain;
-  border-radius: inherit;
-  background: var(--sem-color-bg-surface);
-}
-.photo-fallback-bg {
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  border-radius: inherit;
-}
-.photo-bg {
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  border-radius: inherit;
-}
+.photo-bg { position: absolute; inset: 0; border-radius: inherit; }
 .photo-style-label {
   position: absolute;
   bottom: 0; left: 0; right: 0;
@@ -1791,6 +1774,17 @@ button, a, [role="button"] { touch-action: manipulation; }
   overflow: hidden;
   position: relative;
   background: var(--sem-color-bg-body);
+}
+.upload-preview-image-real,
+.upload-preview-shell .zoomable-photo {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.upload-preview-shell .zoomable-photo-image {
+  width: 100%;
+  height: auto;
+  max-height: none;
 }
 .custom-upload-preview-shell {
   border: none;
