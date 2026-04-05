@@ -45,6 +45,7 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
   const panStartYRef = useRef(0);
   const modeRef = useRef<"none" | "pinch" | "pan">("none");
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  const suppressDblClickUntilRef = useRef(0);
 
   const clampPan = (nextScale: number, nextTx: number, nextTy: number): { tx: number; ty: number } => {
     const root = rootRef.current;
@@ -164,6 +165,9 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
           const dy = changed.clientY - lastTap.y;
           const moved = Math.hypot(dx, dy);
           if (dt <= DOUBLE_TAP_DELAY_MS && moved <= DOUBLE_TAP_DISTANCE_PX) {
+            // Mobile browsers can fire both touch double-tap and dblclick.
+            // Suppress the upcoming dblclick to avoid immediate zoom reset.
+            suppressDblClickUntilRef.current = now + 450;
             toggleDoubleTapZoom();
             lastTapRef.current = null;
             modeRef.current = "none";
@@ -183,6 +187,11 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
     }
   };
 
+  const handleDoubleClick = () => {
+    if (Date.now() <= suppressDblClickUntilRef.current) return;
+    toggleDoubleTapZoom();
+  };
+
   return (
     <div
       ref={rootRef}
@@ -192,7 +201,7 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
-      onDoubleClick={toggleDoubleTapZoom}
+      onDoubleClick={handleDoubleClick}
     >
       <img
         ref={imageRef}
