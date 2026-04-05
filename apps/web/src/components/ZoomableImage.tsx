@@ -30,6 +30,7 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+  const [isPinching, setIsPinching] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const scaleRef = useRef(1);
@@ -45,6 +46,7 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
   const panStartYRef = useRef(0);
   const modeRef = useRef<"none" | "pinch" | "pan">("none");
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
+  const suppressDblClickUntilRef = useRef(0);
 
   const clampPan = (nextScale: number, nextTx: number, nextTy: number): { tx: number; ty: number } => {
     const root = rootRef.current;
@@ -80,6 +82,7 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
     setScale(1);
     setTx(0);
     setTy(0);
+    setIsPinching(false);
     modeRef.current = "none";
   }, [src]);
 
@@ -97,6 +100,7 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
     const touches = event.touches;
 
     if (touches.length >= 2) {
+      setIsPinching(true);
       const first = touches[0];
       const second = touches[1];
       pinchStartDistRef.current = distance(first, second);
@@ -105,6 +109,8 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
       pinchStartTxRef.current = txRef.current;
       pinchStartTyRef.current = tyRef.current;
       modeRef.current = "pinch";
+      // Two-finger gesture belongs to image zoom; prevent page scroll.
+      event.preventDefault();
       return;
     }
 
@@ -154,6 +160,7 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
 
   const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
     if (event.touches.length === 0) {
+      setIsPinching(false);
       const changed = event.changedTouches?.[0];
       if (changed) {
         const now = Date.now();
@@ -164,6 +171,9 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
           const dy = changed.clientY - lastTap.y;
           const moved = Math.hypot(dx, dy);
           if (dt <= DOUBLE_TAP_DELAY_MS && moved <= DOUBLE_TAP_DISTANCE_PX) {
+            // Mobile browsers can fire both touch double-tap and dblclick.
+            // Suppress the upcoming dblclick to avoid immediate zoom reset.
+            suppressDblClickUntilRef.current = now + 450;
             toggleDoubleTapZoom();
             lastTapRef.current = null;
             modeRef.current = "none";
@@ -177,22 +187,35 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
     }
 
     if (event.touches.length === 1 && scaleRef.current > 1) {
+      setIsPinching(false);
       modeRef.current = "pan";
       panStartXRef.current = event.touches[0].clientX - txRef.current;
       panStartYRef.current = event.touches[0].clientY - tyRef.current;
+      return;
     }
+
+    if (event.touches.length >= 2) {
+      setIsPinching(true);
+    } else {
+      setIsPinching(false);
+    }
+  };
+
+  const handleDoubleClick = () => {
+    if (Date.now() <= suppressDblClickUntilRef.current) return;
+    toggleDoubleTapZoom();
   };
 
   return (
     <div
       ref={rootRef}
-      className={`zoomable-photo${scale > 1 ? " is-zoomed" : ""} ${className}`.trim()}
+      className={`zoomable-photo${scale > 1 ? " is-zoomed" : ""}${isPinching ? " is-pinching" : ""} ${className}`.trim()}
       data-photo-zoom="true"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
-      onDoubleClick={toggleDoubleTapZoom}
+      onDoubleClick={handleDoubleClick}
     >
       <img
         ref={imageRef}
