@@ -70,12 +70,12 @@ describe("PhotoViewerScreen share menu", () => {
     expect(screen.queryByRole("button", { name: "X" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Facebook" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "WhatsApp" })).not.toBeInTheDocument();
+
+    // Telegram opens t.me/share link with the appLink prop
     await user.click(screen.getByRole("button", { name: "Telegram" }));
     expect(onSendToTelegram).not.toHaveBeenCalled();
-    expect(screen.getByText("Не удалось отправить фото")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Отправить только ссылку" }));
     expect(openSpy).toHaveBeenCalledWith(
-      expect.stringContaining("https://t.me/share/url?url=http%3A%2F%2Flocalhost%3A3000%2F"),
+      expect.stringContaining("https://t.me/share/url?url=https%3A%2F%2Fpersonai.app"),
       "_blank",
     );
 
@@ -88,13 +88,16 @@ describe("PhotoViewerScreen share menu", () => {
 
     await user.click(screen.getByRole("button", { name: "Поделиться" }));
     await user.click(screen.getByRole("button", { name: "Instagram" }));
-    expect(openSpy).toHaveBeenCalledWith("https://www.instagram.com/create/select/", "_blank");
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringContaining("instagram://sharesheet?text="),
+      "_blank",
+    );
 
     await user.click(screen.getByRole("button", { name: "Поделиться" }));
     await user.click(screen.getByRole("button", { name: "Threads" }));
     await waitFor(() => {
       expect(openSpy).toHaveBeenCalledWith(
-        expect.stringContaining("https://www.threads.net/intent/post?text="),
+        expect.stringContaining("https://www.threads.net/intent/post?url="),
         "_blank",
       );
     });
@@ -125,7 +128,7 @@ describe("PhotoViewerScreen share menu", () => {
     });
   });
 
-  it("opens Instagram story camera on mobile user agents", async () => {
+  it("opens Instagram sharesheet on mobile user agents", async () => {
     const user = userEvent.setup();
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
 
@@ -137,7 +140,10 @@ describe("PhotoViewerScreen share menu", () => {
 
     await user.click(screen.getByRole("button", { name: "Поделиться" }));
     await user.click(screen.getByRole("button", { name: "Instagram" }));
-    expect(openSpy).toHaveBeenCalledWith("instagram://story-camera", "_blank");
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringContaining("instagram://sharesheet?text="),
+      "_blank",
+    );
   });
 
   it("calls copy-link and upload-to-bot actions", async () => {
