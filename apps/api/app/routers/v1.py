@@ -9,7 +9,10 @@ from typing import Any
 from urllib.request import Request as UrlRequest, urlopen
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
+import html as _html
+
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, Response, UploadFile
+from fastapi.responses import HTMLResponse
 
 from app.core.auth import require_user, parse_tg_user
 from app.core.rate_limit import generate_limiter, tg_webhook_limiter, upload_limiter
@@ -362,6 +365,41 @@ def get_shared_photo(order_id: str, request: Request):
         "created_at": serialized.get("created_at"),
         "updated_at": serialized.get("updated_at"),
     }
+
+
+@router.get("/share-page/{order_id}", response_class=HTMLResponse, include_in_schema=False)
+def get_share_preview_page(order_id: str, request: Request):
+    """HTML page with Open Graph meta tags for social sharing previews (Threads, etc.)."""
+    svc = get_service(request)
+    try:
+        order = svc._find_order(order_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    if order.status != "done" or not order.result_url:
+        raise HTTPException(status_code=404, detail="photo_not_available")
+
+    img_url = _html.escape(order.result_url)
+    app_link = _build_photo_share_link({"order_id": order_id}, request)
+    app_link_esc = _html.escape(app_link)
+    app_link_js = json.dumps(app_link)
+
+    return HTMLResponse(content=f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>PersonAI ✨</title>
+  <meta property="og:title" content="Фото из PersonAI ✨">
+  <meta property="og:description" content="Создано с помощью ИИ">
+  <meta property="og:image" content="{img_url}">
+  <meta property="og:url" content="{app_link_esc}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{img_url}">
+  <meta http-equiv="refresh" content="0;url={app_link_esc}">
+</head>
+<body><script>window.location.replace({app_link_js});</script></body>
+</html>""")
 
 
 # ──────────────────── Telegram bot webhook ────────────────────────
