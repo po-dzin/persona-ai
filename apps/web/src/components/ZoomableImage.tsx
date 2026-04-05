@@ -30,7 +30,11 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const scaleRef = useRef(1);
+  const txRef = useRef(0);
+  const tyRef = useRef(0);
 
   const pinchStartDistRef = useRef(0);
   const pinchStartScaleRef = useRef(1);
@@ -42,15 +46,37 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
   const modeRef = useRef<"none" | "pinch" | "pan">("none");
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
 
-  const resetTransform = () => {
-    setScale(1);
-    setTx(0);
-    setTy(0);
-    modeRef.current = "none";
+  const clampPan = (nextScale: number, nextTx: number, nextTy: number): { tx: number; ty: number } => {
+    const root = rootRef.current;
+    const image = imageRef.current;
+    if (!root || !image || nextScale <= 1) return { tx: 0, ty: 0 };
+
+    const baseWidth = image.clientWidth || root.clientWidth;
+    const baseHeight = image.clientHeight || root.clientHeight;
+    const maxX = Math.max(0, (baseWidth * (nextScale - 1)) / 2);
+    const maxY = Math.max(0, (baseHeight * (nextScale - 1)) / 2);
+    return {
+      tx: clamp(nextTx, -maxX, maxX),
+      ty: clamp(nextTy, -maxY, maxY),
+    };
+  };
+
+  const applyTransform = (nextScaleRaw: number, nextTxRaw: number, nextTyRaw: number) => {
+    const nextScale = clamp(nextScaleRaw, MIN_SCALE, MAX_SCALE);
+    const clamped = clampPan(nextScale, nextTxRaw, nextTyRaw);
+    scaleRef.current = nextScale;
+    txRef.current = clamped.tx;
+    tyRef.current = clamped.ty;
+    setScale(nextScale);
+    setTx(clamped.tx);
+    setTy(clamped.ty);
   };
 
   useEffect(() => {
     // New photo must always open in natural framing without inherited pan/zoom.
+    scaleRef.current = 1;
+    txRef.current = 0;
+    tyRef.current = 0;
     setScale(1);
     setTx(0);
     setTy(0);
@@ -63,14 +89,8 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
   }, [tx, ty, scale]);
 
   const toggleDoubleTapZoom = () => {
-    setScale((prev) => {
-      const next = prev <= 1.01 ? DOUBLE_TAP_SCALE : 1;
-      if (next === 1) {
-        setTx(0);
-        setTy(0);
-      }
-      return next;
-    });
+    const nextScale = scaleRef.current <= 1.01 ? DOUBLE_TAP_SCALE : 1;
+    applyTransform(nextScale, 0, 0);
   };
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
@@ -80,18 +100,18 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
       const first = touches[0];
       const second = touches[1];
       pinchStartDistRef.current = distance(first, second);
-      pinchStartScaleRef.current = scale;
+      pinchStartScaleRef.current = scaleRef.current;
       pinchStartMidRef.current = midpoint(first, second);
-      pinchStartTxRef.current = tx;
-      pinchStartTyRef.current = ty;
+      pinchStartTxRef.current = txRef.current;
+      pinchStartTyRef.current = tyRef.current;
       modeRef.current = "pinch";
       return;
     }
 
-    if (touches.length === 1 && scale > 1) {
+    if (touches.length === 1 && scaleRef.current > 1) {
       modeRef.current = "pan";
-      panStartXRef.current = touches[0].clientX - tx;
-      panStartYRef.current = touches[0].clientY - ty;
+      panStartXRef.current = touches[0].clientX - txRef.current;
+      panStartYRef.current = touches[0].clientY - tyRef.current;
     }
   };
 
@@ -104,22 +124,29 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
       const dist = distance(first, second);
       const startDist = pinchStartDistRef.current || dist;
       const nextScale = clamp((pinchStartScaleRef.current * dist) / startDist, MIN_SCALE, MAX_SCALE);
-      setScale(nextScale);
 
       const startMid = pinchStartMidRef.current;
       if (startMid) {
         const currentMid = midpoint(first, second);
-        setTx(pinchStartTxRef.current + (currentMid.x - startMid.x));
-        setTy(pinchStartTyRef.current + (currentMid.y - startMid.y));
+        applyTransform(
+          nextScale,
+          pinchStartTxRef.current + (currentMid.x - startMid.x),
+          pinchStartTyRef.current + (currentMid.y - startMid.y),
+        );
+      } else {
+        applyTransform(nextScale, txRef.current, tyRef.current);
       }
 
       event.preventDefault();
       return;
     }
 
-    if (modeRef.current === "pan" && touches.length === 1 && scale > 1) {
-      setTx(touches[0].clientX - panStartXRef.current);
-      setTy(touches[0].clientY - panStartYRef.current);
+    if (modeRef.current === "pan" && touches.length === 1 && scaleRef.current > 1) {
+      applyTransform(
+        scaleRef.current,
+        touches[0].clientX - panStartXRef.current,
+        touches[0].clientY - panStartYRef.current,
+      );
       event.preventDefault();
       return;
     }
@@ -146,22 +173,20 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
         lastTapRef.current = { time: now, x: changed.clientX, y: changed.clientY };
       }
       modeRef.current = "none";
-      if (scale <= 1.01) {
-        resetTransform();
-      }
       return;
     }
 
-    if (event.touches.length === 1 && scale > 1) {
+    if (event.touches.length === 1 && scaleRef.current > 1) {
       modeRef.current = "pan";
-      panStartXRef.current = event.touches[0].clientX - tx;
-      panStartYRef.current = event.touches[0].clientY - ty;
+      panStartXRef.current = event.touches[0].clientX - txRef.current;
+      panStartYRef.current = event.touches[0].clientY - tyRef.current;
     }
   };
 
   return (
     <div
-      className={`zoomable-photo ${className}`.trim()}
+      ref={rootRef}
+      className={`zoomable-photo${scale > 1 ? " is-zoomed" : ""} ${className}`.trim()}
       data-photo-zoom="true"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

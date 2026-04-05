@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 interface ProfileScreenProps {
   credits: number;
   generations: number;
@@ -28,6 +30,7 @@ export function ProfileScreen({
 }: ProfileScreenProps) {
   const displayName = firstName || username || "Пользователь";
   const displayUsername = username ? `@${username}` : null;
+  const [legalOpen, setLegalOpen] = useState(false);
 
   return (
     <section className="screen profile-screen">
@@ -105,68 +108,80 @@ export function ProfileScreen({
         </div>
       </div>
 
-      <div className="profile-section-title">Документы</div>
-      <div className="profile-card">
-        <button className="profile-row profile-row-button" type="button" onClick={onOpenPrivacyPolicy}>
-          <div className="profile-row-icon profile-row-icon-doc">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <button
+        className="profile-collapse-header"
+        type="button"
+        onClick={() => setLegalOpen((prev) => !prev)}
+        aria-expanded={legalOpen}
+      >
+        <div className="profile-section-title-inline">Условия и политика</div>
+        <svg className={`profile-collapse-arrow${legalOpen ? " open" : ""}`} width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      {legalOpen ? (
+        <div className="profile-card">
+          <button className="profile-row profile-row-button" type="button" onClick={onOpenPrivacyPolicy}>
+            <div className="profile-row-icon profile-row-icon-doc">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="profile-row-text">
+              <div className="profile-row-label">Политика конфиденциальности</div>
+              <div className="profile-row-desc">Privacy Policy</div>
+            </div>
+            <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-          </div>
-          <div className="profile-row-text">
-            <div className="profile-row-label">Политика конфиденциальности</div>
-            <div className="profile-row-desc">Privacy Policy</div>
-          </div>
-          <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-        <button className="profile-row profile-row-button" type="button" onClick={onOpenTermsOfService}>
-          <div className="profile-row-icon profile-row-icon-doc">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </button>
+          <button className="profile-row profile-row-button" type="button" onClick={onOpenTermsOfService}>
+            <div className="profile-row-icon profile-row-icon-doc">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="profile-row-text">
+              <div className="profile-row-label">Пользовательское соглашение</div>
+              <div className="profile-row-desc">Terms of Service</div>
+            </div>
+            <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-          </div>
-          <div className="profile-row-text">
-            <div className="profile-row-label">Пользовательское соглашение</div>
-            <div className="profile-row-desc">Terms of Service</div>
-          </div>
-          <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-        <button className="profile-row profile-row-button" type="button" onClick={onOpenPaymentsPolicy}>
-          <div className="profile-row-icon profile-row-icon-doc">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </button>
+          <button className="profile-row profile-row-button" type="button" onClick={onOpenPaymentsPolicy}>
+            <div className="profile-row-icon profile-row-icon-doc">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="profile-row-text">
+              <div className="profile-row-label">Политика обработки платежей</div>
+            </div>
+            <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-          </div>
-          <div className="profile-row-text">
-            <div className="profile-row-label">Политика обработки платежей</div>
-          </div>
-          <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-        <button className="profile-row profile-row-button" type="button" onClick={onOpenDisclaimer}>
-          <div className="profile-row-icon profile-row-icon-doc">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </button>
+          <button className="profile-row profile-row-button" type="button" onClick={onOpenDisclaimer}>
+            <div className="profile-row-icon profile-row-icon-doc">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 2v6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="profile-row-text">
+              <div className="profile-row-label">Отказ от ответственности</div>
+              <div className="profile-row-desc">Disclaimer</div>
+            </div>
+            <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-          </div>
-          <div className="profile-row-text">
-            <div className="profile-row-label">Отказ от ответственности</div>
-            <div className="profile-row-desc">Disclaimer</div>
-          </div>
-          <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-      </div>
+          </button>
+        </div>
+      ) : null}
 
       <div className="screen-tail-space" />
     </section>

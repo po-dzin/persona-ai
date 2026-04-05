@@ -1253,8 +1253,8 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 /* ─── Viewer ─── */
 .viewer-photo {
-  width: 100%;
-  margin: 0;
+  width: calc(100% - (var(--cmp-space-page-edge) * 2));
+  margin: 0 var(--cmp-space-page-edge);
   position: relative; overflow: hidden; border-radius: var(--cmp-space-16);
   background: var(--sem-color-bg-surface);
   min-height: var(--cmp-space-120);
@@ -1305,7 +1305,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .viewer-body { padding: var(--cmp-space-12) var(--cmp-space-page-edge); }
 .viewer-prompt-block {
   background: var(--sem-color-bg-surface); border-radius: var(--cmp-space-14);
-  padding: var(--cmp-space-14); margin-bottom: var(--cmp-space-14);
+  padding: var(--cmp-space-14);
 }
 .viewer-prompt-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -1335,6 +1335,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .viewer-prompt-text { font-size: var(--cmp-type-body-sm-size); color: var(--sem-color-text-secondary); line-height: var(--cmp-type-line-height-body); }
 .viewer-actions-row {
   display: flex; gap: var(--cmp-space-10); align-items: center;
+  margin-bottom: var(--cmp-space-12);
 }
 .viewer-download-btn {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--cmp-space-8);
@@ -1704,6 +1705,9 @@ button, a, [role="button"] { touch-action: manipulation; }
   height: 100%;
   overflow: hidden;
   position: relative;
+  touch-action: pan-y;
+}
+.zoomable-photo.is-zoomed {
   touch-action: none;
 }
 .zoomable-photo-image {
@@ -1903,6 +1907,29 @@ button, a, [role="button"] { touch-action: manipulation; }
 .profile-row-icon-doc {
   background: color-mix(in srgb, var(--sem-color-accent) 10%, transparent);
   color: var(--sem-color-accent-light);
+}
+
+.profile-collapse-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: calc(100% - (var(--cmp-space-grid-edge) * 2));
+  margin: 0 var(--cmp-space-grid-edge);
+  padding: var(--cmp-space-16) var(--cmp-space-page-edge) var(--cmp-space-8);
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.profile-collapse-header:active { opacity: var(--cmp-state-opacity-inactive); }
+.profile-collapse-arrow {
+  color: var(--sem-color-text-muted);
+  flex-shrink: 0;
+  opacity: var(--cmp-state-opacity-arrow);
+  transition: transform var(--cmp-motion-normal) var(--cmp-ease-standard);
+}
+.profile-collapse-arrow.open {
+  transform: rotate(90deg);
 }
 
 /* ─── Legal docs screen ─── */
