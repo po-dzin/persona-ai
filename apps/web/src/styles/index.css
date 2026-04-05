@@ -1710,6 +1710,9 @@ button, a, [role="button"] { touch-action: manipulation; }
 .zoomable-photo.is-zoomed {
   touch-action: none;
 }
+.zoomable-photo.is-pinching {
+  touch-action: none;
+}
 .zoomable-photo-image {
   width: 100%;
   height: auto;
