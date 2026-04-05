@@ -296,6 +296,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .home-styles-panel.is-adjacent-next,
 .home-styles-panel.is-outgoing {
   visibility: visible;
+  opacity: 1;
 }
 .home-styles-panel.is-active {
   position: relative;
@@ -317,6 +318,12 @@ button, a, [role="button"] { touch-action: manipulation; }
   z-index: var(--cmp-z-selected);
 }
 .home-styles-panels.is-dragging .home-styles-panel {
+  transition: none;
+}
+/* Suppress card press-scale during swipe so it doesn't stick */
+.home-styles-panels.is-dragging .style-card,
+.home-styles-panels.is-dragging .style-card:active {
+  transform: none;
   transition: none;
 }
 .home-styles-panels.is-dragging .home-styles-panel.is-active {
@@ -341,19 +348,19 @@ button, a, [role="button"] { touch-action: manipulation; }
   animation: homePanelEnterFromLeft var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
 }
 @keyframes homePanelEnterFromRight {
-  from { transform: translateX(100%); }
+  from { transform: translateX(var(--panel-enter-from, 100%)); }
   to { transform: translateX(0); }
 }
 @keyframes homePanelEnterFromLeft {
-  from { transform: translateX(-100%); }
+  from { transform: translateX(var(--panel-enter-from, -100%)); }
   to { transform: translateX(0); }
 }
 @keyframes homePanelLeaveToLeft {
-  from { transform: translateX(0); }
+  from { transform: translateX(var(--panel-leave-from, 0%)); }
   to { transform: translateX(-100%); }
 }
 @keyframes homePanelLeaveToRight {
-  from { transform: translateX(0); }
+  from { transform: translateX(var(--panel-leave-from, 0%)); }
   to { transform: translateX(100%); }
 }
 .home-styles-grid {

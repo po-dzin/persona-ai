@@ -188,6 +188,18 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     };
   }, []);
 
+  // Non-passive touchmove: prevent vertical scroll while a horizontal swipe is active.
+  // React synthetic handlers are passive by default, so preventDefault() there is a no-op.
+  useEffect(() => {
+    const el = panelsRef.current;
+    if (!el) return;
+    const handler = (e: TouchEvent) => {
+      if (isSwipeGestureRef.current) e.preventDefault();
+    };
+    el.addEventListener("touchmove", handler, { passive: false });
+    return () => el.removeEventListener("touchmove", handler);
+  }, []);
+
   // Scroll active tab into view when changed by swipe
   useEffect(() => {
     if (!tabsRef.current) return;
@@ -230,6 +242,9 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
 
   const onTouchStart = (e: React.TouchEvent) => {
     clearTouchTracking();
+    // Reset per-swipe animation start positions
+    panelsRef.current?.style.removeProperty("--panel-enter-from");
+    panelsRef.current?.style.removeProperty("--panel-leave-from");
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     touchStartTs.current = performance.now();
@@ -283,14 +298,32 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     const dt = Math.max(1, performance.now() - touchStartTs.current);
     const absDx = Math.abs(dx);
-    const velocityX = absDx / dt; // px per ms
-    clearTouchTracking();
-    // Trigger on either confident distance or quick flick; keep dominant horizontal axis.
+    const velocityX = absDx / dt;
     const isDominantHorizontal = Math.abs(dy) <= absDx * 0.6;
     const passesDistance = absDx >= 40;
     const passesFlick = absDx >= 24 && velocityX >= 0.35;
-    if (!isDominantHorizontal || (!passesDistance && !passesFlick)) return;
-    switchCategory(dx < 0 ? "next" : "prev");
+
+    if (!isDominantHorizontal || (!passesDistance && !passesFlick)) {
+      clearTouchTracking();
+      return;
+    }
+
+    const dir = dx < 0 ? "next" : "prev";
+
+    // Set keyframe start positions from current drag offset so the entering/leaving
+    // panels animate from where they already are, not from ±100% (avoids jitter).
+    if (panelsRef.current && isSwipeGestureRef.current) {
+      const width = panelsRef.current.clientWidth || 1;
+      const ratio = dragOffsetRef.current / width;
+      const enterFrom = dir === "next"
+        ? `${((1 + ratio) * 100).toFixed(2)}%`
+        : `${((-1 + ratio) * 100).toFixed(2)}%`;
+      panelsRef.current.style.setProperty("--panel-enter-from", enterFrom);
+      panelsRef.current.style.setProperty("--panel-leave-from", `${(ratio * 100).toFixed(2)}%`);
+    }
+
+    clearTouchTracking();
+    switchCategory(dir);
   };
 
   const stylesByCategory = useMemo(() => {
