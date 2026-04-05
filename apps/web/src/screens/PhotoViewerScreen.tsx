@@ -39,7 +39,7 @@ export function PhotoViewerScreen({
   const SHARE_BRAND_TEXT = "Создано в PersonAI ✨";
   const [shareOpen, setShareOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [telegramFallbackOpen, setTelegramFallbackOpen] = useState(false);
+
   const [promptCopied, setPromptCopied] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -56,7 +56,19 @@ export function PhotoViewerScreen({
   const closeAll = () => {
     setShareOpen(false);
     setMenuOpen(false);
-    setTelegramFallbackOpen(false);
+  };
+
+  const getShareFile = async (): Promise<File | null> => {
+    try {
+      let blob: Blob | null = null;
+      if (photo.orderId && !photo.orderId.startsWith("shared-")) {
+        try { blob = await getPhotoShareFile(photo.orderId); } catch { blob = null; }
+      }
+      if (!blob && url) blob = await fetch(url).then((r) => r.blob());
+      if (!blob) return null;
+      const ext = blob.type.includes("png") ? "png" : "jpg";
+      return new File([blob], `personai-share.${ext}`, { type: blob.type || "image/jpeg" });
+    } catch { return null; }
   };
 
   useEffect(() => {
@@ -84,57 +96,12 @@ export function PhotoViewerScreen({
     closeAll();
   };
 
+  // Opens TG contact/chat picker directly via t.me/share/url
   const handleTelegramShare = () => {
-    void (async () => {
-      // Prefer native Telegram-style share sheet with photo + app-link (without raw R2 URL).
-      if (navigator.share) {
-        try {
-          let imageBlob: Blob | null = null;
-          if (photo.orderId && !photo.orderId.startsWith("shared-")) {
-            try {
-              imageBlob = await getPhotoShareFile(photo.orderId);
-            } catch {
-              imageBlob = null;
-            }
-          }
-          if (!imageBlob && url) {
-            imageBlob = await fetch(url).then((r) => r.blob());
-          }
-          if (!imageBlob) {
-            throw new Error("share_photo_unavailable");
-          }
-          const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
-          const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
-          const filesOnlyPayload = { files: [file] };
-          if (navigator.canShare && !navigator.canShare(filesOnlyPayload)) {
-            throw new Error("share_photo_unsupported");
-          }
-          await navigator.share({ files: [file], text: shareCaption });
-          closeAll();
-          return;
-        } catch {
-          // fall through to bot fallback below
-        }
-      }
-      setShareOpen(false);
-      setTelegramFallbackOpen(true);
-    })();
-  };
-
-  const handleTelegramLinkOnly = () => {
-    const text = encodeURIComponent(SHARE_BRAND_TEXT);
-    const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(homeAppLink)}&text=${text}`;
-    const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (shareUrl: string) => void } | undefined;
-    if (liveTg?.openTelegramLink) {
-      liveTg.openTelegramLink(targetUrl);
-    } else {
-      window.open(targetUrl, "_blank");
-    }
-    closeAll();
-  };
-
-  const handleTelegramBotFallback = () => {
-    onSendToTelegram();
+    const targetUrl = `https://t.me/share/url?url=${encodeURIComponent(appLink || homeAppLink)}&text=${encodeURIComponent(SHARE_BRAND_TEXT)}`;
+    const liveTg = window.Telegram?.WebApp as { openTelegramLink?: (u: string) => void } | undefined;
+    if (liveTg?.openTelegramLink) liveTg.openTelegramLink(targetUrl);
+    else window.open(targetUrl, "_blank");
     closeAll();
   };
 
@@ -148,17 +115,27 @@ export function PhotoViewerScreen({
     closeAll();
   };
 
+  // Open Instagram DM picker with pre-filled share-page link (shows og:image preview in chat)
   const handleInstagram = () => {
-    const igTarget = /iPhone|iPad|Android/i.test(navigator.userAgent)
-      ? "instagram://story-camera"
-      : "https://www.instagram.com/create/select/";
-    window.open(igTarget, "_blank");
+    const sharePageUrl =
+      photo.orderId && !photo.orderId.startsWith("shared-")
+        ? `${window.location.origin}/v1/share-page/${photo.orderId}`
+        : appLink || homeAppLink;
+    const text = `${SHARE_BRAND_TEXT} ${sharePageUrl}`;
+    window.open(`instagram://sharesheet?text=${encodeURIComponent(text)}`, "_blank");
     closeAll();
   };
 
   const handleThreads = () => {
-    const shareText = `${SHARE_BRAND_TEXT} ${homeAppLink}`.trim();
-    window.open(`https://www.threads.net/intent/post?text=${encodeURIComponent(shareText)}`, "_blank");
+    // Use share-page URL so Threads fetches og:image and shows a rich photo card
+    const sharePageUrl =
+      photo.orderId && !photo.orderId.startsWith("shared-")
+        ? `${window.location.origin}/v1/share-page/${photo.orderId}`
+        : appLink || homeAppLink;
+    window.open(
+      `https://www.threads.net/intent/post?url=${encodeURIComponent(sharePageUrl)}&text=${encodeURIComponent(SHARE_BRAND_TEXT)}`,
+      "_blank",
+    );
     closeAll();
   };
 
@@ -166,36 +143,23 @@ export function PhotoViewerScreen({
     void (async () => {
       try {
         if (navigator.share) {
-          if (url) {
-            try {
-              const imageBlob = await fetch(url).then((r) => r.blob());
-              const imageExt = imageBlob.type.includes("png") ? "png" : "jpg";
-              const file = new File([imageBlob], `personai-share.${imageExt}`, { type: imageBlob.type || "image/jpeg" });
-              const filesOnlyPayload = { files: [file] };
-              if (navigator.canShare && !navigator.canShare(filesOnlyPayload)) {
-                throw new Error("share_photo_unsupported");
-              }
-              await navigator.share({ files: [file], text: shareCaption });
-              closeAll();
-              return;
-            } catch {
-              // fall through to URL/text-only share
-            }
+          const file = await getShareFile();
+          if (file && navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], text: shareCaption });
+          } else {
+            await navigator.share({ text: shareCaption });
           }
-          await navigator.share({ text: shareCaption });
           closeAll();
           return;
         }
-      } catch {
-        // fallback to app copy-link handler
-      }
+      } catch { /* cancelled or unsupported */ }
       onCopyLink();
       closeAll();
     })();
   };
 
   return (
-    <div className="overlay-screen photo-viewer-screen" onClick={shareOpen || menuOpen || telegramFallbackOpen ? closeAll : undefined}>
+    <div className="overlay-screen photo-viewer-screen" onClick={shareOpen || menuOpen ? closeAll : undefined}>
       <div className="flow-top">
         <button className="flow-back" onClick={onClose} aria-label="Назад">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -408,18 +372,6 @@ export function PhotoViewerScreen({
           <div className="viewer-prompt-text">{prompt}</div>
         </div>
       </div>
-      {telegramFallbackOpen ? (
-        <div className="modal-backdrop" onClick={closeAll}>
-          <div className="modal-card" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="tg-fallback-title">
-            <div className="modal-icon" aria-hidden="true">✨</div>
-            <div className="modal-title" id="tg-fallback-title">Не удалось отправить фото</div>
-            <div className="modal-desc">Выберите, как продолжить:</div>
-            <button className="modal-btn primary" onClick={handleTelegramLinkOnly}>Отправить только ссылку</button>
-            <button className="modal-btn primary" onClick={handleTelegramBotFallback}>Выгрузить в бот</button>
-            <button className="modal-btn" onClick={closeAll}>Отмена</button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
