@@ -568,7 +568,6 @@ export function App() {
   // purchaseSuccessOpen removed — Telegram's native openInvoice already shows payment success UI
   const [stylePreviewOpen, setStylePreviewOpen] = useState(false);
   const [stylePreviewBackToFlow, setStylePreviewBackToFlow] = useState(false);
-  const [flowUploadFromPreview, setFlowUploadFromPreview] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const appliedSharePresetRef = useRef(false);
@@ -774,7 +773,6 @@ export function App() {
     setPrefilledUploadPhoto(null);
     setFlowInitialCustomPrompt("");
     setFlowInitialCustomModelId(undefined);
-    setFlowUploadFromPreview(false);
     setFlowStyleOpen(true);
     setSelectedStyle(styles[0] || null);
     setSelectedPrompt("");
@@ -1227,12 +1225,7 @@ export function App() {
         isSubmitting={isSubmitting || createActionLocked}
         onBack={() => {
           setFlowUploadOpen(false);
-          if (flowUploadFromPreview) {
-            setFlowUploadFromPreview(false);
-            setStylePreviewOpen(true);
-          } else {
-            setFlowStyleOpen(true);
-          }
+          setFlowStyleOpen(true);
         }}
         onGenerate={(file) => {
           void handleGenerate(file);
@@ -1267,7 +1260,6 @@ export function App() {
           setStylePreviewOpen(false);
           setCategoryOpen(false);
           setFlowStyleOpen(false);
-          setFlowUploadFromPreview(true);
           setFlowUploadOpen(true);
         }}
       />
