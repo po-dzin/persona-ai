@@ -57,7 +57,6 @@ const profileDto: UserProfileDto = {
   first_name: "G",
   username: "g_user",
   paid_credits: 20,
-  free_credit_available: false,
   generations_count: 5,
   referrals_count: 1,
 };

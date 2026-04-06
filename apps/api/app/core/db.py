@@ -144,6 +144,11 @@ def _run_column_migrations() -> None:
                 conn.execute(text("ALTER TABLE users ADD COLUMN first_name TEXT"))
             if "username" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN username TEXT"))
+            # Migrate users who had the old boolean free trial but no paid credits yet.
+            conn.execute(text(
+                "UPDATE users SET paid_credits = paid_credits + 20, free_credit_available = 0"
+                " WHERE free_credit_available = 1 AND paid_credits = 0"
+            ))
             conn.commit()
         else:
             # PostgreSQL: ADD COLUMN IF NOT EXISTS is idempotent
@@ -152,6 +157,12 @@ def _run_column_migrations() -> None:
             ))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT"))
+            # Migrate users who had the old boolean free trial but no paid credits yet:
+            # give them 20 coins and clear the flag so they operate on the unified model.
+            conn.execute(text(
+                "UPDATE users SET paid_credits = paid_credits + 20, free_credit_available = FALSE"
+                " WHERE free_credit_available = TRUE AND paid_credits = 0"
+            ))
 
             # ── TIMESTAMP migration (VARCHAR → TIMESTAMPTZ) ──────────────────
             # Safe: USING clause parses ISO-8601 strings stored by now_iso().

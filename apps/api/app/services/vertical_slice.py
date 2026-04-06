@@ -208,8 +208,8 @@ class VerticalSliceService:
                     first_name=first_name,
                     username=username,
                     free_credits_granted=True,
-                    free_credit_available=True,
-                    paid_credits=0,
+                    free_credit_available=False,
+                    paid_credits=20,
                     created_at=now_iso(),
                 )
                 db.add(user)
@@ -405,10 +405,7 @@ class VerticalSliceService:
                 raise ValueError("user_not_found")
 
             # Debit credits
-            if user.free_credit_available:
-                user.free_credit_available = False
-                order.is_free_credit_used = True
-            elif user.paid_credits >= order.credit_cost:
+            if user.paid_credits >= order.credit_cost:
                 user.paid_credits -= order.credit_cost
                 if settings.free_demo_mode:
                     # Demo transactions: auto-refund spent paid credits after successful debit.
@@ -636,10 +633,9 @@ class VerticalSliceService:
                     if job:
                         job.status = "failed"
                         job.updated_at = now_iso()
-                    if not order.is_free_credit_used and not settings.free_demo_mode:
-                        user = db.get(UserRow, order.user_id)
-                        if user:
-                            user.paid_credits += order.credit_cost
+                    user = db.get(UserRow, order.user_id)
+                    if user:
+                        user.paid_credits += order.credit_cost
                 elif event_type == "policy_failed":
                     order.status = "failed"
                     order.fail_reason_code = "policy_failed"
@@ -684,7 +680,7 @@ class VerticalSliceService:
                         user = UserRow(
                             user_id=uid,
                             free_credits_granted=True,
-                            free_credit_available=True,
+                            free_credit_available=False,
                             paid_credits=0,
                             created_at=now_iso(),
                         )

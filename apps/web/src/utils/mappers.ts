@@ -59,7 +59,6 @@ export function mapPackageItemDto(dto: PackageItemDto): PackageItem {
 
 export function mapWalletDto(dto: WalletDto): Wallet {
   return {
-    freeCreditAvailable: dto.free_credit_available,
     paidCredits: dto.paid_credits,
   };
 }
@@ -84,7 +83,6 @@ export function mapUserProfileDto(dto: UserProfileDto): UserProfile {
     firstName: dto.first_name,
     username: dto.username,
     paidCredits: dto.paid_credits,
-    freeCreditAvailable: dto.free_credit_available,
     generationsCount: dto.generations_count,
     referralsCount: dto.referrals_count,
   };
