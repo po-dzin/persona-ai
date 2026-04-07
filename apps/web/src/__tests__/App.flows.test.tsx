@@ -36,7 +36,7 @@ vi.mock("../hooks/useCatalog", () => ({
 
 vi.mock("../hooks/useWalletAndPhotos", () => ({
   useWalletAndPhotos: () => ({
-    wallet: { freeCreditAvailable: true, paidCredits: 47 },
+    wallet: { paidCredits: 47 },
     photos: photosState,
     setPhotos: setPhotosMock,
     refresh: refreshMock,
@@ -86,12 +86,11 @@ describe("App flows", () => {
       firstName: "G",
       username: "g_user",
       paidCredits: 47,
-      freeCreditAvailable: true,
       generationsCount: 0,
       referralsCount: 0,
     });
     vi.mocked(sendPhotoToTelegram).mockResolvedValue(undefined);
-    vi.mocked(toggleFavorite).mockResolvedValue({ isFavorite: true });
+    vi.mocked(toggleFavorite).mockResolvedValue({ orderId: 'ord-1', isFavorite: true });
     vi.mocked(getPhotoShareLink).mockResolvedValue({ appLink: "https://persona.example/app?ref_style=hollywood" });
   });
   it("restores last screen from localStorage", async () => {

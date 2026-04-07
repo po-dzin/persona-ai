@@ -65,6 +65,8 @@ class Settings:
 
     base_gen_usd: float = float(os.getenv("BASE_GEN_USD", "0.25"))
 
+    admin_secret_token: str = os.getenv("ADMIN_SECRET_TOKEN", "")
+
 
 settings = Settings()
 

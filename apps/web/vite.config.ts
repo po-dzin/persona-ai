@@ -6,7 +6,7 @@ export default defineConfig({
     host: true,
     proxy: {
       // Forward API calls to local backend during development
-      "/v1": "http://localhost:8000",
+      "/v1": "http://localhost:8001",
     },
   },
   test: {

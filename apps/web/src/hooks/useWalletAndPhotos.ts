@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getBalance, getPhotos, type PhotoRecord, type Wallet } from "../utils/api";
 
 const FALLBACK_WALLET: Wallet = {
-  freeCreditAvailable: true,
   paidCredits: 0,
 };
 
@@ -22,8 +21,8 @@ export function useWalletAndPhotos(userId: string) {
         getBalance(userId),
         getPhotos(userId),
       ]);
-      setWallet(nextWallet);
-      setPhotos(nextPhotos);
+      setWallet(nextWallet ?? FALLBACK_WALLET);
+      setPhotos(Array.isArray(nextPhotos) ? nextPhotos : []);
       return nextPhotos;
     } catch {
       // Keep last known state if backend is unavailable

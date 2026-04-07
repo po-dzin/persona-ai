@@ -579,9 +579,8 @@ export function App() {
   const stylesById = useMemo(() => Object.fromEntries(styles.map((style) => [style.id, style])), [styles]);
   const hasEnoughCoinsForModel = useCallback((modelId: string) => {
     const cost = models.find((m) => m.id === modelId)?.coins ?? 0;
-    if (wallet.freeCreditAvailable) return true;
     return wallet.paidCredits >= cost;
-  }, [models, wallet.freeCreditAvailable, wallet.paidCredits]);
+  }, [models, wallet.paidCredits]);
 
   const chargeCoinsOptimistically = useCallback((orderId: string, cost: number | null | undefined) => {
     const normalizedCost = typeof cost === "number" && cost > 0 ? Math.round(cost) : 0;
@@ -774,6 +773,7 @@ export function App() {
     setPrefilledUploadPhoto(null);
     setFlowInitialCustomPrompt("");
     setFlowInitialCustomModelId(undefined);
+    setFlowStyleOpen(true);
     setSelectedStyle(styles[0] || null);
     setSelectedPrompt("");
     setSelectedModelId(models[0]?.id || "nano-banana-v1");
@@ -1096,7 +1096,7 @@ export function App() {
       await sendPhotoToTelegram(selectedPhoto.orderId);
       setTelegramModalOpen(true);
     } catch {
-      setTelegramModalOpen(true); // show confirmation even if bot send fails (no bot token in dev)
+      // silently ignore — user will see no feedback, which is better than false "success"
     }
   }, [selectedPhoto]);
 
@@ -1307,12 +1307,14 @@ export function App() {
       <Modal
         isOpen={paywallModalOpen}
         title="Нужны монеты"
-        description="Баланс недостаточен для генерации. Пополнить Starter пакет?"
-        actionLabel="Купить Starter"
+        description="Баланса недостаточно для генерации. Пополните счёт — монеты начисляются мгновенно."
+        actionLabel="Пополнить баланс"
         onAction={() => {
-          const starter = packages.find((pkg) => pkg.code === "STARTER");
-          if (starter) handleSelectPackage(starter);
           setPaywallModalOpen(false);
+          setFlowUploadOpen(false);
+          setFlowStyleOpen(false);
+          setStylePreviewOpen(false);
+          setActiveScreen("balance");
         }}
         onClose={() => setPaywallModalOpen(false)}
       />

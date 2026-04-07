@@ -29,7 +29,6 @@ export interface PackageItemDto {
 }
 
 export interface WalletDto {
-  free_credit_available: boolean;
   paid_credits: number;
 }
 
@@ -50,7 +49,6 @@ export interface UserProfileDto {
   first_name: string | null;
   username: string | null;
   paid_credits: number;
-  free_credit_available: boolean;
   generations_count: number;
   referrals_count: number;
 }

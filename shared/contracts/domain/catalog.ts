@@ -29,7 +29,6 @@ export interface PackageItem {
 }
 
 export interface Wallet {
-  freeCreditAvailable: boolean;
   paidCredits: number;
 }
 
@@ -50,7 +49,6 @@ export interface UserProfile {
   firstName: string | null;
   username: string | null;
   paidCredits: number;
-  freeCreditAvailable: boolean;
   generationsCount: number;
   referralsCount: number;
 }

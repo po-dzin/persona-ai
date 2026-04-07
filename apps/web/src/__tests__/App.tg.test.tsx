@@ -33,7 +33,7 @@ vi.mock("../hooks/useCatalog", () => ({
 
 vi.mock("../hooks/useWalletAndPhotos", () => ({
   useWalletAndPhotos: () => ({
-    wallet: { freeCreditAvailable: false, paidCredits: 0 },
+    wallet: { paidCredits: 0 },
     photos: [],
     setPhotos: vi.fn(),
     refresh: vi.fn().mockResolvedValue([]),
@@ -103,13 +103,12 @@ beforeEach(() => {
     firstName: null,
     username: null,
     paidCredits: 0,
-    freeCreditAvailable: false,
     generationsCount: 0,
     referralsCount: 0,
   });
   vi.mocked(getPhotoShareLink).mockResolvedValue({ appLink: "https://persona.example/app?ref_style=hollywood" });
   vi.mocked(sendPhotoToTelegram).mockResolvedValue(undefined);
-  vi.mocked(toggleFavorite).mockResolvedValue({ isFavorite: true });
+  vi.mocked(toggleFavorite).mockResolvedValue({ orderId: 'ord-1', isFavorite: true });
 });
 
 afterEach(() => {
