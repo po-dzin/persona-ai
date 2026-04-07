@@ -6,15 +6,15 @@ import app.services.vertical_slice as vertical_slice_mod
 from app.services.vertical_slice import VerticalSliceService
 
 DEFAULT_MODEL = "nano-banana-v1"
+WELCOME_COINS = 20  # coins granted to every new user on signup
 
 
-def _seed_user(user_id: str, *, paid_credits: int = 0, free_credit_available: bool = True) -> None:
+def _seed_user(user_id: str, *, paid_credits: int = 0) -> None:
     """Directly set user balance via DB for test setup."""
     with get_session() as db:
         user = db.get(UserRow, user_id)
         if user is None:
             raise RuntimeError(f"User {user_id!r} not found — call svc.get_or_create_user first")
-        user.free_credit_available = free_credit_available
         user.paid_credits = paid_credits
         db.commit()
 
@@ -30,23 +30,29 @@ def create_order(svc: VerticalSliceService, user_id: str = "u1", model_id: str =
     return order.order_id
 
 
-def test_free_generation_is_one_time_per_user() -> None:
+def test_new_user_gets_welcome_coins() -> None:
+    """New users start with WELCOME_COINS paid credits."""
     svc = VerticalSliceService()
+    svc.get_or_create_user("u-welcome")
+    balance = svc.get_balance("u-welcome")
+    assert balance["paid_credits"] == WELCOME_COINS
 
-    order_1 = create_order(svc)
-    result_1 = svc.start_order(order_1)
-    assert result_1["result"] == "enqueued"
-    assert result_1["order"]["is_free_credit_used"] is True
 
-    order_2 = create_order(svc)
-    result_2 = svc.start_order(order_2)
-    assert result_2["result"] == "paywall_required"
+def test_paid_credit_spend_and_paywall() -> None:
+    """User with 0 coins gets paywall_required."""
+    svc = VerticalSliceService()
+    svc.get_or_create_user("u1")
+    _seed_user("u1", paid_credits=0)
+
+    order_id = create_order(svc)
+    result = svc.start_order(order_id)
+    assert result["result"] == "paywall_required"
 
 
 def test_paid_credit_spend_and_technical_refund() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u1")
-    _seed_user("u1", paid_credits=50, free_credit_available=False)
+    _seed_user("u1", paid_credits=50)
 
     order_id = create_order(svc, model_id="nano-banana-pro")
     started = svc.start_order(order_id)
@@ -65,7 +71,7 @@ def test_paid_credit_spend_and_technical_refund() -> None:
 def test_policy_failure_no_auto_refund() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u1")
-    _seed_user("u1", paid_credits=50, free_credit_available=False)
+    _seed_user("u1", paid_credits=50)
 
     order_id = create_order(svc, model_id="nano-banana-pro")
     started = svc.start_order(order_id)
@@ -83,6 +89,8 @@ def test_policy_failure_no_auto_refund() -> None:
 
 def test_model_routing_is_deterministic() -> None:
     svc = VerticalSliceService()
+    svc.get_or_create_user("u1")
+    _seed_user("u1", paid_credits=50)
     order_id = create_order(svc, model_id="nano-banana-pro")
     started = svc.start_order(order_id)
     assert started["job"]["provider"] == "nano_banana"
@@ -93,30 +101,34 @@ def test_volume_bonus_credits_on_purchase() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u-bonus")
 
-    # BASIC: 350 base coins + 5% bonus = ceil(350 * 5 / 100) = 18 → 368 total
+    # BASIC: 350 base + 5% bonus = ceil(350 * 5 / 100) = 18 → delta +368
+    before_basic = svc.get_balance("u-bonus")["paid_credits"]
     result = svc.purchase("u-bonus", "BASIC")
-    expected = 350 + math.ceil(350 * 5 / 100)
-    assert result["wallet"]["paid_credits"] == expected, (
-        f"Expected {expected} coins for BASIC+5%, got {result['wallet']['paid_credits']}"
+    basic_delta = 350 + math.ceil(350 * 5 / 100)
+    assert result["wallet"]["paid_credits"] == before_basic + basic_delta, (
+        f"Expected +{basic_delta} coins for BASIC+5%"
     )
 
-    # POPULAR: 800 base + 10% = ceil(800 * 10 / 100) = 80 → 880 total (cumulative)
+    # POPULAR: 800 base + 10% = 80 → delta +880 on top of current balance
+    before_popular = svc.get_balance("u-bonus")["paid_credits"]
     result2 = svc.purchase("u-bonus", "POPULAR")
-    popular_bonus = math.ceil(800 * 10 // 100)
-    assert result2["wallet"]["paid_credits"] == expected + 800 + popular_bonus
+    popular_delta = 800 + math.ceil(800 * 10 / 100)
+    assert result2["wallet"]["paid_credits"] == before_popular + popular_delta
 
-    # STARTER: 0% bonus — exactly 150 coins added
+    # STARTER: 0% bonus — exactly +150 coins
     svc.get_or_create_user("u-starter")
+    before_starter = svc.get_balance("u-starter")["paid_credits"]
     res = svc.purchase("u-starter", "STARTER")
-    assert res["wallet"]["paid_credits"] == 150
+    assert res["wallet"]["paid_credits"] == before_starter + 150
 
 
 def test_purchase_accepts_legacy_package_codes() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u-legacy")
+    before = svc.get_balance("u-legacy")["paid_credits"]
 
     res = svc.purchase("u-legacy", "STARTER_STARS")
-    assert res["wallet"]["paid_credits"] == 150
+    assert res["wallet"]["paid_credits"] == before + 150
 
 
 def test_demo_mode_test_package_gives_1000_credits(monkeypatch) -> None:
@@ -125,24 +137,28 @@ def test_demo_mode_test_package_gives_1000_credits(monkeypatch) -> None:
 
     svc = vertical_slice_mod.VerticalSliceService()
     svc.get_or_create_user("u-demo-test-package")
+    before = svc.get_balance("u-demo-test-package")["paid_credits"]
 
     res = svc.purchase("u-demo-test-package", "TEST")
-    assert res["wallet"]["paid_credits"] == 1000
+    assert res["wallet"]["paid_credits"] == before + 1000
 
 
-def test_demo_mode_auto_refunds_spent_paid_credits(monkeypatch) -> None:
+def test_demo_mode_coins_spent_normally_refunded_on_failure(monkeypatch) -> None:
+    """In demo mode coins are spent just like production; refund only on technical failure."""
     patched_settings = dc_replace(vertical_slice_mod.settings, free_demo_mode=True)
     monkeypatch.setattr(vertical_slice_mod, "settings", patched_settings)
 
     svc = vertical_slice_mod.VerticalSliceService()
     svc.get_or_create_user("u-demo-refund")
-    _seed_user("u-demo-refund", paid_credits=50, free_credit_available=False)
+    _seed_user("u-demo-refund", paid_credits=50)
 
     order_id = create_order(svc, user_id="u-demo-refund", model_id="nano-banana-pro")
     started = svc.start_order(order_id)
     assert started["result"] == "enqueued"
-    assert started["wallet"]["paid_credits"] == 50
+    # Coins are deducted normally (50 cost for pro)
+    assert started["wallet"]["paid_credits"] == 0
 
+    # Technical failure → coins are refunded
     svc.ingest_webhook(
         "nano_banana",
         event_id="evt-tech-demo-1",

@@ -20,6 +20,7 @@ if str(REPO_ROOT) not in sys.path:
 from app.core.db import init_db
 from app.core.settings import settings
 from app.routers.v1 import router as v1_router
+from app.routers.admin import router as admin_router
 from app.services.vertical_slice import VerticalSliceService
 
 
@@ -68,10 +69,23 @@ def create_app() -> FastAPI:
 
     app.state.slice_service = VerticalSliceService()
     app.include_router(v1_router)
+    app.include_router(admin_router)
 
     @app.get("/healthz", tags=["infra"])
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
+
+    # Serve built admin app (present after Docker build or manual build)
+    admin_dist = REPO_ROOT / "apps" / "admin" / "dist"
+    if admin_dist.exists():
+        admin_assets = admin_dist / "assets"
+        if admin_assets.exists():
+            app.mount("/admin/assets", StaticFiles(directory=str(admin_assets)), name="admin-assets")
+
+        @app.get("/admin", include_in_schema=False)
+        @app.get("/admin/", include_in_schema=False)
+        def admin_root() -> FileResponse:
+            return FileResponse(str(admin_dist / "index.html"))
 
     # Serve built React app (present after Docker build)
     web_dist = REPO_ROOT / "apps" / "web" / "dist"

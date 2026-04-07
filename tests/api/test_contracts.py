@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from app.core.db import UserRow, get_session
 from app.main import create_app
 
 
@@ -9,6 +10,21 @@ def _client():
 
 def _headers(user_id: str) -> dict[str, str]:
     return {"X-Dev-User-Id": user_id}
+
+
+def _ensure_user(client: TestClient, user_id: str) -> None:
+    """Hit balance endpoint to auto-create the user row."""
+    client.get("/v1/me/balance", headers=_headers(user_id))
+
+
+def _seed_balance(user_id: str, paid_credits: int) -> None:
+    """Directly set paid_credits for test setup (call after _ensure_user)."""
+    with get_session() as db:
+        user = db.get(UserRow, user_id)
+        if user is None:
+            raise RuntimeError(f"User {user_id!r} not found — call _ensure_user first")
+        user.paid_credits = paid_credits
+        db.commit()
 
 
 def test_packages_endpoint_exposes_5_tiers() -> None:
@@ -46,6 +62,10 @@ def test_paywall_then_purchase_then_resume() -> None:
     user_id = "u-pay"
     hdrs = _headers(user_id)
 
+    # Create user then seed to exactly 10 coins (one v1 generation at 10 coins)
+    _ensure_user(client, user_id)
+    _seed_balance(user_id, 10)
+
     up = client.post("/v1/uploads", json={"filename": "a.jpg"}, headers=hdrs).json()
     order = client.post(
         "/v1/orders",
@@ -53,11 +73,11 @@ def test_paywall_then_purchase_then_resume() -> None:
         headers=hdrs,
     ).json()["order"]
 
-    # consume free credit
+    # spend the 10 coins
     first = client.post(f"/v1/orders/{order['order_id']}/start", json={}, headers=hdrs).json()
     assert first["result"] == "enqueued"
 
-    # second order requires paywall
+    # second order requires paywall (0 coins left)
     up2 = client.post("/v1/uploads", json={"filename": "b.jpg"}, headers=hdrs).json()
     order2 = client.post(
         "/v1/orders",
@@ -82,32 +102,34 @@ def test_paywall_then_purchase_then_resume() -> None:
 
 
 def test_purchase_basic_applies_volume_bonus() -> None:
-    """BASIC package must credit 350 + 5% = 368 coins."""
+    """BASIC package must credit exactly 350 + 5% = 368 coins on top of existing balance."""
     import math
     client = _client()
     hdrs = _headers("u-basic-bonus")
 
+    before = client.get("/v1/me/balance", headers=hdrs).json()["wallet"]["paid_credits"]
     res = client.post(
         "/v1/purchase",
         json={"package_code": "BASIC", "provider": "telegram"},
         headers=hdrs,
     )
     assert res.status_code == 200
-    expected = 350 + math.ceil(350 * 5 / 100)
-    assert res.json()["wallet"]["paid_credits"] == expected
+    delta = 350 + math.ceil(350 * 5 / 100)  # 368
+    assert res.json()["wallet"]["paid_credits"] == before + delta
 
 
 def test_purchase_accepts_legacy_package_code() -> None:
     client = _client()
     hdrs = _headers("u-legacy-api")
 
+    before = client.get("/v1/me/balance", headers=hdrs).json()["wallet"]["paid_credits"]
     res = client.post(
         "/v1/purchase",
         json={"package_code": "STARTER_STARS", "provider": "telegram"},
         headers=hdrs,
     )
     assert res.status_code == 200
-    assert res.json()["wallet"]["paid_credits"] == 150
+    assert res.json()["wallet"]["paid_credits"] == before + 150
 
 
 def test_purchase_invoice_returns_invoice_link_even_in_demo_mode(monkeypatch) -> None:
@@ -147,19 +169,23 @@ def test_demo_mode_test_package_gives_1000_credits(monkeypatch) -> None:
     client = _client()
     hdrs = _headers("u-api-test-package")
 
+    before = client.get("/v1/me/balance", headers=hdrs).json()["wallet"]["paid_credits"]
     res = client.post(
         "/v1/purchase",
         json={"package_code": "TEST", "provider": "telegram"},
         headers=hdrs,
     )
     assert res.status_code == 200
-    assert res.json()["wallet"]["paid_credits"] == 1000
+    assert res.json()["wallet"]["paid_credits"] == before + 1000
 
 
 def test_webhook_idempotency_no_double_credit() -> None:
+    import math
     client = _client()
     user_id = "u-idem"
     hdrs = _headers(user_id)
+
+    before = client.get("/v1/me/balance", headers=hdrs).json()["wallet"]["paid_credits"]
 
     event = {
         "event_id": "pay-evt-dup",
@@ -178,9 +204,9 @@ def test_webhook_idempotency_no_double_credit() -> None:
 
     assert first.get("accepted") is True
     assert second.get("deduplicated") is True
-    # BASIC: 350 + 5% = 368 coins
-    import math
-    assert wallet["paid_credits"] == 350 + math.ceil(350 * 5 / 100)
+    # BASIC: 350 + 5% = 368 — credited exactly once regardless of duplicate webhook
+    delta = 350 + math.ceil(350 * 5 / 100)
+    assert wallet["paid_credits"] == before + delta
 
 
 def test_generate_and_provider_webhook_finalize_photo() -> None:
@@ -359,13 +385,12 @@ def test_profile_endpoint_returns_real_stats() -> None:
     client = _client()
     hdrs = _headers("u-profile")
 
-    # Fresh user: 0 generations
+    # Fresh user: 20 welcome coins, 0 generations
     profile = client.get("/v1/me/profile", headers=hdrs).json()["profile"]
     assert profile["generations_count"] == 0
-    assert profile["paid_credits"] == 0
-    assert profile["free_credit_available"] is True
+    assert profile["paid_credits"] == 20
 
-    # Create and start an order (uses free credit)
+    # Create and start an order (costs 10 paid coins for nano-banana-v1)
     up = client.post("/v1/uploads", json={"filename": "p.jpg"}, headers=hdrs).json()
     order = client.post(
         "/v1/orders",
@@ -376,4 +401,4 @@ def test_profile_endpoint_returns_real_stats() -> None:
 
     profile2 = client.get("/v1/me/profile", headers=hdrs).json()["profile"]
     assert profile2["generations_count"] == 1
-    assert profile2["free_credit_available"] is False
+    assert profile2["paid_credits"] == 10  # 20 welcome coins − 10 for v1

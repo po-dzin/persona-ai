@@ -207,8 +207,6 @@ class VerticalSliceService:
                     user_id=user_id,
                     first_name=first_name,
                     username=username,
-                    free_credits_granted=True,
-                    free_credit_available=False,
                     paid_credits=20,
                     created_at=now_iso(),
                 )
@@ -251,7 +249,6 @@ class VerticalSliceService:
             "first_name": user.first_name,
             "username": user.username,
             "paid_credits": user.paid_credits,
-            "free_credit_available": user.free_credit_available,
             "generations_count": generations_count,
             "referrals_count": 0,
         }
@@ -356,7 +353,6 @@ class VerticalSliceService:
             aspect_ratio=aspect_ratio,
             status="awaiting_credit_or_payment",
             credit_cost=model["coins"],
-            is_free_credit_used=False,
             created_at=now_iso(),
             updated_at=now_iso(),
         )
@@ -407,9 +403,6 @@ class VerticalSliceService:
             # Debit credits
             if user.paid_credits >= order.credit_cost:
                 user.paid_credits -= order.credit_cost
-                if settings.free_demo_mode:
-                    # Demo transactions: auto-refund spent paid credits after successful debit.
-                    user.paid_credits += order.credit_cost
             else:
                 order.status = "awaiting_credit_or_payment"
                 order.updated_at = now_iso()
@@ -449,11 +442,7 @@ class VerticalSliceService:
                 order.status = "failed"
                 order.fail_reason_code = "technical_failed"
                 order.updated_at = now_iso()
-                # Refund credits
-                if order.is_free_credit_used:
-                    user.free_credit_available = True
-                else:
-                    user.paid_credits += order.credit_cost
+                user.paid_credits += order.credit_cost
                 db.commit()
                 raise ValueError(f"provider_error: {exc}") from exc
 
@@ -679,8 +668,6 @@ class VerticalSliceService:
                     if not user:
                         user = UserRow(
                             user_id=uid,
-                            free_credits_granted=True,
-                            free_credit_available=False,
                             paid_credits=0,
                             created_at=now_iso(),
                         )
@@ -745,7 +732,6 @@ class VerticalSliceService:
     @staticmethod
     def _serialize_wallet(user: UserRow) -> dict[str, Any]:
         return {
-            "free_credit_available": user.free_credit_available,
             "paid_credits": user.paid_credits,
         }
 
@@ -761,7 +747,6 @@ class VerticalSliceService:
             "aspect_ratio": order.aspect_ratio,
             "status": order.status,
             "credit_cost": order.credit_cost,
-            "is_free_credit_used": order.is_free_credit_used,
             "result_url": order.result_url,
             "fail_reason_code": order.fail_reason_code,
             "created_at": _to_iso(order.created_at),

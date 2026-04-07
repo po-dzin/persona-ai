@@ -37,13 +37,12 @@ def _headers(user_id: str) -> dict[str, str]:
     return {"X-Dev-User-Id": user_id}
 
 
-def _seed_user(user_id: str, *, paid_credits: int = 0, free_credit_available: bool = False) -> None:
+def _seed_user(user_id: str, *, paid_credits: int = 0) -> None:
     with get_session() as db:
         user = db.get(UserRow, user_id)
         if user is None:
             raise RuntimeError(f"User {user_id!r} not seeded — call /v1/me/balance first")
         user.paid_credits = paid_credits
-        user.free_credit_available = free_credit_available
         db.commit()
 
 
@@ -247,7 +246,7 @@ def test_generate_returns_paywall_when_no_credits() -> None:
     client = _client()
     uid = "u-paywall-gen"
     _ensure_user(client, uid)
-    _seed_user(uid, paid_credits=0, free_credit_available=False)
+    _seed_user(uid, paid_credits=0)
 
     sk = _source_key(client, uid)
     res = client.post(
@@ -525,20 +524,17 @@ def test_generate_response_contains_required_fields() -> None:
     assert result["job"]["provider"] == "nano_banana"
 
 
-def test_generate_free_credit_used_before_paid() -> None:
+def test_new_user_welcome_coins_deducted_on_generation() -> None:
+    """New users receive 20 welcome paid coins; generation deducts the model cost."""
     client = _client()
-    uid = "u-free-first"
-    # Fresh user has free_credit_available=True by default
+    uid = "u-welcome-gen"
     _ensure_user(client, uid)
 
-    # Reload to check state — fresh user has free credit
+    # Fresh user has 20 welcome coins
     balance = client.get("/v1/me/balance", headers=_headers(uid)).json()["wallet"]
-    assert balance["free_credit_available"] is True
+    assert balance["paid_credits"] == 20
 
-    result = _generate(client, uid, model_id="nano-banana-v1")
+    result = _generate(client, uid, model_id="nano-banana-v1")  # costs 10 coins
 
     assert result["result"] == "enqueued"
-    assert result["order"]["is_free_credit_used"] is True
-    assert result["wallet"]["free_credit_available"] is False
-    # Paid credits untouched
-    assert result["wallet"]["paid_credits"] == 0
+    assert result["wallet"]["paid_credits"] == 10  # 20 − 10

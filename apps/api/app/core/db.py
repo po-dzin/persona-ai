@@ -50,8 +50,6 @@ class UserRow(Base):
     user_id = Column(String, primary_key=True)
     first_name = Column(String, nullable=True)
     username = Column(String, nullable=True)
-    free_credits_granted = Column(Boolean, default=True, nullable=False)
-    free_credit_available = Column(Boolean, default=True, nullable=False)
     paid_credits = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False)
 
@@ -73,7 +71,6 @@ class OrderRow(Base):
     aspect_ratio = Column(String, nullable=False)
     status = Column(String, nullable=False, default="draft")
     credit_cost = Column(Integer, nullable=False, default=10)
-    is_free_credit_used = Column(Boolean, nullable=False, default=False)
     result_url = Column(Text, nullable=True)
     fail_reason_code = Column(String, nullable=True)
     is_favorite = Column(Boolean, nullable=False, default=False)
@@ -144,11 +141,6 @@ def _run_column_migrations() -> None:
                 conn.execute(text("ALTER TABLE users ADD COLUMN first_name TEXT"))
             if "username" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN username TEXT"))
-            # Migrate users who had the old boolean free trial but no paid credits yet.
-            conn.execute(text(
-                "UPDATE users SET paid_credits = paid_credits + 20, free_credit_available = 0"
-                " WHERE free_credit_available = 1 AND paid_credits = 0"
-            ))
             conn.commit()
         else:
             # PostgreSQL: ADD COLUMN IF NOT EXISTS is idempotent
@@ -157,12 +149,20 @@ def _run_column_migrations() -> None:
             ))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT"))
-            # Migrate users who had the old boolean free trial but no paid credits yet:
-            # give them 20 coins and clear the flag so they operate on the unified model.
-            conn.execute(text(
-                "UPDATE users SET paid_credits = paid_credits + 20, free_credit_available = FALSE"
-                " WHERE free_credit_available = TRUE AND paid_credits = 0"
-            ))
+            # ── Drop obsolete free-trial columns ─────────────────────────────
+            # free_credit_available: migrate old users first (give 20 coins) then drop.
+            fca_exists = conn.execute(text(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='users' AND column_name='free_credit_available'"
+            )).fetchone()
+            if fca_exists:
+                conn.execute(text(
+                    "UPDATE users SET paid_credits = paid_credits + 20"
+                    " WHERE free_credit_available = TRUE AND paid_credits = 0"
+                ))
+                conn.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS free_credit_available"))
+            conn.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS free_credits_granted"))
+            conn.execute(text("ALTER TABLE orders DROP COLUMN IF EXISTS is_free_credit_used"))
 
             # ── TIMESTAMP migration (VARCHAR → TIMESTAMPTZ) ──────────────────
             # Safe: USING clause parses ISO-8601 strings stored by now_iso().
