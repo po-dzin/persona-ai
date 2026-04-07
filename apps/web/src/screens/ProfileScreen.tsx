@@ -6,6 +6,8 @@ interface ProfileScreenProps {
   firstName?: string;
   username?: string;
   avatarUrl?: string;
+  isAdmin?: boolean;
+  tgInitData?: string;
   onOpenPrivacyPolicy?: () => void;
   onOpenTermsOfService?: () => void;
   onOpenPaymentsPolicy?: () => void;
@@ -23,6 +25,8 @@ export function ProfileScreen({
   firstName,
   username,
   avatarUrl,
+  isAdmin,
+  tgInitData,
   onOpenPrivacyPolicy,
   onOpenTermsOfService,
   onOpenPaymentsPolicy,
@@ -55,6 +59,36 @@ export function ProfileScreen({
           <div className="profile-stat-label">Монет</div>
         </div>
       </div>
+
+      {isAdmin ? (
+        <>
+          <div className="profile-section-title">Администрирование</div>
+          <div className="profile-card">
+            <a
+              className="profile-row"
+              href={`/admin${tgInitData ? `?tgInitData=${encodeURIComponent(tgInitData)}` : ""}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <div className="profile-row-icon profile-row-icon-support">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+                </svg>
+              </div>
+              <div className="profile-row-text">
+                <div className="profile-row-label">Admin Panel</div>
+                <div className="profile-row-desc">Статистика и управление</div>
+              </div>
+              <svg className="profile-row-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </a>
+          </div>
+        </>
+      ) : null}
 
       <div className="profile-section-title">Мы в соцсетях</div>
       <div className="profile-card">

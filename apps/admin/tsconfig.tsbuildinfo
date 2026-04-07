@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/components/card.tsx","./src/components/chart.tsx","./src/components/layout.tsx","./src/components/periodpicker.tsx","./src/pages/dashboard.tsx","./src/pages/generations.tsx","./src/pages/login.tsx","./src/pages/revenue.tsx","./src/pages/users.tsx"],"version":"5.9.3"}

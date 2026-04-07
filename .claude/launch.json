@@ -10,6 +10,13 @@
       "autoPort": true
     },
     {
+      "name": "Admin (Vite)",
+      "runtimeExecutable": "/opt/homebrew/Cellar/node/25.2.1/bin/node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5174"],
+      "cwd": "apps/admin",
+      "port": 5174
+    },
+    {
       "name": "API (FastAPI)",
       "runtimeExecutable": "/Users/G/Documents/Projects/PersonAI/.venv312/bin/uvicorn",
       "runtimeArgs": ["app.main:app", "--host", "0.0.0.0", "--port", "8001", "--app-dir", "apps/api"],

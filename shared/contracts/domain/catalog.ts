@@ -51,6 +51,7 @@ export interface UserProfile {
   paidCredits: number;
   generationsCount: number;
   referralsCount: number;
+  isAdmin: boolean;
 }
 
 export interface GenerateRequest {

@@ -51,6 +51,7 @@ export interface UserProfileDto {
   paid_credits: number;
   generations_count: number;
   referrals_count: number;
+  is_admin: boolean;
 }
 
 export interface GeneratePayloadDto {
