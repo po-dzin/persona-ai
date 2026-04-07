@@ -69,8 +69,11 @@ class Settings:
 
     @property
     def admin_user_ids(self) -> set[str]:
-        """Comma-separated Telegram user IDs allowed to access admin panel."""
-        raw = os.getenv("ADMIN_USER_IDS", "574824008,5314405296")
+        """Comma-separated Telegram user IDs allowed to access admin panel.
+        Fails closed: returns empty set if ADMIN_USER_IDS is not set,
+        so a misconfigured deployment never silently grants admin access.
+        """
+        raw = os.getenv("ADMIN_USER_IDS", "")
         return {uid.strip() for uid in raw.split(",") if uid.strip()}
 
 

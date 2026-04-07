@@ -28,7 +28,9 @@ export default function App() {
     localStorage.removeItem("admin_token");
     sessionStorage.removeItem("admin_tg_init_data");
     setToken("");
-    window.location.reload();
+    // Navigate to /admin without tgInitData query param so hasTgInitData()
+    // returns false and the login screen is shown instead of auto re-auth.
+    window.location.replace("/admin/");
   };
 
   return (
