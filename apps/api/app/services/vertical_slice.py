@@ -251,6 +251,7 @@ class VerticalSliceService:
             "paid_credits": user.paid_credits,
             "generations_count": generations_count,
             "referrals_count": 0,
+            "is_admin": user_id in settings.admin_user_ids,
         }
 
     # ---------------------------------------------------------------- catalog

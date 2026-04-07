@@ -59,6 +59,7 @@ const profileDto: UserProfileDto = {
   paid_credits: 20,
   generations_count: 5,
   referrals_count: 1,
+  is_admin: false,
 };
 
 const profileDomain = mapUserProfileDto(profileDto);

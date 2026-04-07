@@ -67,6 +67,15 @@ class Settings:
 
     admin_secret_token: str = os.getenv("ADMIN_SECRET_TOKEN", "")
 
+    @property
+    def admin_user_ids(self) -> set[str]:
+        """Comma-separated Telegram user IDs allowed to access admin panel.
+        Fails closed: returns empty set if ADMIN_USER_IDS is not set,
+        so a misconfigured deployment never silently grants admin access.
+        """
+        raw = os.getenv("ADMIN_USER_IDS", "")
+        return {uid.strip() for uid in raw.split(",") if uid.strip()}
+
 
 settings = Settings()
 

@@ -1193,6 +1193,8 @@ export function App() {
               firstName={profile?.firstName ?? tgUser?.first_name}
               username={profile?.username ?? tgUser?.username}
               avatarUrl={tgUser?.photo_url}
+              isAdmin={profile?.isAdmin ?? false}
+              tgInitData={window.Telegram?.WebApp?.initData ?? ""}
               onOpenPrivacyPolicy={() => setActiveLegalDoc("privacy")}
               onOpenTermsOfService={() => setActiveLegalDoc("terms")}
               onOpenPaymentsPolicy={() => setActiveLegalDoc("payments")}

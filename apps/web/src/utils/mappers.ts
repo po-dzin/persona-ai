@@ -85,6 +85,7 @@ export function mapUserProfileDto(dto: UserProfileDto): UserProfile {
     paidCredits: dto.paid_credits,
     generationsCount: dto.generations_count,
     referralsCount: dto.referrals_count,
+    isAdmin: dto.is_admin ?? false,
   };
 }
 

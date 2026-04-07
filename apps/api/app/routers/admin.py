@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy import text
 
+from app.core.auth import parse_tg_user
 from app.core.db import get_session, _is_sqlite
 from app.core.settings import settings
 
@@ -21,11 +22,28 @@ router = APIRouter(prefix="/admin/api", tags=["admin"])
 # ─────────────────────────── auth ────────────────────────────────
 
 
-def require_admin(x_admin_token: str = Header(default="")) -> None:
-    if not settings.admin_secret_token:
-        raise HTTPException(status_code=503, detail="admin_not_configured")
-    if not hmac.compare_digest(x_admin_token, settings.admin_secret_token):
-        raise HTTPException(status_code=401, detail="unauthorized")
+def require_admin(
+    x_telegram_init_data: str = Header(default=""),
+    x_admin_token: str = Header(default=""),
+) -> None:
+    """
+    Two ways to authenticate:
+    1. X-Telegram-Init-Data — user must be in ADMIN_USER_IDS
+    2. X-Admin-Token — static token fallback (for scripts / curl)
+    """
+    # Try TG init data first
+    if x_telegram_init_data.strip():
+        user = parse_tg_user(x_telegram_init_data.strip())
+        if user and str(user.get("id", "")) in settings.admin_user_ids:
+            return
+        raise HTTPException(status_code=403, detail="not_admin")
+
+    # Fallback: static token (for scripts/curl)
+    if x_admin_token.strip() and settings.admin_secret_token:
+        if hmac.compare_digest(x_admin_token.strip(), settings.admin_secret_token):
+            return
+
+    raise HTTPException(status_code=401, detail="unauthorized")
 
 
 # ─────────────────────── SQL helpers ─────────────────────────────
@@ -76,7 +94,7 @@ def overview(days: int = Query(default=7, ge=1, le=90)):
     `days` controls the primary comparison period (1 / 7 / 30).
     Always returns today + period + alltime.
     """
-    with SessionLocal() as session:
+    with get_session() as session:
         total_users = _scalar(session, "SELECT COUNT(*) FROM users")
         paying_users = _scalar(
             session,
@@ -182,7 +200,7 @@ def overview(days: int = Query(default=7, ge=1, le=90)):
 @router.get("/timeseries", dependencies=[Depends(require_admin)])
 def timeseries(days: int = Query(default=30, ge=7, le=90)):
     """Daily breakdown for charts: users, generations, revenue."""
-    with SessionLocal() as session:
+    with get_session() as session:
         users_sql = f"""
             SELECT {_trunc_day()} as day, COUNT(*) as new_users
             FROM users WHERE {_interval(days)}
@@ -218,7 +236,7 @@ def timeseries(days: int = Query(default=30, ge=7, le=90)):
 @router.get("/revenue", dependencies=[Depends(require_admin)])
 def revenue(days: int = Query(default=30, ge=1, le=365)):
     """Revenue breakdown: by package, recent payments, totals."""
-    with SessionLocal() as session:
+    with get_session() as session:
         # By package
         by_package = _serialize_rows(_rows(
             session,
@@ -281,7 +299,7 @@ def revenue(days: int = Query(default=30, ge=1, le=365)):
 @router.get("/generations", dependencies=[Depends(require_admin)])
 def generations(days: int = Query(default=7, ge=1, le=90)):
     """Generation stats: by status, by style, by model, recent failures."""
-    with SessionLocal() as session:
+    with get_session() as session:
         # By status
         by_status = {
             r["status"]: r["cnt"]
@@ -423,7 +441,7 @@ def users_list(
         {where_sql}
     """
 
-    with SessionLocal() as session:
+    with get_session() as session:
         rows = _serialize_rows(_rows(session, sql, params))
         total = _scalar(session, count_sql, {k: v for k, v in params.items() if k not in ("limit", "offset")})
 
@@ -438,7 +456,7 @@ def users_list(
 @router.get("/users/{user_id}", dependencies=[Depends(require_admin)])
 def user_detail(user_id: str):
     """Full user profile: balance, orders history, payments history."""
-    with SessionLocal() as session:
+    with get_session() as session:
         user_row = session.execute(
             text("SELECT * FROM users WHERE user_id = :uid"), {"uid": user_id}
         ).fetchone()
