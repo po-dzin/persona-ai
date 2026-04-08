@@ -157,8 +157,8 @@ def test_admin_overview_counts_revenue(monkeypatch):
 
     res = client.get("/admin/api/overview?days=7", headers=_admin_headers())
     assert res.status_code == 200
-    # BASIC costs 399 stars
-    assert res.json()["revenue"]["period_stars"] == 399
+    # BASIC costs 537 stars
+    assert res.json()["revenue"]["period_stars"] == 537
     assert res.json()["users"]["paying"] == 1
 
 
@@ -194,7 +194,7 @@ def test_admin_revenue_structure(monkeypatch):
     assert res.status_code == 200
     body = res.json()
 
-    assert body["totals"]["stars"] == 199  # STARTER = 199 stars
+    assert body["totals"]["stars"] == 230  # STARTER = 230 stars
     assert body["totals"]["payments"] == 1
     assert body["totals"]["paying_users"] == 1
     assert len(body["by_package"]) >= 1
@@ -324,7 +324,7 @@ def test_admin_user_detail_full_profile(monkeypatch):
 
     assert body["user"]["user_id"] == "u-detail-test"
     assert body["stats"]["total_orders"] >= 1
-    assert body["stats"]["total_stars_paid"] == 399  # BASIC = 399 stars
+    assert body["stats"]["total_stars_paid"] == 537  # BASIC = 537 stars
     assert len(body["orders"]) >= 1
     assert len(body["payments"]) >= 1
 
@@ -335,4 +335,4 @@ def test_admin_user_detail_full_profile(monkeypatch):
 
     payment = body["payments"][0]
     assert payment["package_code"] == "BASIC"
-    assert payment["amount"] == 399
+    assert payment["amount"] == 537

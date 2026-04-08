@@ -13,11 +13,11 @@ export type JobStatus = (typeof JOB_STATUSES)[number];
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const PACKAGE_MATRIX = [
-  { code: "STARTER", title: "Starter", credits: 150, starsPrice: 199, bonusPercent: 0, sortOrder: 10 },
-  { code: "BASIC", title: "Basic", credits: 350, starsPrice: 399, bonusPercent: 5, sortOrder: 20 },
-  { code: "POPULAR", title: "Popular", credits: 800, starsPrice: 799, bonusPercent: 10, sortOrder: 30 },
-  { code: "PRO", title: "Pro", credits: 2000, starsPrice: 1599, bonusPercent: 18, sortOrder: 40 },
-  { code: "ULTRA", title: "Ultra", credits: 5000, starsPrice: 2999, bonusPercent: 25, sortOrder: 50 },
+  { code: "STARTER", title: "Starter", credits: 150,  starsPrice: 230,  bonusPercent: 0,  sortOrder: 10 },
+  { code: "BASIC",   title: "Basic",   credits: 365,  starsPrice: 537,  bonusPercent: 4,  sortOrder: 20 },
+  { code: "POPULAR", title: "Popular", credits: 875,  starsPrice: 1227, bonusPercent: 9,  sortOrder: 30 },
+  { code: "PRO",     title: "Pro",     credits: 2300, starsPrice: 3067, bonusPercent: 15, sortOrder: 40 },
+  { code: "ULTRA",   title: "Ultra",   credits: 6000, starsPrice: 7667, bonusPercent: 20, sortOrder: 50 },
 ] as const;
 
 export const PACKAGE_CREDITS = Object.fromEntries(

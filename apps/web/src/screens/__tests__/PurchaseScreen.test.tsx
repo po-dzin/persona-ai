@@ -21,7 +21,7 @@ describe("PurchaseScreen", () => {
 
     expect(screen.getByText("Подтверждение")).toBeInTheDocument();
     expect(screen.getByText("К оплате")).toBeInTheDocument();
-    expect(screen.getByText("799 ⭐")).toBeInTheDocument();
+    expect(screen.getByText("1227 ⭐")).toBeInTheDocument();
 
     const tgMethod = screen.getByRole("button", { name: /Telegram Stars/i });
     expect(tgMethod).toHaveClass("active");
@@ -31,7 +31,7 @@ describe("PurchaseScreen", () => {
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({ code: "POPULAR", priceStars: 799 }),
+      expect.objectContaining({ code: "POPULAR", priceStars: 1227 }),
     );
   });
 });

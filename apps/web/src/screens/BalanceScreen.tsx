@@ -8,10 +8,10 @@ interface BalanceScreenProps {
 }
 
 const PACKAGE_BONUS: Record<string, string> = {
-  BASIC: "+5% бонус",
-  POPULAR: "+10% бонус",
-  PRO: "+18% бонус",
-  ULTRA: "+25% бонус",
+  BASIC: "+4% бонус",
+  POPULAR: "+9% бонус",
+  PRO: "+15% бонус",
+  ULTRA: "+20% бонус",
 };
 
 const PACKAGE_ICONS: Record<string, string> = {
