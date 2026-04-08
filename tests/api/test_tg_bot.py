@@ -28,7 +28,7 @@ def test_successful_payment_refunds_stars_in_demo_mode(monkeypatch) -> None:
     tg_bot.handle_successful_payment(
         user_id="12345",
         payload="PACKAGE_STARTER",
-        stars=199,
+        stars=230,
         telegram_payment_charge_id="chg_123",
         svc=svc,
     )
@@ -54,7 +54,7 @@ def test_successful_payment_no_refund_when_demo_mode_disabled(monkeypatch) -> No
     tg_bot.handle_successful_payment(
         user_id="12345",
         payload="PACKAGE_STARTER",
-        stars=199,
+        stars=230,
         telegram_payment_charge_id="chg_123",
         svc=svc,
     )

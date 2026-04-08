@@ -41,12 +41,16 @@ export default function Users() {
 
       {/* Controls */}
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <input
-          placeholder="Поиск по ID, username, имени..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          style={{ flex: 1, minWidth: 220 }}
-        />
+        <label htmlFor="users-search" style={{ display: "contents" }}>
+          <input
+            id="users-search"
+            placeholder="Поиск по ID, username, имени..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            style={{ flex: 1, minWidth: 220 }}
+            aria-label="Поиск пользователей"
+          />
+        </label>
         {(["", "paying", "active"] as Filter[]).map((f) => (
           <button
             key={f}

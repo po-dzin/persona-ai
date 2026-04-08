@@ -62,16 +62,17 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
     collapsed   ? "sidebar--collapsed" : "",
   ].filter(Boolean).join(" ");
 
+  const layoutClass = ["layout", collapsed ? "layout--collapsed" : ""].filter(Boolean).join(" ");
+
   return (
-    <div className="layout">
+    <div className={layoutClass}>
       {/* Mobile top bar */}
       <header className="topbar">
         <button className="topbar-burger" onClick={() => setMobileOpen((v) => !v)} aria-label="Menu">
           {mobileOpen ? <IconClose /> : <IconMenu />}
         </button>
         <div className="topbar-title">
-          <IconLogo size={16} />
-          <span>Persona</span>
+          Persona <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400, marginLeft: 4 }}>Admin</span>
         </div>
       </header>
 
@@ -90,6 +91,7 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
             className="sidebar-collapse-btn"
             onClick={() => setCollapsed((v) => !v)}
             title={collapsed ? "Развернуть" : "Свернуть"}
+            aria-label={collapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}
           >
             {collapsed ? <IconChevronRight size={15} /> : <IconChevronLeft size={15} />}
           </button>
@@ -102,6 +104,8 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
               className={`nav-item${page === id ? " nav-item--active" : ""}`}
               onClick={() => handleNav(id)}
               title={label}
+              aria-label={label}
+              aria-current={page === id ? "page" : undefined}
             >
               <span className="nav-item-icon"><Icon size={18} /></span>
               <span className="nav-item-label">{label}</span>
@@ -110,7 +114,7 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
         </nav>
 
         <div className="sidebar-footer">
-          <button className="nav-item nav-item--logout" onClick={onLogout} title="Выйти">
+          <button className="nav-item nav-item--logout" onClick={onLogout} title="Выйти" aria-label="Выйти из панели">
             <span className="nav-item-icon"><IconLogout size={18} /></span>
             <span className="nav-item-label">Выйти</span>
           </button>
@@ -118,7 +122,7 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
       </aside>
 
       {/* Main content */}
-      <main className="layout-main">
+      <main className="layout-main" tabIndex={-1}>
         {children}
       </main>
     </div>

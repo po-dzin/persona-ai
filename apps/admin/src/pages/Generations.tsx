@@ -15,17 +15,20 @@ const STATUS_COLORS: Record<string, string> = {
 export default function Generations() {
   const [days, setDays] = useState(7);
   const [data, setData] = useState<GenerationsData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    setLoading(true);
     setError("");
     api.generations(days)
       .then(setData)
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [days]);
 
   if (error) return <Err msg={error} />;
-  if (!data) return <Spin />;
+  if (loading || !data) return <Spin />;
 
   const { by_status, top_styles, by_model, recent_failed, avg_gen_seconds } = data;
   const total = Object.values(by_status).reduce((a, b) => a + b, 0);

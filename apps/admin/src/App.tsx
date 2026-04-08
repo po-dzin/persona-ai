@@ -13,8 +13,22 @@ function hasTgInitData(): boolean {
   return !!(params.get("tgInitData") || sessionStorage.getItem("admin_tg_init_data"));
 }
 
+/** Support ?token=xxx URL param for local dev convenience */
+function getTokenFromUrl(): string {
+  const params = new URLSearchParams(window.location.search);
+  const t = params.get("token") ?? "";
+  if (t) {
+    localStorage.setItem("admin_token", t);
+    // Remove token from URL so it's not visible in browser history
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete("token");
+    window.history.replaceState({}, "", clean.toString());
+  }
+  return t;
+}
+
 export default function App() {
-  const [token, setToken] = useState(() => localStorage.getItem("admin_token") ?? "");
+  const [token, setToken] = useState(() => getTokenFromUrl() || localStorage.getItem("admin_token") || "");
   const [page, setPage] = useState<Page>("dashboard");
 
   // If TG init data is present (opened from mini-app), skip login screen
@@ -34,11 +48,16 @@ export default function App() {
   };
 
   return (
-    <Layout page={page} onNavigate={setPage} onLogout={logout}>
-      {page === "dashboard" && <Dashboard />}
-      {page === "revenue" && <Revenue />}
-      {page === "generations" && <Generations />}
-      {page === "users" && <Users />}
-    </Layout>
+    <>
+      <a href="#main-content" className="skip-link">Перейти к содержимому</a>
+      <Layout page={page} onNavigate={setPage} onLogout={logout}>
+        <div id="main-content">
+          {page === "dashboard" && <Dashboard />}
+          {page === "revenue" && <Revenue />}
+          {page === "generations" && <Generations />}
+          {page === "users" && <Users />}
+        </div>
+      </Layout>
+    </>
   );
 }

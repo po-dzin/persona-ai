@@ -1,4 +1,4 @@
-import math
+
 from dataclasses import replace as dc_replace
 
 from app.core.db import UserRow, get_session
@@ -97,25 +97,23 @@ def test_model_routing_is_deterministic() -> None:
 
 
 def test_volume_bonus_credits_on_purchase() -> None:
-    """Purchasing a package with bonus_percent > 0 must credit base + bonus coins."""
+    """Purchasing a package credits exactly package.credits coins (bonus already included)."""
     svc = VerticalSliceService()
     svc.get_or_create_user("u-bonus")
 
-    # BASIC: 350 base + 5% bonus = ceil(350 * 5 / 100) = 18 → delta +368
+    # BASIC: 365 total coins (bonus already included in credits)
     before_basic = svc.get_balance("u-bonus")["paid_credits"]
     result = svc.purchase("u-bonus", "BASIC")
-    basic_delta = 350 + math.ceil(350 * 5 / 100)
-    assert result["wallet"]["paid_credits"] == before_basic + basic_delta, (
-        f"Expected +{basic_delta} coins for BASIC+5%"
+    assert result["wallet"]["paid_credits"] == before_basic + 365, (
+        "Expected +365 coins for BASIC"
     )
 
-    # POPULAR: 800 base + 10% = 80 → delta +880 on top of current balance
+    # POPULAR: 875 total coins
     before_popular = svc.get_balance("u-bonus")["paid_credits"]
     result2 = svc.purchase("u-bonus", "POPULAR")
-    popular_delta = 800 + math.ceil(800 * 10 / 100)
-    assert result2["wallet"]["paid_credits"] == before_popular + popular_delta
+    assert result2["wallet"]["paid_credits"] == before_popular + 875
 
-    # STARTER: 0% bonus — exactly +150 coins
+    # STARTER: 150 coins (no bonus)
     svc.get_or_create_user("u-starter")
     before_starter = svc.get_balance("u-starter")["paid_credits"]
     res = svc.purchase("u-starter", "STARTER")

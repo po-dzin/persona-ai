@@ -28,14 +28,14 @@ interface StatCardProps {
 
 export function StatCard({ label, value, sub, color }: StatCardProps) {
   return (
-    <Card>
-      <div style={{ color: "var(--muted)", fontSize: 12, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>
+    <Card style={{ padding: 14 }}>
+      <div style={{ color: "var(--muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6, lineHeight: 1.3 }}>
         {label}
       </div>
-      <div style={{ fontSize: 28, fontWeight: 700, color: color ?? "var(--text)", lineHeight: 1 }}>
+      <div style={{ fontSize: 24, fontWeight: 700, color: color ?? "var(--text)", lineHeight: 1 }}>
         {value}
       </div>
-      {sub && <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 6 }}>{sub}</div>}
+      {sub && <div style={{ color: "var(--muted)", fontSize: 11, marginTop: 5 }}>{sub}</div>}
     </Card>
   );
 }

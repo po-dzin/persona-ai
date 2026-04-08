@@ -10,7 +10,6 @@ from app.adapters.http_client import ProviderHTTPError
 from app.adapters.provider_registry import build_provider_registry
 from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, get_session
 from app.core.settings import settings
-import math
 from app.services.package_codes import normalize_package_code
 
 logger = logging.getLogger(__name__)
@@ -673,13 +672,11 @@ class VerticalSliceService:
                             created_at=now_iso(),
                         )
                         db.add(user)
-                    base_credits = package["credits"]
-                    bonus_pct = package["bonus_percent"]
-                    bonus_credits = math.ceil(base_credits * bonus_pct / 100) if bonus_pct else 0
-                    user.paid_credits += base_credits + bonus_credits
+                    total_credits = package["credits"]
+                    user.paid_credits += total_credits
                     logger.info(
-                        "payment_credited user_id=%s package=%s credits=%d+%d total_now=%d",
-                        uid, package_code, base_credits, bonus_credits, user.paid_credits,
+                        "payment_credited user_id=%s package=%s credits=%d total_now=%d",
+                        uid, package_code, total_credits, user.paid_credits,
                     )
                 else:
                     logger.warning(

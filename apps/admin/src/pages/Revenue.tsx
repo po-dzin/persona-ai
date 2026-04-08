@@ -6,29 +6,32 @@ import PeriodPicker from "../components/PeriodPicker";
 
 const PACKAGE_LABELS: Record<string, string> = {
   STARTER_STARS: "Starter 150",
-  BASIC_STARS: "Basic 350",
-  POPULAR_STARS: "Popular 800",
-  PRO_STARS: "Pro 2000",
-  ULTRA_STARS: "Ultra 5000",
+  BASIC_STARS: "Basic 365",
+  POPULAR_STARS: "Popular 875",
+  PRO_STARS: "Pro 2300",
+  ULTRA_STARS: "Ultra 6000",
 };
 
 export default function Revenue() {
   const [days, setDays] = useState(30);
   const [data, setData] = useState<RevenueData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    setLoading(true);
     setError("");
     api.revenue(days)
       .then(setData)
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
   }, [days]);
 
   if (error) return <Err msg={error} />;
-  if (!data) return <Spin />;
+  if (loading || !data) return <Spin />;
 
   const { totals, by_package, recent } = data;
-  const usd = (stars: number) => `$${(stars * 0.013).toFixed(0)}`;
+  const usd = (stars: number) => `$${(stars * 0.0151).toFixed(2)}`;
 
   return (
     <div>

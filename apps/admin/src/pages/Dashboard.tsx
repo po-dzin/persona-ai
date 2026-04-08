@@ -34,7 +34,7 @@ export default function Dashboard() {
       </div>
 
       {/* Top stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12, marginBottom: 24 }}>
         <StatCard label="Всего пользователей" value={users.total.toLocaleString()} sub={`+${users.new_period} за период`} />
         <StatCard label="Новые сегодня" value={users.new_today} sub={`DAU: ${users.dau}`} />
         <StatCard label="Платящих" value={users.paying.toLocaleString()} sub={`Конверсия ${users.conversion_pct}%`} color="var(--green)" />
@@ -46,7 +46,7 @@ export default function Dashboard() {
 
       {/* Charts */}
       {ts && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
           <Card>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--muted)" }}>НОВЫЕ ПОЛЬЗОВАТЕЛИ</div>
             <LineChart
@@ -110,9 +110,13 @@ function Spinner() {
 }
 
 function ErrorBox({ msg }: { msg: string }) {
+  const text =
+    msg === "unauthorized" ? "Неверный токен — обновите страницу." :
+    msg === "not_admin"    ? "Нет прав администратора." :
+    msg;
   return (
     <div style={{ background: "rgba(248,113,113,.1)", border: "1px solid var(--red)", borderRadius: "var(--radius)", padding: 20, color: "var(--red)" }}>
-      {msg === "unauthorized" ? "Неверный токен. Обновите страницу." : `Ошибка: ${msg}`}
+      {text}
     </div>
   );
 }

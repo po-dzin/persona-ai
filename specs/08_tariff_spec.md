@@ -22,11 +22,11 @@
 
 | Package | Coins | Price (⭐) | Bonus |
 |---|---:|---:|---:|
-| Starter | 150 | 199 | — |
-| Basic | 350 | 399 | +5% |
-| Popular | 800 | 799 | +10% |
-| Pro | 2,000 | 1,599 | +18% |
-| Ultra | 5,000 | 2,999 | +25% |
+| Starter | 150 | 230 | — |
+| Basic | 365 | 537 | +4% |
+| Popular | 875 | 1,227 | +9% |
+| Pro | 2,300 | 3,067 | +15% |
+| Ultra | 6,000 | 7,667 | +20% |
 
 ## 4) Credit and paywall rules
 

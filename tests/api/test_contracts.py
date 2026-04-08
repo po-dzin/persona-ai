@@ -40,10 +40,10 @@ def test_packages_expose_bonus_percent() -> None:
     client = _client()
     packages = {p["code"]: p for p in client.get("/v1/packages").json()["packages"]}
     assert packages["STARTER"]["bonus_percent"] == 0
-    assert packages["BASIC"]["bonus_percent"] == 5
-    assert packages["POPULAR"]["bonus_percent"] == 10
-    assert packages["PRO"]["bonus_percent"] == 18
-    assert packages["ULTRA"]["bonus_percent"] == 25
+    assert packages["BASIC"]["bonus_percent"] == 4
+    assert packages["POPULAR"]["bonus_percent"] == 9
+    assert packages["PRO"]["bonus_percent"] == 15
+    assert packages["ULTRA"]["bonus_percent"] == 20
 
 
 def test_catalog_endpoints_styles_and_models() -> None:
@@ -102,8 +102,7 @@ def test_paywall_then_purchase_then_resume() -> None:
 
 
 def test_purchase_basic_applies_volume_bonus() -> None:
-    """BASIC package must credit exactly 350 + 5% = 368 coins on top of existing balance."""
-    import math
+    """BASIC package must credit exactly 365 coins (bonus already included) on top of existing balance."""
     client = _client()
     hdrs = _headers("u-basic-bonus")
 
@@ -114,8 +113,7 @@ def test_purchase_basic_applies_volume_bonus() -> None:
         headers=hdrs,
     )
     assert res.status_code == 200
-    delta = 350 + math.ceil(350 * 5 / 100)  # 368
-    assert res.json()["wallet"]["paid_credits"] == before + delta
+    assert res.json()["wallet"]["paid_credits"] == before + 365
 
 
 def test_purchase_accepts_legacy_package_code() -> None:
@@ -194,7 +192,7 @@ def test_webhook_idempotency_no_double_credit() -> None:
             "user_id": user_id,
             "package_code": "BASIC",
             "status": "paid",
-            "amount": 399,
+            "amount": 537,
         },
     }
 
@@ -204,9 +202,8 @@ def test_webhook_idempotency_no_double_credit() -> None:
 
     assert first.get("accepted") is True
     assert second.get("deduplicated") is True
-    # BASIC: 350 + 5% = 368 — credited exactly once regardless of duplicate webhook
-    delta = 350 + math.ceil(350 * 5 / 100)
-    assert wallet["paid_credits"] == before + delta
+    # BASIC: 365 coins (bonus included) — credited exactly once regardless of duplicate webhook
+    assert wallet["paid_credits"] == before + 365
 
 
 def test_generate_and_provider_webhook_finalize_photo() -> None:

@@ -6,10 +6,13 @@ __pycache__/
 .pytest_cache/
 node_modules/
 apps/web/dist/
+apps/admin/dist/
 .DS_Store
 specs/Live Photo App.png
 .env
 .env.local
 .env.real
 
+dev.db
+vendor/
 dev.db

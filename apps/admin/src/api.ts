@@ -27,9 +27,19 @@ async function request<T>(path: string, params?: Record<string, string | number>
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)));
   }
-  const res = await fetch(url.toString(), { headers: authHeaders() });
-  if (res.status === 401 || res.status === 403) throw new Error("unauthorized");
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), { headers: authHeaders() });
+  } catch {
+    throw new Error("Нет соединения с API сервером");
+  }
+  if (res.status === 401) throw new Error("unauthorized");
+  if (res.status === 403) throw new Error("not_admin");
+  if (!res.ok) throw new Error(`Ошибка сервера: HTTP ${res.status}`);
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("API сервер недоступен");
+  }
   return res.json() as Promise<T>;
 }
 
