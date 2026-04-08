@@ -434,12 +434,17 @@ def users_list(
         LIMIT :limit OFFSET :offset
     """
 
-    count_sql = f"""
-        SELECT COUNT(DISTINCT u.user_id) FROM users u
+    # Wrap in a subquery so HAVING (for "paying" filter) is respected by COUNT
+    inner_sql = f"""
+        SELECT u.user_id
+        FROM users u
         LEFT JOIN orders o ON o.user_id = u.user_id
         LEFT JOIN payments p ON p.user_id = u.user_id
         {where_sql}
+        GROUP BY u.user_id
+        {having_clause}
     """
+    count_sql = f"SELECT COUNT(*) FROM ({inner_sql}) AS _sub"
 
     with get_session() as session:
         rows = _serialize_rows(_rows(session, sql, params))
@@ -457,15 +462,14 @@ def users_list(
 def user_detail(user_id: str):
     """Full user profile: balance, orders history, payments history."""
     with get_session() as session:
-        user_row = session.execute(
+        result = session.execute(
             text("SELECT * FROM users WHERE user_id = :uid"), {"uid": user_id}
-        ).fetchone()
+        )
+        user_row = result.fetchone()
         if not user_row:
             raise HTTPException(status_code=404, detail="user_not_found")
 
-        user_keys = session.execute(text("SELECT * FROM users WHERE user_id = :uid"), {"uid": user_id})
-        user = dict(zip(list(user_keys.keys()), user_row))
-        user = {k: _serialize(v) for k, v in user.items()}
+        user = {k: _serialize(v) for k, v in dict(zip(list(result.keys()), user_row)).items()}
 
         orders = _serialize_rows(_rows(
             session,

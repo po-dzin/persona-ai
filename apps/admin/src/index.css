@@ -14,6 +14,10 @@
   --yellow: #fbbf24;
   --radius: 10px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --sidebar-full: 220px;
+  --sidebar-rail: 64px;
+  --topbar-h: 52px;
 }
 
 body {
@@ -28,11 +32,7 @@ body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-button {
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-}
+button { cursor: pointer; font-family: inherit; font-size: 14px; }
 
 input {
   font-family: inherit;
@@ -47,25 +47,277 @@ input {
 }
 input:focus { border-color: var(--accent); }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+table { width: 100%; border-collapse: collapse; }
 th, td {
   text-align: left;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
-th {
-  color: var(--muted);
-  font-weight: 500;
-  white-space: nowrap;
-}
+th { color: var(--muted); font-weight: 500; white-space: nowrap; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: var(--surface2); }
 
-/* scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+
+/* ─── Layout shell ───────────────────────────────────────────── */
+
+.layout {
+  display: flex;
+  min-height: 100dvh;
+}
+
+.layout-main {
+  flex: 1;
+  overflow: auto;
+  padding: 28px;
+  min-width: 0;
+}
+
+
+/* ─── Top bar (mobile only) ──────────────────────────────────── */
+
+.topbar {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  z-index: 100;
+}
+
+.topbar-burger {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.topbar-burger:hover { background: var(--surface2); }
+
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+}
+
+
+/* ─── Sidebar ────────────────────────────────────────────────── */
+
+.sidebar {
+  width: var(--sidebar-full);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow: hidden;
+  transition: width .2s ease;
+}
+
+/* Logo */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 54px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar-logo-text {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.sidebar-logo-sub {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Nav */
+.sidebar-nav {
+  flex: 1;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/*
+ * Stable layout: icon zone always = var(--sidebar-rail) wide and centered.
+ * Label just appears/disappears — icon never moves.
+ */
+.nav-item {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  width: 100%;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background .15s, color .15s;
+  cursor: pointer;
+  /* No padding/gap — icon-zone handles spacing */
+}
+
+.nav-item:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.nav-item--active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Fixed-width icon zone = rail width, always centered at the same X position */
+.nav-item-icon {
+  width: var(--sidebar-rail);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-item-label {
+  flex: 1;
+  font-size: 14px;
+  text-align: left;
+  padding-right: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Footer */
+.sidebar-footer {
+  padding: 8px 0 14px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item--logout:hover {
+  background: rgba(248,113,113,.1);
+  color: var(--red);
+}
+
+.sidebar-collapse-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background .15s, color .15s;
+}
+.sidebar-collapse-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+/* Backdrop */
+.sidebar-backdrop {
+  display: none;
+}
+
+
+/* ─── Collapsed sidebar (desktop/tablet toggle) ──────────────── */
+
+.sidebar--collapsed {
+  width: var(--sidebar-rail);
+}
+
+/* Logo: hide text, center the collapse button */
+.sidebar--collapsed .sidebar-logo {
+  justify-content: center;
+}
+.sidebar--collapsed .sidebar-logo-text,
+.sidebar--collapsed .sidebar-logo-sub {
+  display: none;
+}
+.sidebar--collapsed .sidebar-collapse-btn {
+  margin-left: 0;
+}
+
+/* Nav items: ONLY hide labels — icon position never changes */
+.sidebar--collapsed .nav-item-label {
+  display: none;
+}
+
+
+/* ─── Mobile: burger + overlay drawer (< 640px) ──────────────── */
+
+@media (max-width: 639px) {
+  .topbar { display: flex; }
+
+  .layout-main {
+    padding: 16px;
+    padding-top: calc(var(--topbar-h) + 16px);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 100dvh;
+    width: var(--sidebar-full);
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+    box-shadow: none;
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,.5);
+  }
+
+  /* On mobile: collapse button is irrelevant, hide it */
+  .sidebar-collapse-btn { display: none; }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 199;
+    backdrop-filter: blur(2px);
+  }
+}
+
+/* ─── Tablet: start as rail (handled by JS initCollapsed) ───── */
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .layout-main { padding: 20px; }
+}
