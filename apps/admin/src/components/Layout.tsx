@@ -83,9 +83,16 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
       {/* Sidebar */}
       <aside className={sidebarClass}>
         <div className="sidebar-logo">
-          <IconLogo size={20} />
           <span className="sidebar-logo-text">Persona</span>
           <span className="sidebar-logo-sub">Admin</span>
+          {/* Collapse toggle — desktop/tablet only */}
+          <button
+            className="sidebar-collapse-btn"
+            onClick={() => setCollapsed((v) => !v)}
+            title={collapsed ? "Развернуть" : "Свернуть"}
+          >
+            {collapsed ? <IconChevronRight size={15} /> : <IconChevronLeft size={15} />}
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -106,18 +113,6 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
           <button className="nav-item nav-item--logout" onClick={onLogout} title="Выйти">
             <span className="nav-item-icon"><IconLogout size={18} /></span>
             <span className="nav-item-label">Выйти</span>
-          </button>
-
-          {/* Collapse toggle — desktop/tablet only (hidden on mobile via CSS) */}
-          <button
-            className="nav-item sidebar-collapse-btn"
-            onClick={() => setCollapsed((v) => !v)}
-            title={collapsed ? "Развернуть" : "Свернуть"}
-          >
-            <span className="nav-item-icon">
-              {collapsed ? <IconChevronRight size={16} /> : <IconChevronLeft size={16} />}
-            </span>
-            <span className="nav-item-label">{collapsed ? "Развернуть" : "Свернуть"}</span>
           </button>
         </div>
       </aside>

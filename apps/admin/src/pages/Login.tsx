@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { IconLogo } from "../components/Icons";
 
 interface Props { onLogin: (token: string) => void; }
 
@@ -30,7 +31,9 @@ export default function Login({ onLogin }: Props) {
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100dvh" }}>
       <form onSubmit={submit} style={{ width: 320 }}>
         <div style={{ marginBottom: 32, textAlign: "center" }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>⚙️</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 8, color: "var(--accent)" }}>
+            <IconLogo size={36} />
+          </div>
           <h1 style={{ fontSize: 20, fontWeight: 600 }}>Persona Admin</h1>
           <p style={{ color: "var(--muted)", marginTop: 4 }}>Введите токен для входа</p>
         </div>
