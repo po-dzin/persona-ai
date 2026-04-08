@@ -62,8 +62,10 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
     collapsed   ? "sidebar--collapsed" : "",
   ].filter(Boolean).join(" ");
 
+  const layoutClass = ["layout", collapsed ? "layout--collapsed" : ""].filter(Boolean).join(" ");
+
   return (
-    <div className="layout">
+    <div className={layoutClass}>
       {/* Mobile top bar */}
       <header className="topbar">
         <button className="topbar-burger" onClick={() => setMobileOpen((v) => !v)} aria-label="Menu">

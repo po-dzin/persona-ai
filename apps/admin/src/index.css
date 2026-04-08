@@ -107,6 +107,22 @@ tr:hover td { background: var(--surface2); }
   min-width: 0;
 }
 
+/* Desktop: fixed sidebar + margin-left transition eliminates layout jump */
+@media (min-width: 640px) {
+  .layout {
+    display: block; /* sidebar is fixed, main fills viewport */
+  }
+
+  .layout-main {
+    margin-left: var(--sidebar-full);
+    transition: margin-left .2s ease-out;
+  }
+
+  .layout--collapsed .layout-main {
+    margin-left: var(--sidebar-rail);
+  }
+}
+
 
 /* ─── Top bar (mobile only) ──────────────────────────────────── */
 
@@ -155,11 +171,13 @@ tr:hover td { background: var(--surface2); }
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
   height: 100dvh;
   overflow: hidden;
   transition: width .2s ease-out;
+  z-index: 50;
 }
 
 /* Logo */
@@ -203,6 +221,7 @@ tr:hover td { background: var(--surface2); }
 .nav-item {
   display: flex;
   align-items: center;
+  width: 100%;
   height: 44px; /* min 44px touch target (WCAG 2.5.5) */
   border-radius: 8px;
   border: none;
@@ -323,14 +342,12 @@ tr:hover td { background: var(--surface2); }
   .topbar { display: flex; }
 
   .layout-main {
+    margin-left: 0 !important;
     padding: 16px;
     padding-top: calc(var(--topbar-h) + 16px);
   }
 
   .sidebar {
-    position: fixed;
-    top: 0; left: 0;
-    height: 100dvh;
     width: var(--sidebar-full);
     z-index: 200;
     transform: translateX(-100%);
