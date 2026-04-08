@@ -70,8 +70,7 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
           {mobileOpen ? <IconClose /> : <IconMenu />}
         </button>
         <div className="topbar-title">
-          <IconLogo size={16} />
-          <span>Persona</span>
+          Persona <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400, marginLeft: 4 }}>Admin</span>
         </div>
       </header>
 

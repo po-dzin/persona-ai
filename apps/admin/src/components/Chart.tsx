@@ -1,5 +1,8 @@
 /**
- * Lightweight SVG line/bar chart — no external deps.
+ * Lightweight SVG charts — no external deps.
+ *
+ * Architecture: SVG handles bars/lines only.
+ * Axis labels are rendered as HTML (readable on any screen size).
  */
 
 interface LineChartProps {
@@ -13,7 +16,7 @@ export function LineChart({ data, series, height = 160 }: LineChartProps) {
 
   const W = 600;
   const H = height;
-  const padL = 40, padR = 12, padT = 12, padB = 28;
+  const padL = 44, padR = 8, padT = 12, padB = 4;
   const chartW = W - padL - padR;
   const chartH = H - padT - padB;
 
@@ -26,47 +29,80 @@ export function LineChart({ data, series, height = 160 }: LineChartProps) {
   const ticks = 4;
   const labelStep = Math.max(1, Math.floor(data.length / 6));
 
+  // Y-axis labels as numbers
+  const yLabels = Array.from({ length: ticks + 1 }, (_, i) => ({
+    val: Math.round(maxVal * (1 - i / ticks)),
+    pct: i / ticks,
+  }));
+
+  // X-axis labels (dates) — rendered as HTML below SVG
+  const xLabels = data
+    .map((d, i) => ({ label: String(d.day).slice(5), i }))
+    .filter(({ i }) => i % labelStep === 0 || i === data.length - 1);
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height }} preserveAspectRatio="none">
-      {/* grid */}
-      {Array.from({ length: ticks + 1 }, (_, i) => {
-        const yy = padT + (i / ticks) * chartH;
-        const val = Math.round(maxVal * (1 - i / ticks));
-        return (
-          <g key={i}>
-            <line x1={padL} x2={W - padR} y1={yy} y2={yy} stroke="#2e3348" strokeWidth={1} />
-            <text x={padL - 4} y={yy + 4} fill="#8b8fa8" fontSize={10} textAnchor="end">{val}</text>
-          </g>
-        );
-      })}
+    <div style={{ position: "relative" }}>
+      {/* Y-axis labels */}
+      <div style={{
+        position: "absolute",
+        top: padT,
+        left: 0,
+        width: padL - 6,
+        height: chartH,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        alignItems: "flex-end",
+      }}>
+        {yLabels.map(({ val }) => (
+          <span key={val} style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1 }}>
+            {val > 999 ? `${(val / 1000).toFixed(1)}k` : val}
+          </span>
+        ))}
+      </div>
 
-      {/* x labels */}
-      {data.map((d, i) => {
-        if (i % labelStep !== 0 && i !== data.length - 1) return null;
-        const label = String(d.day).slice(5); // MM-DD
-        return (
-          <text key={i} x={x(i)} y={H - 4} fill="#8b8fa8" fontSize={10} textAnchor="middle">
-            {label}
-          </text>
-        );
-      })}
-
-      {/* series */}
-      {series.map((s) => {
-        const pts = data.map((d, i) => `${x(i)},${y(Number(d[s.key]) || 0)}`).join(" ");
-        const areaBottom = `${x(data.length - 1)},${padT + chartH} ${x(0)},${padT + chartH}`;
-        return (
-          <g key={s.key}>
-            <polygon
-              points={pts + " " + areaBottom}
-              fill={s.color}
-              fillOpacity={0.08}
+      {/* Chart SVG — lines/area only, no text */}
+      <svg
+        viewBox={`${padL} 0 ${chartW + padR} ${H}`}
+        style={{ width: "100%", display: "block" }}
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        {/* grid lines */}
+        {yLabels.map(({ pct }, i) => {
+          const yy = padT + pct * chartH;
+          return (
+            <line
+              key={i}
+              x1={padL} x2={W - padR}
+              y1={yy} y2={yy}
+              stroke="#2e3348" strokeWidth={1}
             />
-            <polyline points={pts} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" />
-          </g>
-        );
-      })}
-    </svg>
+          );
+        })}
+
+        {/* series */}
+        {series.map((s) => {
+          const pts = data.map((d, i) => `${x(i)},${y(Number(d[s.key]) || 0)}`).join(" ");
+          const areaBottom = `${x(data.length - 1)},${padT + chartH} ${x(0)},${padT + chartH}`;
+          return (
+            <g key={s.key}>
+              <polygon points={pts + " " + areaBottom} fill={s.color} fillOpacity={0.08} />
+              <polyline points={pts} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" />
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* X-axis labels — HTML, always readable */}
+      <div style={{ display: "flex", marginLeft: padL, justifyContent: "space-between", marginTop: 4 }}>
+        {xLabels.map(({ label, i }) => (
+          <span key={i} style={{ fontSize: 11, color: "var(--muted)", textAlign: "center" }}>
+            {label}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -82,30 +118,58 @@ export function BarChart({ data, color = "#7c6af7", height = 140 }: BarChartProp
 
   const W = 600;
   const H = height;
-  const padL = 8, padR = 8, padT = 12, padB = 40;
+  const padL = 0, padR = 0, padT = 20, padB = 0;
   const chartH = H - padT - padB;
   const maxVal = Math.max(...data.map((d) => d.value), 1);
-  const barW = Math.max(4, (W - padL - padR) / data.length - 4);
+  const slotW = (W - padL - padR) / data.length;
+  const barW = Math.max(8, slotW - 8);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height }} preserveAspectRatio="none">
-      {data.map((d, i) => {
-        const bh = (d.value / maxVal) * chartH;
-        const bx = padL + i * ((W - padL - padR) / data.length) + 2;
-        const by = padT + chartH - bh;
-        const labelX = bx + barW / 2;
-        const shortLabel = d.label.length > 10 ? d.label.slice(0, 9) + "…" : d.label;
-        return (
-          <g key={i}>
-            <rect x={bx} y={by} width={barW} height={bh} fill={color} rx={3} fillOpacity={0.85} />
-            <text x={labelX} y={H - 4} fill="#8b8fa8" fontSize={9} textAnchor="middle">{shortLabel}</text>
-            {d.value > 0 && (
-              <text x={labelX} y={by - 3} fill="#8b8fa8" fontSize={9} textAnchor="middle">{d.value}</text>
-            )}
-          </g>
-        );
-      })}
-    </svg>
+    <div>
+      {/* SVG — bars + value labels above bars only */}
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        style={{ width: "100%", display: "block" }}
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
+      >
+        {data.map((d, i) => {
+          const bh = Math.max(2, (d.value / maxVal) * chartH);
+          const bx = padL + i * slotW + (slotW - barW) / 2;
+          const by = padT + chartH - bh;
+          const labelX = bx + barW / 2;
+          return (
+            <g key={i}>
+              <rect x={bx} y={by} width={barW} height={bh} fill={color} rx={3} fillOpacity={0.85} />
+              {/* Value label above bar — larger font, readable at any scale */}
+              {d.value > 0 && (
+                <text x={labelX} y={Math.max(padT - 3, by - 3)} fill="#c8cad8" fontSize={14} textAnchor="middle" fontWeight={500}>
+                  {d.value > 999 ? `${(d.value / 1000).toFixed(1)}k` : d.value}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Category labels — HTML flex row, always readable */}
+      <div style={{ display: "flex" }}>
+        {data.map((d, i) => (
+          <div key={i} style={{
+            flex: 1,
+            textAlign: "center",
+            fontSize: 11,
+            color: "var(--muted)",
+            paddingTop: 6,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}>
+            {d.label}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
