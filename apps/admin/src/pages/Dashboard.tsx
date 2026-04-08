@@ -110,9 +110,13 @@ function Spinner() {
 }
 
 function ErrorBox({ msg }: { msg: string }) {
+  const text =
+    msg === "unauthorized" ? "Неверный токен — обновите страницу." :
+    msg === "not_admin"    ? "Нет прав администратора." :
+    msg;
   return (
     <div style={{ background: "rgba(248,113,113,.1)", border: "1px solid var(--red)", borderRadius: "var(--radius)", padding: 20, color: "var(--red)" }}>
-      {msg === "unauthorized" ? "Неверный токен. Обновите страницу." : `Ошибка: ${msg}`}
+      {text}
     </div>
   );
 }

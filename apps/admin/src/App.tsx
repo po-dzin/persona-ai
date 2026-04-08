@@ -34,11 +34,16 @@ export default function App() {
   };
 
   return (
-    <Layout page={page} onNavigate={setPage} onLogout={logout}>
-      {page === "dashboard" && <Dashboard />}
-      {page === "revenue" && <Revenue />}
-      {page === "generations" && <Generations />}
-      {page === "users" && <Users />}
-    </Layout>
+    <>
+      <a href="#main-content" className="skip-link">Перейти к содержимому</a>
+      <Layout page={page} onNavigate={setPage} onLogout={logout}>
+        <div id="main-content">
+          {page === "dashboard" && <Dashboard />}
+          {page === "revenue" && <Revenue />}
+          {page === "generations" && <Generations />}
+          {page === "users" && <Users />}
+        </div>
+      </Layout>
+    </>
   );
 }
