@@ -10,6 +10,8 @@ import {
   IconMenu,
   IconClose,
   IconLogo,
+  IconChevronLeft,
+  IconChevronRight,
 } from "./Icons";
 
 interface NavItem {
@@ -19,11 +21,17 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { id: "dashboard", label: "Dashboard",      Icon: IconDashboard },
-  { id: "revenue",   label: "Revenue",        Icon: IconRevenue },
-  { id: "generations", label: "Генерации",    Icon: IconGenerations },
-  { id: "users",     label: "Пользователи",   Icon: IconUsers },
+  { id: "dashboard",   label: "Dashboard",       Icon: IconDashboard },
+  { id: "revenue",     label: "Revenue",         Icon: IconRevenue },
+  { id: "generations", label: "Генерации",       Icon: IconGenerations },
+  { id: "users",       label: "Пользователи",    Icon: IconUsers },
 ];
+
+/** On tablet (640–1023px) start collapsed (rail), desktop starts expanded. */
+function initCollapsed() {
+  const w = window.innerWidth;
+  return w >= 640 && w < 1024;
+}
 
 interface Props {
   page: Page;
@@ -34,6 +42,7 @@ interface Props {
 
 export default function Layout({ page, onNavigate, onLogout, children }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(initCollapsed);
 
   // Close mobile drawer on route change
   useEffect(() => { setMobileOpen(false); }, [page]);
@@ -46,6 +55,12 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
   }, []);
 
   const handleNav = (id: Page) => { onNavigate(id); setMobileOpen(false); };
+
+  const sidebarClass = [
+    "sidebar",
+    mobileOpen  ? "sidebar--open"      : "",
+    collapsed   ? "sidebar--collapsed" : "",
+  ].filter(Boolean).join(" ");
 
   return (
     <div className="layout">
@@ -66,7 +81,7 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
       )}
 
       {/* Sidebar */}
-      <aside className={`sidebar${mobileOpen ? " sidebar--open" : ""}`}>
+      <aside className={sidebarClass}>
         <div className="sidebar-logo">
           <IconLogo size={20} />
           <span className="sidebar-logo-text">Persona</span>
@@ -91,6 +106,18 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
           <button className="nav-item nav-item--logout" onClick={onLogout} title="Выйти">
             <span className="nav-item-icon"><IconLogout size={18} /></span>
             <span className="nav-item-label">Выйти</span>
+          </button>
+
+          {/* Collapse toggle — desktop/tablet only (hidden on mobile via CSS) */}
+          <button
+            className="nav-item sidebar-collapse-btn"
+            onClick={() => setCollapsed((v) => !v)}
+            title={collapsed ? "Развернуть" : "Свернуть"}
+          >
+            <span className="nav-item-icon">
+              {collapsed ? <IconChevronRight size={16} /> : <IconChevronLeft size={16} />}
+            </span>
+            <span className="nav-item-label">{collapsed ? "Развернуть" : "Свернуть"}</span>
           </button>
         </div>
       </aside>

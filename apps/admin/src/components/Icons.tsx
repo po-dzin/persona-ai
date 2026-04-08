@@ -84,6 +84,22 @@ export function IconClose({ size = 20 }: IconProps) {
   );
 }
 
+export function IconChevronLeft({ size = 18 }: IconProps) {
+  return (
+    <svg {...props(size)}>
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+
+export function IconChevronRight({ size = 18 }: IconProps) {
+  return (
+    <svg {...props(size)}>
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
 export function IconLogo({ size = 20 }: IconProps) {
   return (
     <svg {...props(size)}>

@@ -142,18 +142,21 @@ tr:hover td { background: var(--surface2); }
   flex-shrink: 0;
   overflow: hidden;
   white-space: nowrap;
+  transition: padding .2s ease;
 }
 
 .sidebar-logo-text {
   font-weight: 700;
   font-size: 15px;
   color: var(--text);
+  transition: opacity .15s ease;
 }
 
 .sidebar-logo-sub {
   font-size: 11px;
   color: var(--muted);
   margin-left: 2px;
+  transition: opacity .15s ease;
 }
 
 /* Nav */
@@ -205,6 +208,7 @@ tr:hover td { background: var(--surface2); }
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: opacity .15s ease;
 }
 
 /* Footer */
@@ -212,11 +216,22 @@ tr:hover td { background: var(--surface2); }
   padding: 8px 8px 14px;
   border-top: 1px solid var(--border);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .nav-item--logout:hover {
   background: rgba(248,113,113,.1);
   color: var(--red);
+}
+
+.sidebar-collapse-btn {
+  color: var(--muted);
+}
+.sidebar-collapse-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
 }
 
 /* Backdrop */
@@ -225,34 +240,39 @@ tr:hover td { background: var(--surface2); }
 }
 
 
-/* ─── Tablet: icon rail (640–1023px) ─────────────────────────── */
+/* ─── Collapsed sidebar (desktop/tablet toggle) ──────────────── */
 
-@media (min-width: 640px) and (max-width: 1023px) {
-  .sidebar {
-    width: var(--sidebar-rail);
-  }
+.sidebar--collapsed {
+  width: var(--sidebar-rail);
+}
 
-  .sidebar-logo {
-    padding: 18px 0 14px;
-    justify-content: center;
-    gap: 0;
-  }
-  .sidebar-logo-text,
-  .sidebar-logo-sub { display: none; }
+.sidebar--collapsed .sidebar-logo {
+  padding: 18px 0 14px;
+  justify-content: center;
+  gap: 0;
+}
 
-  .sidebar-nav { padding: 10px 8px; }
+.sidebar--collapsed .sidebar-logo-text,
+.sidebar--collapsed .sidebar-logo-sub {
+  display: none;
+}
 
-  .nav-item {
-    justify-content: center;
-    padding: 10px;
-    gap: 0;
-  }
-  .nav-item-label { display: none; }
-  .nav-item-icon { width: auto; }
+.sidebar--collapsed .nav-item {
+  justify-content: center;
+  padding: 10px;
+  gap: 0;
+}
 
-  .sidebar-footer { padding: 8px 8px 14px; }
+.sidebar--collapsed .nav-item-label {
+  display: none;
+}
 
-  .layout-main { padding: 20px; }
+.sidebar--collapsed .nav-item-icon {
+  width: auto;
+}
+
+.sidebar--collapsed .sidebar-footer {
+  padding: 8px 8px 14px;
 }
 
 
@@ -282,6 +302,9 @@ tr:hover td { background: var(--surface2); }
     box-shadow: 4px 0 24px rgba(0,0,0,.5);
   }
 
+  /* On mobile: collapse button is irrelevant, hide it */
+  .sidebar-collapse-btn { display: none; }
+
   .sidebar-backdrop {
     display: block;
     position: fixed;
@@ -290,4 +313,10 @@ tr:hover td { background: var(--surface2); }
     z-index: 199;
     backdrop-filter: blur(2px);
   }
+}
+
+/* ─── Tablet: start as rail (handled by JS initCollapsed) ───── */
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .layout-main { padding: 20px; }
 }
