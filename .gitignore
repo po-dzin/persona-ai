@@ -7,6 +7,8 @@ __pycache__/
 node_modules/
 apps/web/dist/
 apps/admin/dist/
+apps/admin/.vite/
+apps/admin/tsconfig.tsbuildinfo
 .DS_Store
 specs/Live Photo App.png
 .env
