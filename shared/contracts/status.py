@@ -29,11 +29,11 @@ PAYMENT_STATUSES = (
 )
 
 PACKAGE_MATRIX = (
-    {"code": "STARTER", "title": "Starter", "credits": 150,  "stars_price": 230,  "bonus_percent": 0,  "sort_order": 10},
-    {"code": "BASIC",   "title": "Basic",   "credits": 365,  "stars_price": 537,  "bonus_percent": 4,  "sort_order": 20},
-    {"code": "POPULAR", "title": "Popular", "credits": 875,  "stars_price": 1227, "bonus_percent": 9,  "sort_order": 30},
-    {"code": "PRO",     "title": "Pro",     "credits": 2300, "stars_price": 3067, "bonus_percent": 15, "sort_order": 40},
-    {"code": "ULTRA",   "title": "Ultra",   "credits": 6000, "stars_price": 7667, "bonus_percent": 20, "sort_order": 50},
+    {"code": "STARTER", "title": "Starter", "credits": 150,  "bonus_coins": 0,    "bonus_percent": 0,  "stars_price": 230,  "sort_order": 10},
+    {"code": "BASIC",   "title": "Basic",   "credits": 350,  "bonus_coins": 20,   "bonus_percent": 5,  "stars_price": 537,  "sort_order": 20},
+    {"code": "POPULAR", "title": "Popular", "credits": 800,  "bonus_coins": 80,   "bonus_percent": 10, "stars_price": 1227, "sort_order": 30},
+    {"code": "PRO",     "title": "Pro",     "credits": 2000, "bonus_coins": 300,  "bonus_percent": 15, "stars_price": 3067, "sort_order": 40},
+    {"code": "ULTRA",   "title": "Ultra",   "credits": 5000, "bonus_coins": 1000, "bonus_percent": 20, "stars_price": 7667, "sort_order": 50},
 )
 
 PACKAGE_CREDITS = {pkg["code"]: pkg["credits"] for pkg in PACKAGE_MATRIX}

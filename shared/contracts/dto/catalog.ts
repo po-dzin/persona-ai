@@ -23,8 +23,9 @@ export interface PackageItemDto {
   code: string;
   title: string;
   credits: number;
-  price_stars: number;
+  bonus_coins: number;
   bonus_percent: number;
+  price_stars: number;
   provider: string;
 }
 
