@@ -41,9 +41,18 @@ def test_packages_expose_bonus_percent() -> None:
     packages = {p["code"]: p for p in client.get("/v1/packages").json()["packages"]}
     assert packages["STARTER"]["bonus_percent"] == 0
     assert packages["BASIC"]["bonus_percent"] == 4
-    assert packages["POPULAR"]["bonus_percent"] == 9
+    assert packages["POPULAR"]["bonus_percent"] == 11
     assert packages["PRO"]["bonus_percent"] == 15
     assert packages["ULTRA"]["bonus_percent"] == 20
+
+def test_packages_expose_bonus_coins() -> None:
+    client = _client()
+    packages = {p["code"]: p for p in client.get("/v1/packages").json()["packages"]}
+    assert packages["STARTER"]["bonus_coins"] == 0
+    assert packages["BASIC"]["bonus_coins"] == 15
+    assert packages["POPULAR"]["bonus_coins"] == 85
+    assert packages["PRO"]["bonus_coins"] == 300
+    assert packages["ULTRA"]["bonus_coins"] == 1000
 
 
 def test_catalog_endpoints_styles_and_models() -> None:

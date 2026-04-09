@@ -97,26 +97,25 @@ def test_model_routing_is_deterministic() -> None:
 
 
 def test_volume_bonus_credits_on_purchase() -> None:
-    """Purchasing a package credits base + ceil(base * bonus_pct / 100) coins."""
-    import math
+    """Purchasing credits exactly base + bonus_coins from the package matrix."""
     svc = VerticalSliceService()
     svc.get_or_create_user("u-bonus")
 
-    # BASIC: 350 base + ceil(350*4/100)=14 bonus = 364 total
-    before_basic = svc.get_balance("u-bonus")["paid_credits"]
+    # BASIC: 350 base + 15 bonus = 365 total
+    before = svc.get_balance("u-bonus")["paid_credits"]
     result = svc.purchase("u-bonus", "BASIC")
-    assert result["wallet"]["paid_credits"] == before_basic + 350 + math.ceil(350 * 4 / 100)
+    assert result["wallet"]["paid_credits"] == before + 365
 
-    # POPULAR: 800 base + ceil(800*9/100)=72 bonus = 872 total
-    before_popular = svc.get_balance("u-bonus")["paid_credits"]
+    # POPULAR: 800 base + 85 bonus = 885 total
+    before = svc.get_balance("u-bonus")["paid_credits"]
     result2 = svc.purchase("u-bonus", "POPULAR")
-    assert result2["wallet"]["paid_credits"] == before_popular + 800 + math.ceil(800 * 9 / 100)
+    assert result2["wallet"]["paid_credits"] == before + 885
 
     # STARTER: 150 coins (no bonus)
     svc.get_or_create_user("u-starter")
-    before_starter = svc.get_balance("u-starter")["paid_credits"]
+    before = svc.get_balance("u-starter")["paid_credits"]
     res = svc.purchase("u-starter", "STARTER")
-    assert res["wallet"]["paid_credits"] == before_starter + 150
+    assert res["wallet"]["paid_credits"] == before + 150
 
 
 def test_purchase_accepts_legacy_package_codes() -> None:

@@ -9,8 +9,6 @@ import logging
 from app.adapters.http_client import ProviderHTTPError
 from app.adapters.provider_registry import build_provider_registry
 from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, get_session
-import math
-
 from app.core.settings import settings
 from app.services.package_codes import normalize_package_code
 
@@ -181,6 +179,7 @@ _DEMO_TEST_PACKAGE = {
     "code": "TEST",
     "title": "Test",
     "credits": 1000,
+    "bonus_coins": 0,
     "stars_price": 1,
     "bonus_percent": 0,
     "sort_order": 1,
@@ -283,8 +282,9 @@ class VerticalSliceService:
                 "code": pkg["code"],
                 "title": pkg["title"],
                 "credits": pkg["credits"],
-                "price_stars": pkg["stars_price"],
+                "bonus_coins": pkg["bonus_coins"],
                 "bonus_percent": pkg["bonus_percent"],
+                "price_stars": pkg["stars_price"],
                 "provider": "telegram_stars",
                 "sort_order": pkg["sort_order"],
             }
@@ -675,8 +675,7 @@ class VerticalSliceService:
                         )
                         db.add(user)
                     base_credits = package["credits"]
-                    bonus_pct = package["bonus_percent"]
-                    bonus_credits = math.ceil(base_credits * bonus_pct / 100) if bonus_pct else 0
+                    bonus_credits = package["bonus_coins"]
                     user.paid_credits += base_credits + bonus_credits
                     logger.info(
                         "payment_credited user_id=%s package=%s credits=%d+%d total_now=%d",

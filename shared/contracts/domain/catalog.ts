@@ -23,8 +23,9 @@ export interface PackageItem {
   code: string;
   title: string;
   credits: number;
-  priceStars: number;
+  bonusCoins: number;
   bonusPercent: number;
+  priceStars: number;
   provider: string;
 }
 
