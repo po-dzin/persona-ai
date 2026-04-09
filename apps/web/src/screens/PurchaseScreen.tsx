@@ -43,13 +43,13 @@ export function PurchaseScreen({ isOpen, selectedPackage, onClose, onConfirm }: 
           <div className="purchase-row-label">Монет</div>
           <div className="purchase-row-value">
             {selectedPackage.credits}
-            {bonusCoins > 0 && <span className="purchase-row-bonus-inline"> +{bonusCoins}</span>}
+            {bonusCoins > 0 && <span style={{ color: "var(--color-success, #34d399)", marginLeft: 4 }}>+{bonusCoins}</span>}
           </div>
         </div>
         {selectedPackage.bonusPercent > 0 ? (
           <div className="purchase-row">
             <div className="purchase-row-label">Бонус</div>
-            <div className="purchase-row-value bonus">+{selectedPackage.bonusPercent}%</div>
+            <div className="purchase-row-value" style={{ color: "var(--color-success, #34d399)" }}>+{selectedPackage.bonusPercent}%</div>
           </div>
         ) : null}
         <div className="purchase-total">

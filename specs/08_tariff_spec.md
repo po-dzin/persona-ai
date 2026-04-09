@@ -4,7 +4,7 @@
 
 - Unit billing: `1 generation = model_coin_cost`.
 - Trial: `1 free generation` per `user_id` (one-time).
-- Paid model: 5 пакетов `Starter/Basic/Popular/Pro/Ultra = 150/365/875/2300/6000`.
+- Paid model: 5 пакетов `Starter/Basic/Popular/Pro/Ultra = 150/350/800/2000/5000`.
 - Каналы оплаты: `Telegram Stars` (primary), `Stripe` (web/regional fallback).
 
 ## 2) Model price policy (photo-first)

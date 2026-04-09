@@ -29,7 +29,7 @@ OUTDATED_PATTERNS = [
 ]
 
 REQUIRED_GLOBAL = [
-    r"150/365/875/2300/6000",
+    r"150/350/800/2000/5000",
     r"webhook_events",
     r"Celery Beat",
     r"30–120",
@@ -40,8 +40,8 @@ REQUIRED_GLOBAL = [
 # High-signal per-file lock checks
 REQUIRED_BY_FILE = {
     "specs/photo_animation_mvp_spec.md": [r"Mini App \+ Web", r"Nano Banana", r"webhook_events"],
-    "specs/00_unified_spec.md": [r"150/365/875/2300/6000", r"webhook_events\(provider,event_id\)"],
-    "specs/08_tariff_spec.md": [r"10–40", r"Starter/Basic/Popular/Pro/Ultra", r"150/365/875/2300/6000"],
+    "specs/00_unified_spec.md": [r"150/350/800/2000/5000", r"webhook_events\(provider,event_id\)"],
+    "specs/08_tariff_spec.md": [r"10–40", r"Starter/Basic/Popular/Pro/Ultra", r"150/350/800/2000/5000"],
     "specs/06_technical_architecture_diagrams.md": [r"Redis \+ Celery", r"webhook_events\(provider,event_id\)"],
 }
 
