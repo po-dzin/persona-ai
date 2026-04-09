@@ -54,3 +54,6 @@ tg_webhook_limiter = InMemoryRateLimiter(calls=300, period=60, key_prefix="tgwh:
 
 # 30 file uploads per minute per user
 upload_limiter = InMemoryRateLimiter(calls=30, period=60, key_prefix="upl:")
+
+# 120 admin API calls per minute per IP
+admin_limiter = InMemoryRateLimiter(calls=120, period=60, key_prefix="adm:")

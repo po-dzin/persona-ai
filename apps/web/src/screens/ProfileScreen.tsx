@@ -66,9 +66,7 @@ export function ProfileScreen({
           <div className="profile-card">
             <a
               className="profile-row"
-              href={`/admin${tgInitData ? `?tgInitData=${encodeURIComponent(tgInitData)}` : ""}`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`/admin${tgInitData ? `#tgInitData=${encodeURIComponent(tgInitData)}` : ""}`}
             >
               <div className="profile-row-icon profile-row-icon-support">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">

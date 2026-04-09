@@ -637,7 +637,21 @@ class VerticalSliceService:
 
             # Payment webhook (Stars / Stripe)
             if provider in {"telegram", "stripe"}:
-                payment_id = event_id
+                # Use provider-specific charge ID for deduplication, not event_id,
+                # to prevent double-credit if the same payment arrives with different event_ids.
+                if provider == "telegram":
+                    payment_id = str(payload.get("telegram_payment_charge_id") or event_id)
+                elif provider == "stripe":
+                    payment_id = str(payload.get("stripe_payment_intent_id") or event_id)
+                else:
+                    payment_id = event_id
+
+                # Second idempotency check on the resolved payment_id
+                if payment_id != event_id:
+                    dup = db.query(PaymentRow).filter(PaymentRow.payment_id == payment_id).first()
+                    if dup:
+                        return {"deduplicated": True}
+
                 user_id = payload.get("user_id")
                 package_code_raw = str(payload.get("package_code", ""))
                 package_code = self._normalize_package_code(package_code_raw)
@@ -726,6 +740,13 @@ class VerticalSliceService:
                 "bonus_percent": _DEMO_TEST_PACKAGE["bonus_percent"],
             }
         return None
+
+    def _find_order(self, order_id: str) -> "OrderRow":
+        with get_session() as db:
+            order = db.get(OrderRow, order_id)
+            if not order:
+                raise ValueError("order_not_found")
+            return order
 
     @staticmethod
     def _serialize_wallet(user: UserRow) -> dict[str, Any]:

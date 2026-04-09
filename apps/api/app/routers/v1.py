@@ -37,6 +37,19 @@ def get_service(request: Request) -> VerticalSliceService:
     return request.app.state.slice_service
 
 
+def _sign_share_token(order_id: str) -> str:
+    """HMAC-SHA256 signature for share tokens to prevent enumeration."""
+    secret = (settings.telegram_bot_token or settings.provider_webhook_secret or "dev-insecure").encode()
+    return hmac.new(secret, order_id.encode(), hashlib.sha256).hexdigest()[:16]  # type: ignore[attr-defined]
+
+
+def _verify_share_token(order_id: str, token: str) -> bool:
+    if settings.env in {"dev", "test", "local"} and not token:
+        return True
+    expected = _sign_share_token(order_id)
+    return hmac.compare_digest(token, expected)
+
+
 def _build_photo_share_link(order: dict[str, Any], request: Request) -> str:
     base = settings.telegram_miniapp_url.strip()
     if not base:
@@ -49,6 +62,7 @@ def _build_photo_share_link(order: dict[str, Any], request: Request) -> str:
     order_id = str(order.get("order_id") or "").strip()
     if order_id:
         query["share_order"] = order_id
+        query["share_token"] = _sign_share_token(order_id)
 
     return urlunparse(parsed._replace(query=urlencode(query)))
 
@@ -248,6 +262,8 @@ def webhook_provider(provider: str, data: WebhookRequest, request: Request):
 def _verify_webhook_secret(request: Request) -> None:
     secret = settings.provider_webhook_secret
     if not secret or secret == "replace":
+        if settings.env not in {"dev", "test", "local"}:
+            raise HTTPException(status_code=403, detail="webhook_auth_not_configured")
         return
     token = request.headers.get("X-Webhook-Secret", "")
     if not hmac.compare_digest(token, secret):
@@ -345,8 +361,10 @@ def get_photo_share_file(order_id: str, request: Request, user_id: str = Depends
 
 
 @router.get("/share/{order_id}")
-def get_shared_photo(order_id: str, request: Request):
+def get_shared_photo(order_id: str, request: Request, share_token: str = ""):
     """Public read-only shared photo payload for app deeplinks."""
+    if not _verify_share_token(order_id, share_token):
+        raise HTTPException(status_code=403, detail="invalid_share_token")
     svc = get_service(request)
     try:
         order = svc._find_order(order_id)
@@ -368,8 +386,10 @@ def get_shared_photo(order_id: str, request: Request):
 
 
 @router.get("/share-page/{order_id}", response_class=HTMLResponse, include_in_schema=False)
-def get_share_preview_page(order_id: str, request: Request):
+def get_share_preview_page(order_id: str, request: Request, share_token: str = ""):
     """HTML page with Open Graph meta tags for social sharing previews (Threads, etc.)."""
+    if not _verify_share_token(order_id, share_token):
+        raise HTTPException(status_code=403, detail="invalid_share_token")
     svc = get_service(request)
     try:
         order = svc._find_order(order_id)
