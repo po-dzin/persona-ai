@@ -17,9 +17,11 @@ export function PurchaseScreen({ isOpen, selectedPackage, onClose, onConfirm }: 
 
   if (!isOpen || !selectedPackage) return null;
 
-  const bonusCoins = selectedPackage.bonusPercent > 0
-    ? Math.round(selectedPackage.credits * selectedPackage.bonusPercent / 100)
-    : 0;
+  const bonusCoins = selectedPackage.bonusCoins ?? (
+    selectedPackage.bonusPercent > 0
+      ? Math.round(selectedPackage.credits * selectedPackage.bonusPercent / 100)
+      : 0
+  );
   const isStripeEnabled = false;
 
   return (
