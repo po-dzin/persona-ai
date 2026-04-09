@@ -51,8 +51,9 @@ export function mapPackageItemDto(dto: PackageItemDto): PackageItem {
     code: dto.code,
     title: dto.title,
     credits: dto.credits,
-    priceStars: dto.price_stars,
+    bonusCoins: dto.bonus_coins,
     bonusPercent: dto.bonus_percent,
+    priceStars: dto.price_stars,
     provider: dto.provider,
   };
 }

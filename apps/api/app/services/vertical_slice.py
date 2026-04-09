@@ -179,6 +179,7 @@ _DEMO_TEST_PACKAGE = {
     "code": "TEST",
     "title": "Test",
     "credits": 1000,
+    "bonus_coins": 0,
     "stars_price": 1,
     "bonus_percent": 0,
     "sort_order": 1,
@@ -281,8 +282,9 @@ class VerticalSliceService:
                 "code": pkg["code"],
                 "title": pkg["title"],
                 "credits": pkg["credits"],
-                "price_stars": pkg["stars_price"],
+                "bonus_coins": pkg["bonus_coins"],
                 "bonus_percent": pkg["bonus_percent"],
+                "price_stars": pkg["stars_price"],
                 "provider": "telegram_stars",
                 "sort_order": pkg["sort_order"],
             }
@@ -672,11 +674,12 @@ class VerticalSliceService:
                             created_at=now_iso(),
                         )
                         db.add(user)
-                    total_credits = package["credits"]
-                    user.paid_credits += total_credits
+                    base_credits = package["credits"]
+                    bonus_credits = package["bonus_coins"]
+                    user.paid_credits += base_credits + bonus_credits
                     logger.info(
-                        "payment_credited user_id=%s package=%s credits=%d total_now=%d",
-                        uid, package_code, total_credits, user.paid_credits,
+                        "payment_credited user_id=%s package=%s credits=%d+%d total_now=%d",
+                        uid, package_code, base_credits, bonus_credits, user.paid_credits,
                     )
                 else:
                     logger.warning(
