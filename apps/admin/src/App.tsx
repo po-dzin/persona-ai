@@ -9,8 +9,16 @@ import Users from "./pages/Users";
 export type Page = "dashboard" | "revenue" | "generations" | "users";
 
 function hasTgInitData(): boolean {
-  const params = new URLSearchParams(window.location.search);
-  return !!(params.get("tgInitData") || sessionStorage.getItem("admin_tg_init_data"));
+  // Read tgInitData from URL hash fragment only (not query string) —
+  // hash is never sent to the server and not stored in browser history.
+  const hash = window.location.hash.slice(1);
+  const fromHash = new URLSearchParams(hash).get("tgInitData") ?? "";
+  if (fromHash) {
+    sessionStorage.setItem("admin_tg_init_data", fromHash);
+    // Clean the hash so credentials aren't visible in the URL bar
+    window.history.replaceState({}, "", window.location.pathname + window.location.search);
+  }
+  return !!(fromHash || sessionStorage.getItem("admin_tg_init_data"));
 }
 
 /** Support ?token=xxx URL param for local dev convenience */

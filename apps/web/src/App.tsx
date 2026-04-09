@@ -54,7 +54,7 @@ declare global {
 
 const tg = window.Telegram?.WebApp;
 type TgUser = { id: number; first_name?: string; username?: string; photo_url?: string };
-type SharePreview = { orderId?: string };
+type SharePreview = { orderId?: string; shareToken?: string };
 type LegalDocId = "privacy" | "terms" | "payments" | "disclaimer";
 
 const LEGAL_DOCS: Record<LegalDocId, { title: string; updatedAt: string; sections: Array<{ heading?: string; paragraphs: string[] }> }> = {
@@ -214,13 +214,15 @@ function readSharePreviewFromUrl(): SharePreview | null {
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get("share_order")?.trim() || undefined;
   if (!orderId) return null;
-  return { orderId };
+  const shareToken = params.get("share_token")?.trim() || undefined;
+  return { orderId, shareToken };
 }
 
 function clearSharePreviewFromUrl() {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
   url.searchParams.delete("share_order");
+  url.searchParams.delete("share_token");
   window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -563,6 +565,7 @@ export function App() {
   const [lastChargedCoins, setLastChargedCoins] = useState<number | null>(null);
   const [asyncFailError, setAsyncFailError] = useState<string | null>(null);
   const [createActionLocked, setCreateActionLocked] = useState(false);
+  const createActionLockedRef = useRef(false);
   const [paywallModalOpen, setPaywallModalOpen] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   // purchaseSuccessOpen removed — Telegram's native openInvoice already shows payment success UI
@@ -623,6 +626,7 @@ export function App() {
     setPurchaseOpen(false);
     setViewerOpen(false);
     setModelsOpen(false);
+    createActionLockedRef.current = false;
     setCreateActionLocked(false);
   }, [
     setFlowStyleOpen,
@@ -768,6 +772,7 @@ export function App() {
     setModelsOpen(false);
 
     // Reset all create-flow state so each session starts clean
+    createActionLockedRef.current = false;
     setCreateActionLocked(false);
     setFlowInitialTab("styles");
     setPrefilledUploadPhoto(null);
@@ -793,7 +798,7 @@ export function App() {
 
     void (async () => {
       try {
-        const shared = await getSharedPhoto(preview.orderId!);
+        const shared = await getSharedPhoto(preview.orderId!, preview.shareToken);
         const sharedPhoto: PhotoRecord = {
           orderId: `shared-${shared.orderId}`,
           styleCode: shared.styleCode || "custom",
@@ -864,7 +869,8 @@ export function App() {
       setPaywallModalOpen(true);
       return;
     }
-    if (createActionLocked) return;
+    if (createActionLockedRef.current) return;
+    createActionLockedRef.current = true;
     setCreateActionLocked(true);
     transitionToScreen("photos");
     const optimisticId = addOptimisticGeneration({
@@ -887,7 +893,8 @@ export function App() {
         removeOptimisticGeneration(optimisticId);
         settleOptimisticCharge(optimisticId, null);
         setQueuedModalOpen(false);
-        setCreateActionLocked(false);
+        createActionLockedRef.current = false;
+    setCreateActionLocked(false);
         return;
       }
 
@@ -914,7 +921,8 @@ export function App() {
             settleOptimisticCharge(optimisticId, null);
           }
           if (!generationAccepted) setQueuedModalOpen(false);
-          setCreateActionLocked(false);
+          createActionLockedRef.current = false;
+    setCreateActionLocked(false);
           await refresh();
         },
       );
@@ -927,7 +935,8 @@ export function App() {
       setPaywallModalOpen(true);
       return;
     }
-    if (createActionLocked) return;
+    if (createActionLockedRef.current) return;
+    createActionLockedRef.current = true;
     setCreateActionLocked(true);
 
     // Switch to photos first and keep generation queued in the background.
@@ -955,7 +964,8 @@ export function App() {
       removeOptimisticGeneration(optimisticId);
       settleOptimisticCharge(optimisticId, null);
       setQueuedModalOpen(false);
-      setCreateActionLocked(false);
+      createActionLockedRef.current = false;
+    setCreateActionLocked(false);
       return;
     }
 
@@ -989,7 +999,8 @@ export function App() {
           settleOptimisticCharge(optimisticId, null);
         }
         if (!generationAccepted) setQueuedModalOpen(false);
-        setCreateActionLocked(false);
+        createActionLockedRef.current = false;
+    setCreateActionLocked(false);
         await refresh();
       },
     );

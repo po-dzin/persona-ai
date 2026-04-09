@@ -174,6 +174,7 @@ export async function getPhotoShareFile(orderId: string): Promise<Blob> {
 
 export async function getSharedPhoto(
   orderId: string,
+  shareToken?: string,
 ): Promise<{
   orderId: string;
   styleCode: string;
@@ -182,6 +183,7 @@ export async function getSharedPhoto(
   createdAt: string;
   updatedAt: string;
 }> {
+  const qs = shareToken ? `?share_token=${encodeURIComponent(shareToken)}` : "";
   const data = await request<{
     order_id: string;
     style_code: string;
@@ -189,7 +191,7 @@ export async function getSharedPhoto(
     result_url: string;
     created_at: string;
     updated_at: string;
-  }>(`/share/${encodeURIComponent(orderId)}`);
+  }>(`/share/${encodeURIComponent(orderId)}${qs}`);
   return {
     orderId: data.order_id,
     styleCode: data.style_code,

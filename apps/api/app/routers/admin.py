@@ -14,6 +14,7 @@ from sqlalchemy import text
 
 from app.core.auth import parse_tg_user
 from app.core.db import get_session, _is_sqlite
+from app.core.rate_limit import admin_limiter
 from app.core.settings import settings
 
 router = APIRouter(prefix="/admin/api", tags=["admin"])
@@ -23,9 +24,11 @@ router = APIRouter(prefix="/admin/api", tags=["admin"])
 
 
 def require_admin(
+    request: Request,
     x_telegram_init_data: str = Header(default=""),
     x_admin_token: str = Header(default=""),
 ) -> None:
+    admin_limiter.check(request)
     """
     Two ways to authenticate:
     1. X-Telegram-Init-Data — user must be in ADMIN_USER_IDS
