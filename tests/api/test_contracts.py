@@ -39,11 +39,9 @@ def test_packages_endpoint_exposes_5_tiers() -> None:
 def test_packages_expose_bonus_percent() -> None:
     client = _client()
     packages = {p["code"]: p for p in client.get("/v1/packages").json()["packages"]}
-    assert packages["STARTER"]["bonus_percent"] == 0
-    assert packages["BASIC"]["bonus_percent"] == 4
-    assert packages["POPULAR"]["bonus_percent"] == 9
-    assert packages["PRO"]["bonus_percent"] == 15
-    assert packages["ULTRA"]["bonus_percent"] == 20
+    # credits field encodes post-bonus total; bonus_percent is 0 to avoid double-counting
+    for code in ("STARTER", "BASIC", "POPULAR", "PRO", "ULTRA"):
+        assert packages[code]["bonus_percent"] == 0
 
 
 def test_catalog_endpoints_styles_and_models() -> None:
