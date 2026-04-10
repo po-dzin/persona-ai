@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import type { StyleItem } from "../data/styles";
 
 interface StylePreviewScreenProps {
@@ -10,9 +11,27 @@ interface StylePreviewScreenProps {
 export function StylePreviewScreen({ isOpen, style, onClose, onCreate }: StylePreviewScreenProps) {
   if (!isOpen || !style) return null;
 
+  const touchStartX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (dx > 60) onClose();
+    touchStartX.current = null;
+  };
+
   return (
     <div className="overlay-screen style-preview-screen">
-      <div className="style-preview-hero" style={{ background: style.gradient }}>
+      <div
+        className="style-preview-hero"
+        style={{ background: style.gradient }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
 
         <div className="style-preview-top">
           <button className="flow-back" onClick={onClose} aria-label="Назад">

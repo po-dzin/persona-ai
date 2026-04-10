@@ -277,7 +277,8 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 .home-styles-panels {
   position: relative;
-  overflow: hidden;
+  overflow-x: clip;   /* clips side-panels horizontally without creating scroll container */
+  overflow-y: visible; /* adjacent panels are never clipped at the bottom */
   transition: height var(--cmp-motion-swipe) var(--cmp-ease-standard);
   --home-swipe-ratio: 0;
 }
@@ -1528,14 +1529,13 @@ button, a, [role="button"] { touch-action: manipulation; }
   justify-content: space-between;
 }
 .style-preview-top .flow-back {
-  background: var(--sem-color-scrim-30);
-  backdrop-filter: blur(var(--cmp-space-8));
-  -webkit-backdrop-filter: blur(var(--cmp-space-8));
+  background: transparent;
   flex-shrink: 0;
-  transition: transform var(--cmp-motion-fast) var(--cmp-ease-standard), background var(--cmp-motion-fast) var(--cmp-ease-standard);
+  color: var(--sem-color-text-inverse);
+  transition: transform var(--cmp-motion-fast) var(--cmp-ease-standard), opacity var(--cmp-motion-fast) var(--cmp-ease-standard);
 }
 .style-preview-top .flow-back:active {
-  background: var(--sem-color-scrim-42);
+  opacity: 0.6;
 }
 .style-preview-name-top {
   font-size: var(--cmp-type-title-xl-size);
@@ -1543,10 +1543,11 @@ button, a, [role="button"] { touch-action: manipulation; }
   color: var(--sem-color-text-inverse);
   text-shadow: var(--sem-shadow-text-hero);
   text-align: right;
+  padding-right: calc(var(--cmp-touch-min-size) / 2);
 }
 .style-preview-go-center {
   position: absolute;
-  top: 75%;
+  top: 67%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: var(--cmp-space-72);

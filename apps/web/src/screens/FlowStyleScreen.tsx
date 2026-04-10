@@ -57,7 +57,21 @@ export function FlowStyleScreen({
   onClose,
 }: FlowStyleScreenProps) {
   const ratioOptions = ["1:1", "9:16", "16:9", "3:4", "4:3", "2:3", "5:4", "21:9"];
-  const categoryOrder = ["Тренды", "Бизнес и карьера", "Лайфстайл", "Арт и креатив", "Особый повод"];
+  const categoryOrder = [
+    "Тренды",
+    "Бизнес и карьера",
+    "Лайфстайл",
+    "Студийный портрет",
+    "Фешн",
+    "Романтика и отношения",
+    "Семья и память",
+    "Праздники",
+    "Арт и креатив",
+    "Сезоны и атмосфера",
+    "Персонажи и герои",
+    "Культуры и страны",
+    "Эпохи и ретро",
+  ];
   const MAX_FILE_SIZE_MB = 20;
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
@@ -84,11 +98,17 @@ export function FlowStyleScreen({
       if (!grouped[style.category]) grouped[style.category] = [];
       grouped[style.category].push(style);
     }
-    const ordered = categoryOrder.filter((category) => grouped[category]);
+    const trending = styles.filter((style) => style.isTrending);
+    const ordered = categoryOrder.filter((category) =>
+      category === "Тренды" ? trending.length > 0 : grouped[category],
+    );
     for (const category of Object.keys(grouped)) {
       if (!ordered.includes(category)) ordered.push(category);
     }
-    return ordered.map((category) => ({ category, items: grouped[category] || [] }));
+    return ordered.map((category) => ({
+      category,
+      items: category === "Тренды" ? trending : grouped[category] || [],
+    }));
   }, [styles]);
 
   useEffect(() => {
