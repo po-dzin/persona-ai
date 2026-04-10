@@ -9,8 +9,9 @@ RUN apt-get update && apt-get install -y curl ca-certificates && \
 WORKDIR /app
 COPY . .
 
-# Build React frontend -> apps/web/dist/
+# Build frontends -> apps/web/dist/ and apps/admin/dist/
 RUN cd apps/web && npm ci && npm run build
+RUN cd apps/admin && npm ci && npm run build
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r apps/api/requirements.txt

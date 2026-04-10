@@ -61,3 +61,23 @@ def test_successful_payment_no_refund_when_demo_mode_disabled(monkeypatch) -> No
 
     assert svc.events
     assert all(method != "refundStarPayment" for method, _ in calls)
+
+
+def test_create_invoice_link_uses_total_credits_with_bonus(monkeypatch) -> None:
+    patched_settings = dc_replace(tg_bot.settings, free_demo_mode=False)
+    monkeypatch.setattr(tg_bot, "settings", patched_settings)
+
+    captured: dict[str, dict] = {}
+
+    def fake_tg_api(method: str, payload: dict):
+        captured[method] = payload
+        return {"ok": True, "result": "https://t.me/invoice/demo"}
+
+    monkeypatch.setattr(tg_bot, "_tg_api", fake_tg_api)
+
+    link = tg_bot.create_invoice_link("POPULAR")
+
+    assert link == "https://t.me/invoice/demo"
+    invoice_payload = captured["createInvoiceLink"]
+    assert invoice_payload["title"] == "Popular — 880 монет"
+    assert invoice_payload["description"] == "Пополнение баланса PersonAI на 880 монет"
