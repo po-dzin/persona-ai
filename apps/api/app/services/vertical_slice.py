@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 from shared.contracts.status import (
     MODEL_BY_ID,
     MODEL_CATALOG,
+    PACKAGE_BONUS_COINS,
     PACKAGE_BONUS_PERCENT,
     PACKAGE_CREDITS,
     PACKAGE_MATRIX,
@@ -732,6 +733,7 @@ class VerticalSliceService:
             return {
                 "code": package_code,
                 "credits": PACKAGE_CREDITS[package_code],
+                "bonus_coins": PACKAGE_BONUS_COINS.get(package_code, 0),
                 "stars_price": PACKAGE_STARS_PRICES[package_code],
                 "bonus_percent": PACKAGE_BONUS_PERCENT.get(package_code, 0),
             }
@@ -739,6 +741,7 @@ class VerticalSliceService:
             return {
                 "code": "TEST",
                 "credits": _DEMO_TEST_PACKAGE["credits"],
+                "bonus_coins": _DEMO_TEST_PACKAGE["bonus_coins"],
                 "stars_price": _DEMO_TEST_PACKAGE["stars_price"],
                 "bonus_percent": _DEMO_TEST_PACKAGE["bonus_percent"],
             }

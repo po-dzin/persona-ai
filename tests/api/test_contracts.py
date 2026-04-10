@@ -122,7 +122,7 @@ def test_purchase_basic_applies_volume_bonus() -> None:
         headers=hdrs,
     )
     assert res.status_code == 200
-    assert res.json()["wallet"]["paid_credits"] == before + 365
+    assert res.json()["wallet"]["paid_credits"] == before + 370
 
 
 def test_purchase_accepts_legacy_package_code() -> None:
@@ -211,8 +211,8 @@ def test_webhook_idempotency_no_double_credit() -> None:
 
     assert first.get("accepted") is True
     assert second.get("deduplicated") is True
-    # BASIC: 365 coins (bonus included) — credited exactly once regardless of duplicate webhook
-    assert wallet["paid_credits"] == before + 365
+    # BASIC: 350 base + 20 bonus = 370 coins — credited exactly once regardless of duplicate webhook
+    assert wallet["paid_credits"] == before + 370
 
 
 def test_generate_and_provider_webhook_finalize_photo() -> None:

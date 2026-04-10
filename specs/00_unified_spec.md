@@ -58,9 +58,10 @@
 
 ## Canonical tariff baseline
 
-- 5-tier packages: `Starter/Basic/Popular/Pro/Ultra` = `150/350/800/2000/5000` coins
+- 5-tier packages: `Starter/Basic/Popular/Pro/Ultra` = `150/370/880/2300/6000` coins (total delivered)
+- Base coins: `150/350/800/2000/5000`; bonus coins: `0/20/80/300/1000`
 - Prices in Telegram Stars: `230/537/1227/3067/7667 ⭐`
-- Volume bonuses: `—/+4%/+9%/+15%/+20%`
+- Volume bonuses: `—/+5%/+10%/+15%/+20%`
 - Per-model pricing: `10–40 🪙` per generation depending on AI model
 
 ## Out of MVP (moved to Phase 2+)

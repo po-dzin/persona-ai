@@ -37,6 +37,7 @@ PACKAGE_MATRIX = (
 )
 
 PACKAGE_CREDITS = {pkg["code"]: pkg["credits"] for pkg in PACKAGE_MATRIX}
+PACKAGE_BONUS_COINS = {pkg["code"]: pkg["bonus_coins"] for pkg in PACKAGE_MATRIX}
 PACKAGE_STARS_PRICES = {pkg["code"]: pkg["stars_price"] for pkg in PACKAGE_MATRIX}
 PACKAGE_TITLES = {pkg["code"]: pkg["title"] for pkg in PACKAGE_MATRIX}
 PACKAGE_BONUS_PERCENT = {pkg["code"]: pkg["bonus_percent"] for pkg in PACKAGE_MATRIX}
