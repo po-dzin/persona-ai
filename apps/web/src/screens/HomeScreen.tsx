@@ -13,7 +13,21 @@ interface HomeScreenProps {
   onPreviewStyle: (style: StyleItem) => void;
 }
 
-const CATEGORY_ORDER = ["Тренды", "Бизнес и карьера", "Лайфстайл", "Арт и креатив", "Особый повод"];
+const CATEGORY_ORDER = [
+  "Тренды",
+  "Бизнес и карьера",
+  "Лайфстайл",
+  "Студийный портрет",
+  "Фешн",
+  "Романтика и отношения",
+  "Семья и память",
+  "Праздники",
+  "Арт и креатив",
+  "Сезоны и атмосфера",
+  "Персонажи и герои",
+  "Культуры и страны",
+  "Эпохи и ретро",
+];
 function CameraIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -37,10 +51,11 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
   }, {}), [styles]);
 
   const categories = useMemo(() => {
-    const ordered = CATEGORY_ORDER.filter((c) => byCategory[c]);
+    const hasTrending = styles.some((s) => s.isTrending);
+    const ordered = CATEGORY_ORDER.filter((c) => c === "Тренды" ? hasTrending : byCategory[c]);
     Object.keys(byCategory).forEach((c) => { if (!ordered.includes(c)) ordered.push(c); });
     return ordered;
-  }, [byCategory]);
+  }, [byCategory, styles]);
 
   const [activeCategory, setActiveCategory] = useState("ВСЕ");
   const [visitedCategories, setVisitedCategories] = useState<Set<string>>(() => new Set(["ВСЕ"]));
@@ -213,6 +228,9 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
 
   const setCategory = (nextCategory: string) => {
     if (nextCategory === activeCategory || isCategoryTransitioning) return;
+    // Always reset keyframe offsets so tab-click never inherits a stale swipe position
+    panelsRef.current?.style.removeProperty("--panel-enter-from");
+    panelsRef.current?.style.removeProperty("--panel-leave-from");
     const currentIdx = allCategories.indexOf(activeCategory);
     const nextIdx = allCategories.indexOf(nextCategory);
     preloadCategory(nextCategory);
@@ -329,7 +347,9 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
   const stylesByCategory = useMemo(() => {
     const result: Record<string, StyleItem[]> = { ВСЕ: styles };
     for (const category of categories) {
-      result[category] = byCategory[category] || [];
+      result[category] = category === "Тренды"
+        ? styles.filter((s) => s.isTrending)
+        : byCategory[category] || [];
     }
     return result;
   }, [styles, categories, byCategory]);
@@ -402,9 +422,11 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
         {allCategories.map((category) => {
           const activeIdx = allCategories.indexOf(activeCategory);
           const categoryIdx = allCategories.indexOf(category);
-          const isAdjacentPrev = categoryIdx === activeIdx - 1;
-          const isAdjacentNext = categoryIdx === activeIdx + 1;
           const isOutgoing = outgoingCategory === category;
+          // Outgoing panel must not get adjacent classes — their static transform
+          // conflicts with the leave-animation and causes a single-frame blink.
+          const isAdjacentPrev = !isOutgoing && categoryIdx === activeIdx - 1;
+          const isAdjacentNext = !isOutgoing && categoryIdx === activeIdx + 1;
           const shouldRender = visitedCategories.has(category) || isAdjacentPrev || isAdjacentNext || isOutgoing;
           if (!shouldRender) return null;
           const isActive = category === activeCategory;

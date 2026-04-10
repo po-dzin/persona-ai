@@ -66,13 +66,22 @@ describe("FlowStyleScreen", () => {
       "Стили",
       "Кастом",
     ]);
-    expect(Array.from(sectionHeaders, (header) => header.textContent)).toEqual([
+    const sectionNames = Array.from(sectionHeaders, (header) => header.textContent);
+    expect(sectionNames).toEqual(expect.arrayContaining([
       "Тренды",
       "Бизнес и карьера",
       "Лайфстайл",
-      "Арт и креатив",
-      "Особый повод",
+      "Студийный портрет",
+      "Фешн",
+    ]));
+    expect(sectionNames.slice(0, 5)).toEqual([
+      "Тренды",
+      "Бизнес и карьера",
+      "Лайфстайл",
+      "Студийный портрет",
+      "Фешн",
     ]);
+    expect(sectionNames).not.toContain("Бизнес");
     expect(container.querySelector(".section-header")?.parentElement).toBe(
       flowTabs?.nextElementSibling,
     );

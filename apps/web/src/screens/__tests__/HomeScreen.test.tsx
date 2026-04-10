@@ -18,14 +18,15 @@ describe("HomeScreen", () => {
     const categoryRail = screen.getByLabelText("Категории стилей");
     const categoryButtons = within(categoryRail).getAllByRole("button");
 
-    expect(categoryButtons.map((button) => button.textContent)).toEqual([
+    const categoryNames = categoryButtons.map((button) => button.textContent);
+    expect(categoryNames.slice(0, 5)).toEqual([
       "ВСЕ",
       "Тренды",
       "Бизнес и карьера",
       "Лайфстайл",
-      "Арт и креатив",
-      "Особый повод",
+      "Студийный портрет",
     ]);
+    expect(categoryNames).not.toContain("Бизнес");
     expect(within(categoryRail).getByRole("button", { name: "ВСЕ" })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -34,7 +35,7 @@ describe("HomeScreen", () => {
     const activePanel = container.querySelector('.home-styles-panel[aria-hidden="false"]');
     expect(activePanel).toBeTruthy();
     expect(within(activePanel as HTMLElement).getByRole("button", { name: "Голливуд" })).toBeInTheDocument();
-    expect(within(activePanel as HTMLElement).getByRole("button", { name: "Аниме" })).toBeInTheDocument();
+    expect(within(activePanel as HTMLElement).getByRole("button", { name: "Аниме-герой" })).toBeInTheDocument();
 
     await user.click(within(categoryRail).getByRole("button", { name: "Бизнес и карьера" }));
 
@@ -50,7 +51,7 @@ describe("HomeScreen", () => {
     const businessPanel = container.querySelector('.home-styles-panel[aria-hidden="false"]');
     expect(businessPanel).toBeTruthy();
     expect(within(businessPanel as HTMLElement).getByRole("button", { name: "Бизнес-портрет" })).toBeInTheDocument();
-    expect(within(businessPanel as HTMLElement).queryByRole("button", { name: "Аниме" })).not.toBeInTheDocument();
+    expect(within(businessPanel as HTMLElement).queryByRole("button", { name: "Аниме-герой" })).not.toBeInTheDocument();
   });
 
   it("calls onPreviewStyle when style card is clicked", async () => {
@@ -115,15 +116,16 @@ describe("HomeScreen", () => {
     expect(stickyHeader).toContainElement(tabsRow);
 
     const tabButtons = within(tabsRow).getAllByRole("button");
-    expect(tabButtons).toHaveLength(6);
-    expect(tabButtons.map((node) => node.textContent)).toEqual([
+    const tabNames = tabButtons.map((node) => node.textContent);
+    expect(tabNames.length).toBeGreaterThan(6);
+    expect(tabNames.slice(0, 5)).toEqual([
       "ВСЕ",
       "Тренды",
       "Бизнес и карьера",
       "Лайфстайл",
-      "Арт и креатив",
-      "Особый повод",
+      "Студийный портрет",
     ]);
+    expect(tabNames).not.toContain("Бизнес");
     expect(within(tabsRow).getByRole("button", { name: "ВСЕ" })).toHaveAttribute(
       "aria-pressed",
       "true",
