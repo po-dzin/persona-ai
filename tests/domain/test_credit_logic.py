@@ -101,15 +101,15 @@ def test_volume_bonus_credits_on_purchase() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u-bonus")
 
-    # BASIC: 350 base + 20 bonus = 370 total
+    # BASIC: 350 base + 15 bonus = 365 total
     before = svc.get_balance("u-bonus")["paid_credits"]
     result = svc.purchase("u-bonus", "BASIC")
-    assert result["wallet"]["paid_credits"] == before + 370
+    assert result["wallet"]["paid_credits"] == before + 365
 
-    # POPULAR: 800 base + 80 bonus = 880 total
+    # POPULAR: 800 base + 75 bonus = 875 total
     before = svc.get_balance("u-bonus")["paid_credits"]
     result2 = svc.purchase("u-bonus", "POPULAR")
-    assert result2["wallet"]["paid_credits"] == before + 880
+    assert result2["wallet"]["paid_credits"] == before + 875
 
     # STARTER: 150 coins (no bonus)
     svc.get_or_create_user("u-starter")

@@ -14,8 +14,8 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
 export const PACKAGE_MATRIX = [
   { code: "STARTER", title: "Starter", credits: 150,  bonusCoins: 0,    bonusPercent: 0,  starsPrice: 230,  sortOrder: 10 },
-  { code: "BASIC",   title: "Basic",   credits: 350,  bonusCoins: 20,   bonusPercent: 5,  starsPrice: 537,  sortOrder: 20 },
-  { code: "POPULAR", title: "Popular", credits: 800,  bonusCoins: 80,   bonusPercent: 10, starsPrice: 1227, sortOrder: 30 },
+  { code: "BASIC",   title: "Basic",   credits: 350,  bonusCoins: 15,   bonusPercent: 4,  starsPrice: 537,  sortOrder: 20 },
+  { code: "POPULAR", title: "Popular", credits: 800,  bonusCoins: 75,   bonusPercent: 9,  starsPrice: 1227, sortOrder: 30 },
   { code: "PRO",     title: "Pro",     credits: 2000, bonusCoins: 300,  bonusPercent: 15, starsPrice: 3067, sortOrder: 40 },
   { code: "ULTRA",   title: "Ultra",   credits: 5000, bonusCoins: 1000, bonusPercent: 20, starsPrice: 7667, sortOrder: 50 },
 ] as const;
