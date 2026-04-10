@@ -84,7 +84,7 @@ describe("ProfileScreen layout", () => {
 
     const adminCard = cards[0];
     expect(adminCard.querySelector("a")).toHaveAttribute("href");
-    expect(adminCard.querySelector("a")?.getAttribute("href")).toContain("/admin");
+    expect(adminCard.querySelector("a")?.getAttribute("href")).toContain("/admin/");
     expect(adminCard.querySelector("a")?.getAttribute("href")).toContain("tgInitData=");
 
     // Social and support are still present

@@ -63,18 +63,25 @@ async def answer_pre_checkout(pre_checkout_query_id: str) -> None:
 
 def create_invoice_link(package_code: str) -> str:
     """Create a Telegram Stars invoice link for the given package."""
-    from shared.contracts.status import PACKAGE_CREDITS, PACKAGE_STARS_PRICES, PACKAGE_TITLES
+    from shared.contracts.status import (
+        PACKAGE_BONUS_COINS,
+        PACKAGE_CREDITS,
+        PACKAGE_STARS_PRICES,
+        PACKAGE_TITLES,
+    )
     package_code = normalize_package_code(package_code)
 
     if package_code in PACKAGE_CREDITS:
         stars = PACKAGE_STARS_PRICES[package_code]
         credits = PACKAGE_CREDITS[package_code]
+        bonus = PACKAGE_BONUS_COINS.get(package_code, 0)
+        total_credits = credits + bonus
         title = PACKAGE_TITLES.get(package_code, package_code)
     elif settings.free_demo_mode and package_code == "TEST":
         # Demo/test package: 1 Star, credited then refunded automatically
         from app.services.vertical_slice import _DEMO_TEST_PACKAGE
         stars = _DEMO_TEST_PACKAGE["stars_price"]      # 1 Star
-        credits = _DEMO_TEST_PACKAGE["credits"]
+        total_credits = _DEMO_TEST_PACKAGE["credits"]
         title = "Тест"
     else:
         raise ValueError(f"package_not_found: {package_code}")
@@ -82,8 +89,8 @@ def create_invoice_link(package_code: str) -> str:
     resp = _tg_api(
         "createInvoiceLink",
         {
-            "title": f"{title} — {credits} монет",
-            "description": f"Пополнение баланса PersonAI на {credits} монет",
+            "title": f"{title} — {total_credits} монет",
+            "description": f"Пополнение баланса PersonAI на {total_credits} монет",
             "payload": f"PACKAGE_{package_code}",
             "currency": "XTR",
             "prices": [{"label": "Монеты", "amount": stars}],
