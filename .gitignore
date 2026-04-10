@@ -18,3 +18,4 @@ specs/Live Photo App.png
 dev.db
 vendor/
 dev.db
+.claude/worktrees/
