@@ -462,7 +462,7 @@ export function App() {
   const screenTransitionTimerRef = useRef<number | null>(null);
 
   const [selectedStyle, setSelectedStyle] = useState<StyleItem | null>(styles[0] || null);
-  const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nano-banana-v1");
+  const [selectedModelId, setSelectedModelId] = useState(models[0]?.id || "nb2-1k");
   const selectedModelCost = models.find((m) => m.id === selectedModelId)?.coins ?? 10;
   const [selectedPrompt, setSelectedPrompt] = useState("");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState("1:1");
@@ -781,7 +781,7 @@ export function App() {
     setFlowStyleOpen(true);
     setSelectedStyle(styles[0] || null);
     setSelectedPrompt("");
-    setSelectedModelId(models[0]?.id || "nano-banana-v1");
+    setSelectedModelId("nb2-1k");
     setSelectedAspectRatio("1:1");
     setSelectedSourceTab("styles");
     setFlowUploadOpen(false);
@@ -802,7 +802,7 @@ export function App() {
         const sharedPhoto: PhotoRecord = {
           orderId: `shared-${shared.orderId}`,
           styleCode: shared.styleCode || "custom",
-          modelId: shared.modelId || (models[0]?.id || "nano-banana-v1"),
+          modelId: shared.modelId || (models[0]?.id || "nb2-1k"),
           status: "done",
           prompt: "",
           resultUrl: shared.resultUrl,
@@ -830,7 +830,7 @@ export function App() {
   const applyStyleSelection = (style: StyleItem) => {
     setSelectedStyle(style);
     setSelectedPrompt(style.promptTemplate);
-    setSelectedModelId("nano-banana-v1");
+    setSelectedModelId("nb2-1k");
     setSelectedAspectRatio("1:1");
   };
 
@@ -850,8 +850,8 @@ export function App() {
     setStylePreviewOpen(true);
   };
 
-  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string; sourceTab: SourceTab; photoFile?: File | null }) => {
-    setSelectedModelId(payload.modelId);
+  const handleFlowContinue = (payload: { modelId: string; prompt: string; aspectRatio: string; sourceTab: SourceTab; enhancePrompt?: boolean; photoFile?: File | null }) => {
+    setSelectedModelId(payload.sourceTab === "styles" ? "nb2-1k" : payload.modelId);
     setSelectedPrompt(payload.prompt);
     setSelectedAspectRatio(payload.aspectRatio);
     setSelectedSourceTab(payload.sourceTab);
@@ -900,7 +900,7 @@ export function App() {
 
       runGenerateBackground(
         { userId, sourceKey, modelId: payload.modelId, styleCode: "custom",
-          prompt: payload.prompt, aspectRatio: payload.aspectRatio },
+          prompt: payload.prompt, aspectRatio: payload.aspectRatio, enhancePrompt: payload.enhancePrompt },
         async (response) => {
           if (response.result === "paywall_required") {
             settleOptimisticCharge(optimisticId, null);

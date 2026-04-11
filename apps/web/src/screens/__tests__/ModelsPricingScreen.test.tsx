@@ -18,7 +18,7 @@ describe("ModelsPricingScreen", () => {
 
     expect(screen.getByRole("button", { name: "Назад" })).toBeInTheDocument();
     expect(screen.getByText("Описание тарифов")).toBeInTheDocument();
-    expect(screen.getByText("Nano Banana")).toBeInTheDocument();
+    expect(screen.getByText("Nano Banana 2 · 1k")).toBeInTheDocument();
     expect(screen.getByText("10 🪙")).toBeInTheDocument();
     expect(screen.getByText("Хранение фотографий")).toBeInTheDocument();
     expect(screen.getAllByText("30 дней")).toHaveLength(2);

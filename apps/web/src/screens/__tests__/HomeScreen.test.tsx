@@ -73,7 +73,7 @@ describe("HomeScreen", () => {
       {
         orderId: "ord_1",
         styleCode: "hollywood",
-        modelId: "nano-banana-v1",
+        modelId: "nb2-1k",
         status: "processing",
         prompt: "cinematic portrait",
         resultUrl: null,
@@ -84,7 +84,7 @@ describe("HomeScreen", () => {
       {
         orderId: "ord_2",
         styleCode: "business",
-        modelId: "nano-banana-v1",
+        modelId: "nb2-1k",
         status: "queued",
         prompt: "business headshot",
         resultUrl: null,

@@ -1068,6 +1068,70 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .custom-textarea::placeholder { color: var(--sem-color-text-disabled); }
 .custom-textarea:focus { outline: var(--cmp-space-2) solid var(--sem-color-accent-ring-50); outline-offset: var(--cmp-size-hairline); border-color: var(--sem-color-accent-ring-40); }
+.enhancer-toggle {
+  width: 100%;
+  margin-top: var(--cmp-space-8);
+  padding: var(--cmp-space-10) var(--cmp-space-12);
+  border-radius: var(--cmp-space-12);
+  border: var(--cmp-size-hairline) solid var(--sem-border-default);
+  background: var(--sem-color-bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cmp-space-12);
+  color: var(--sem-color-text-secondary);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--cmp-motion-fast) var(--cmp-ease-standard), background var(--cmp-motion-fast) var(--cmp-ease-standard);
+}
+.enhancer-toggle.active {
+  border-color: var(--sem-color-accent-ring-40);
+  background: var(--sem-color-accent-soft-15);
+}
+.enhancer-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cmp-space-2);
+  min-width: 0;
+}
+.enhancer-toggle-title {
+  font-size: var(--cmp-type-label-md-size);
+  font-weight: 600;
+  color: var(--sem-color-text-primary);
+}
+.enhancer-toggle-subtitle {
+  font-size: var(--cmp-type-label-sm-size);
+  color: var(--sem-color-text-tertiary);
+  line-height: var(--cmp-type-line-height-body);
+}
+.enhancer-toggle-track {
+  width: var(--cmp-space-32);
+  height: var(--cmp-space-20);
+  border-radius: var(--cmp-radius-pill);
+  background: var(--sem-color-bg-elevated);
+  border: var(--cmp-size-hairline) solid var(--sem-border-default);
+  display: inline-flex;
+  align-items: center;
+  padding: var(--cmp-size-hairline);
+  flex-shrink: 0;
+  transition: background var(--cmp-motion-fast) var(--cmp-ease-standard), border-color var(--cmp-motion-fast) var(--cmp-ease-standard);
+}
+.enhancer-toggle-track.active {
+  background: var(--sem-color-accent);
+  border-color: var(--sem-color-accent-ring-40);
+}
+.enhancer-toggle-thumb {
+  width: var(--cmp-space-16);
+  height: var(--cmp-space-16);
+  border-radius: 50%;
+  background: var(--sem-color-text-inverse);
+  transform: translateX(0);
+  transition: transform var(--cmp-motion-fast) var(--cmp-ease-standard);
+}
+.enhancer-toggle-track.active .enhancer-toggle-thumb {
+  transform: translateX(var(--cmp-space-12));
+}
 
 .ratio-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--cmp-space-6); }
 .ratio-chip {
@@ -1207,48 +1271,50 @@ button, a, [role="button"] { touch-action: manipulation; }
   margin-bottom: var(--cmp-space-8);
 }
 
-/* ─── Model inline dropdown ─── */
-.model-trigger {
-  display: flex; align-items: center; justify-content: space-between;
-  width: 100%; padding: var(--cmp-space-12) var(--cmp-space-14);
-  background: var(--sem-color-bg-surface);
+/* ─── Model family + quality controls ─── */
+.model-family-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--cmp-space-8);
+}
+.family-chip,
+.quality-chip {
   border: var(--cmp-size-hairline) solid var(--sem-border-default);
   border-radius: var(--cmp-space-12);
+  background: var(--sem-color-bg-surface);
+  color: var(--sem-color-text-secondary);
+  min-height: var(--cmp-touch-min-size);
+  font-family: inherit;
+  font-size: var(--cmp-type-body-sm-size);
+  font-weight: 600;
+  transition: border-color var(--cmp-motion-fast) var(--cmp-ease-standard), background var(--cmp-motion-fast) var(--cmp-ease-standard), color var(--cmp-motion-fast) var(--cmp-ease-standard);
+}
+.family-chip.active,
+.quality-chip.active {
+  background: var(--sem-color-accent-soft-15);
+  border-color: var(--sem-color-accent-light);
   color: var(--sem-color-text-primary);
-  font-family: inherit; font-size: var(--cmp-type-body-lg-size); font-weight: 500;
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--cmp-motion-fast) var(--cmp-ease-standard);
 }
-.model-trigger:active { background: var(--sem-border-default); }
-.model-dropdown {
-  position: absolute;
-  top: calc(100% + var(--cmp-space-4));
-  left: 0; right: 0;
-  background: var(--sem-color-bg-popover);
-  border: var(--cmp-size-hairline) solid var(--sem-color-overlay-10);
-  border-radius: var(--cmp-space-12);
-  overflow: hidden;
-  z-index: var(--cmp-z-flow);
-  box-shadow: 0 var(--cmp-space-8) var(--cmp-space-24) var(--sem-color-overlay-chip);
-  transform-origin: top center;
-  animation: popoverEnter var(--cmp-motion-popover-enter) var(--cmp-ease-standard);
+.quality-chip-row {
+  display: flex;
+  gap: var(--cmp-space-8);
 }
-.model-dropdown-item {
-  display: flex; align-items: center; justify-content: space-between;
-  width: 100%; padding: var(--cmp-space-12) var(--cmp-space-14);
-  background: transparent;
-  border: none;
-  border-bottom: var(--cmp-size-hairline) solid var(--sem-border-default);
+.quality-chip {
+  padding: 0 var(--cmp-space-14);
+}
+.custom-label-secondary {
+  margin-top: var(--cmp-space-12);
+}
+.custom-meta-row {
+  margin-top: var(--cmp-space-8);
+  display: flex;
+  justify-content: flex-end;
+}
+.custom-meta-value {
+  font-size: var(--cmp-type-body-md-size);
+  font-weight: 700;
   color: var(--sem-color-text-primary);
-  font-family: inherit; font-size: var(--cmp-type-body-lg-size); font-weight: 500;
-  cursor: pointer;
-  text-align: left;
-  transition: background var(--cmp-motion-snappy) var(--cmp-ease-standard);
 }
-.model-dropdown-item:last-child { border-bottom: none; }
-.model-dropdown-item:active { background: var(--sem-border-default); }
-.model-dropdown-item.selected { color: var(--sem-color-accent-light); }
 
 /* ─── Placeholder screens ─── */
 .placeholder-screen {
@@ -1793,12 +1859,6 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 
 .custom-field-relative { position: relative; }
-.model-trigger-chevron {
-  transition: transform var(--cmp-motion-normal) var(--cmp-ease-standard);
-}
-.model-trigger-chevron.open {
-  transform: rotate(180deg);
-}
 
 .upload-preview-shell {
   border: none;

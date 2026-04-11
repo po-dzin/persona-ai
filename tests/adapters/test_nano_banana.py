@@ -21,29 +21,27 @@ from app.adapters.http_client import ProviderHTTPError
 
 # ──────────────────────── model map ──────────────────────────────
 
-def test_model_map_has_all_three_models() -> None:
-    assert "nano-banana-v1" in _MODEL_MAP
-    assert "nano-banana-v2" in _MODEL_MAP
-    assert "nano-banana-pro" in _MODEL_MAP
+def test_model_map_has_all_sku_models() -> None:
+    assert "nb2-1k" in _MODEL_MAP
+    assert "nb2-2k" in _MODEL_MAP
+    assert "nb2-4k" in _MODEL_MAP
+    assert "nb-pro-2k" in _MODEL_MAP
+    assert "nb-pro-4k" in _MODEL_MAP
 
 
-def test_model_map_v1_is_flash() -> None:
-    assert _MODEL_MAP["nano-banana-v1"] == "gemini-2.5-flash-image"
+def test_model_map_nb2_is_flash_preview() -> None:
+    assert _MODEL_MAP["nb2-1k"] == "gemini-3.1-flash-image-preview"
 
 
-def test_model_map_v2_is_flash_preview() -> None:
-    assert _MODEL_MAP["nano-banana-v2"] == "gemini-3.1-flash-image-preview"
-
-
-def test_model_map_pro_is_pro_preview() -> None:
-    assert _MODEL_MAP["nano-banana-pro"] == "gemini-3-pro-image-preview"
+def test_model_map_nb_pro_is_pro_preview() -> None:
+    assert _MODEL_MAP["nb-pro-2k"] == "gemini-3-pro-image-preview"
 
 
 def test_unknown_model_falls_back_to_default() -> None:
     adapter = NanoBananaAdapter(integration_mode="mock")
     # In mock mode submit ignores model_id anyway, but verify _MODEL_MAP.get fallback
-    result = _MODEL_MAP.get("non-existent-model", "gemini-2.5-flash-image")
-    assert result == "gemini-2.5-flash-image"
+    result = _MODEL_MAP.get("non-existent-model", "gemini-3.1-flash-image-preview")
+    assert result == "gemini-3.1-flash-image-preview"
 
 
 # ─────────────────── _extract_image ──────────────────────────────
@@ -165,7 +163,7 @@ def test_mock_mode_returns_submitted_status() -> None:
     adapter = NanoBananaAdapter(integration_mode="mock")
     result = adapter.submit(
         order_id="ord-1",
-        model_id="nano-banana-v1",
+        model_id="nb2-1k",
         source_key="source/u1/img.jpg",
         source_image_url="https://r2.example/source/u1/img.jpg",
         prompt="test",
@@ -227,14 +225,14 @@ def test_real_mode_calls_correct_gemini_endpoint(monkeypatch) -> None:
     # r2.example placeholder → no image fetched, plain text-only payload
     result = adapter.submit(
         order_id="ord-real",
-        model_id="nano-banana-v1",
+        model_id="nb2-1k",
         source_key="source/u1/img.jpg",
         source_image_url="https://r2.example/img.jpg",
         prompt="cyberpunk portrait",
         aspect_ratio="1:1",
     )
 
-    assert "gemini-2.5-flash-image:generateContent" in captured["url"]
+    assert "gemini-3.1-flash-image-preview:generateContent" in captured["url"]
     assert captured["headers"]["x-goog-api-key"] == "test-key-123"
     parts = captured["payload"]["contents"][0]["parts"]
     # text-only: first (and only) part is the raw prompt (no photo instruction prefix)
@@ -274,7 +272,7 @@ def test_real_mode_includes_source_photo_when_url_is_real(monkeypatch) -> None:
     adapter = NanoBananaAdapter(integration_mode="real", real_calls_enabled=True, api_key="k")
     adapter.submit(
         order_id="ord-photo",
-        model_id="nano-banana-v1",
+        model_id="nb2-1k",
         source_key="source/u1/img.jpg",
         source_image_url="https://cdn.real.com/source/u1/img.jpg",
         prompt="Hollywood portrait",
@@ -310,9 +308,9 @@ def test_real_mode_uses_correct_model_per_model_id(monkeypatch) -> None:
     adapter = NanoBananaAdapter(integration_mode="real", real_calls_enabled=True, api_key="k")
 
     for model_id, expected_slug in [
-        ("nano-banana-v1", "gemini-2.5-flash-image"),
-        ("nano-banana-v2", "gemini-3.1-flash-image-preview"),
-        ("nano-banana-pro", "gemini-3-pro-image-preview"),
+        ("nb2-1k", "gemini-3.1-flash-image-preview"),
+        ("nb2-4k", "gemini-3.1-flash-image-preview"),
+        ("nb-pro-2k", "gemini-3-pro-image-preview"),
     ]:
         calls.clear()
         adapter.submit(
@@ -348,7 +346,7 @@ def test_real_mode_retries_on_503_and_succeeds(monkeypatch) -> None:
     adapter = NanoBananaAdapter(integration_mode="real", real_calls_enabled=True, api_key="k")
     result = adapter.submit(
         order_id="ord-retry",
-        model_id="nano-banana-v1",
+        model_id="nb2-1k",
         source_key="k",
         source_image_url="https://r2/k",
         prompt="test",
@@ -367,7 +365,7 @@ def test_real_mode_falls_back_to_default_model_on_404(monkeypatch) -> None:
 
     def fake_post_json(*, url, headers, payload, timeout_seconds):
         called_urls.append(url)
-        if "gemini-3.1-flash-image-preview" in url:
+        if "gemini-3-pro-image-preview" in url:
             raise ProviderHTTPError("http_404: model not found")
         raw = b"\x89PNG fallback"
         return {"candidates": [{"content": {"parts": [
@@ -380,15 +378,15 @@ def test_real_mode_falls_back_to_default_model_on_404(monkeypatch) -> None:
     adapter = NanoBananaAdapter(integration_mode="real", real_calls_enabled=True, api_key="k")
     result = adapter.submit(
         order_id="ord-fallback",
-        model_id="nano-banana-v2",
+        model_id="nb-pro-2k",
         source_key="k",
         source_image_url="https://r2/k",
         prompt="test",
         aspect_ratio="1:1",
     )
 
-    assert any("gemini-3.1-flash-image-preview" in url for url in called_urls)
-    assert any("gemini-2.5-flash-image:generateContent" in url for url in called_urls)
+    assert any("gemini-3-pro-image-preview" in url for url in called_urls)
+    assert any("gemini-3.1-flash-image-preview:generateContent" in url for url in called_urls)
     assert result.status == "done"
 
 
@@ -405,7 +403,7 @@ def test_real_mode_raises_on_non_retryable_http_error(monkeypatch) -> None:
     with pytest.raises(ProviderHTTPError):
         adapter.submit(
             order_id="ord-fail",
-            model_id="nano-banana-v1",
+            model_id="nb2-1k",
             source_key="k",
             source_image_url="https://r2/k",
             prompt="test",

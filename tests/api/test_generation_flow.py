@@ -57,9 +57,9 @@ def _source_key(client: TestClient, user_id: str, filename: str = "photo.jpg") -
     return res.json()["source_key"]
 
 
-def _generate(client: TestClient, user_id: str, *, model_id: str = "nano-banana-v1",
+def _generate(client: TestClient, user_id: str, *, model_id: str = "nb2-1k",
               style_code: str = "hollywood", aspect_ratio: str = "1:1",
-              prompt: str = "test prompt") -> dict:
+              prompt: str = "test prompt", enhance_prompt: bool = True) -> dict:
     sk = _source_key(client, user_id)
     res = client.post(
         "/v1/generate",
@@ -69,6 +69,7 @@ def _generate(client: TestClient, user_id: str, *, model_id: str = "nano-banana-
             "style_code": style_code,
             "aspect_ratio": aspect_ratio,
             "prompt": prompt,
+            "enhance_prompt": enhance_prompt,
         },
         headers=_headers(user_id),
     )
@@ -103,9 +104,11 @@ def _webhook_failed(client: TestClient, order_id: str, event_id: str,
 # ──────────────────── model routing & coin cost ──────────────────
 
 @pytest.mark.parametrize("model_id,expected_cost", [
-    ("nano-banana-v1", 10),
-    ("nano-banana-v2", 20),
-    ("nano-banana-pro", 50),
+    ("nb2-1k", 10),
+    ("nb2-2k", 15),
+    ("nb-pro-2k", 20),
+    ("flux2-pro-1k", 7),
+    ("flux2-max-1k", 12),
 ])
 def test_each_model_deducts_correct_coins(model_id: str, expected_cost: int) -> None:
     client = _client()
@@ -119,7 +122,7 @@ def test_each_model_deducts_correct_coins(model_id: str, expected_cost: int) -> 
     assert result["wallet"]["paid_credits"] == 100 - expected_cost
 
 
-@pytest.mark.parametrize("model_id", ["nano-banana-v1", "nano-banana-v2", "nano-banana-pro"])
+@pytest.mark.parametrize("model_id", ["nb2-1k", "nb2-2k", "nb-pro-2k"])
 def test_all_models_route_to_nano_banana_provider(model_id: str) -> None:
     client = _client()
     uid = f"u-provider-{model_id}"
@@ -131,9 +134,30 @@ def test_all_models_route_to_nano_banana_provider(model_id: str) -> None:
     assert result["job"]["provider"] == "nano_banana"
 
 
+def test_legacy_model_aliases_are_rejected() -> None:
+    client = _client()
+    uid = "u-alias-rejected"
+    _ensure_user(client, uid)
+    _seed_user(uid, paid_credits=100)
+
+    sk = _source_key(client, uid)
+    res = client.post(
+        "/v1/generate",
+        json={
+            "source_key": sk,
+            "model_id": "nano-banana-v1",
+            "style_code": "hollywood",
+            "aspect_ratio": "1:1",
+        },
+        headers=_headers(uid),
+    )
+    assert res.status_code == 400
+    assert res.json()["detail"] == "model_not_found"
+
+
 # ────────────────── synchronous completion ───────────────────────
 
-@pytest.mark.parametrize("model_id", ["nano-banana-v1", "nano-banana-v2", "nano-banana-pro"])
+@pytest.mark.parametrize("model_id", ["nb2-1k", "nb2-2k", "nb-pro-2k"])
 def test_sync_provider_completion_sets_order_done_immediately(monkeypatch, model_id: str) -> None:
     """When the provider returns status=done inline, no webhook should be needed."""
     import app.services.vertical_slice as svc_mod
@@ -173,7 +197,7 @@ def test_sync_provider_completion_sets_order_done_immediately(monkeypatch, model
 
 # ─────────────────── async webhook flow ──────────────────────────
 
-@pytest.mark.parametrize("model_id", ["nano-banana-v1", "nano-banana-v2", "nano-banana-pro"])
+@pytest.mark.parametrize("model_id", ["nb2-1k", "nb2-2k", "nb-pro-2k"])
 def test_async_provider_order_stays_processing_until_webhook(model_id: str) -> None:
     """Mock provider returns submitted → order in processing → webhook finalises it."""
     client = _client()
@@ -203,9 +227,9 @@ def test_async_provider_order_stays_processing_until_webhook(model_id: str) -> N
 # ─────────────────── failures & refunds ──────────────────────────
 
 @pytest.mark.parametrize("model_id,cost", [
-    ("nano-banana-v1", 10),
-    ("nano-banana-v2", 20),
-    ("nano-banana-pro", 50),
+    ("nb2-1k", 10),
+    ("nb2-2k", 15),
+    ("nb-pro-2k", 20),
 ])
 def test_technical_failure_refunds_coins_for_all_models(model_id: str, cost: int) -> None:
     client = _client()
@@ -232,14 +256,34 @@ def test_policy_failure_does_not_refund_coins() -> None:
     _ensure_user(client, uid)
     _seed_user(uid, paid_credits=50)
 
-    result = _generate(client, uid, model_id="nano-banana-v2")
+    result = _generate(client, uid, model_id="nb2-2k")
     order_id = result["order"]["order_id"]
-    assert result["wallet"]["paid_credits"] == 30  # 50 - 20
+    assert result["wallet"]["paid_credits"] == 35  # 50 - 15
 
     _webhook_failed(client, order_id, "evt-policy-v2", "policy_failed")
 
     wallet = client.get("/v1/me/balance", headers=_headers(uid)).json()["wallet"]
-    assert wallet["paid_credits"] == 30  # not refunded
+    assert wallet["paid_credits"] == 35  # not refunded
+
+
+def test_technical_failure_does_not_recompute_lifecycle_state() -> None:
+    client = _client()
+    uid = "u-fail-state-stable"
+    _ensure_user(client, uid)
+    _seed_user(uid, paid_credits=35)
+
+    result = _generate(client, uid, model_id="nb-pro-4k")
+    order_id = result["order"]["order_id"]
+
+    with get_session() as db:
+        state_before_fail = db.get(UserRow, uid).lifecycle_state
+
+    _webhook_failed(client, order_id, "evt-fail-no-recompute", "technical_failed")
+
+    with get_session() as db:
+        state_after_fail = db.get(UserRow, uid).lifecycle_state
+
+    assert state_before_fail == state_after_fail
 
 
 def test_generate_returns_paywall_when_no_credits() -> None:
@@ -251,7 +295,7 @@ def test_generate_returns_paywall_when_no_credits() -> None:
     sk = _source_key(client, uid)
     res = client.post(
         "/v1/generate",
-        json={"source_key": sk, "model_id": "nano-banana-v1",
+        json={"source_key": sk, "model_id": "nb2-1k",
               "style_code": "hollywood", "aspect_ratio": "1:1"},
         headers=_headers(uid),
     )
@@ -259,23 +303,23 @@ def test_generate_returns_paywall_when_no_credits() -> None:
     assert res.json()["result"] == "paywall_required"
 
 
-def test_generate_insufficient_coins_for_pro_but_enough_for_v1() -> None:
-    """20 coins: enough for v2 but not pro."""
+def test_generate_insufficient_coins_for_nb_pro_4k_but_enough_for_nb2_2k() -> None:
+    """35-coin tier remains unavailable after spending 15 coins on nb2-2k."""
     client = _client()
     uid = "u-partial-coins"
     _ensure_user(client, uid)
     _seed_user(uid, paid_credits=20)
 
-    # v2 succeeds (costs 20)
-    r_v2 = _generate(client, uid, model_id="nano-banana-v2")
+    # nb2-2k succeeds (costs 15)
+    r_v2 = _generate(client, uid, model_id="nb2-2k")
     assert r_v2["result"] == "enqueued"
-    assert r_v2["wallet"]["paid_credits"] == 0
+    assert r_v2["wallet"]["paid_credits"] == 5
 
-    # pro now fails (0 coins left, costs 50)
+    # NB Pro 4k now fails (5 coins left, costs 35)
     sk = _source_key(client, uid)
     r_pro = client.post(
         "/v1/generate",
-        json={"source_key": sk, "model_id": "nano-banana-pro",
+        json={"source_key": sk, "model_id": "nb-pro-4k",
               "style_code": "hollywood", "aspect_ratio": "1:1"},
         headers=_headers(uid),
     )
@@ -307,7 +351,37 @@ def test_prompt_stored_in_order() -> None:
     order_id = result["order"]["order_id"]
 
     order = client.get(f"/v1/orders/{order_id}", headers=_headers(uid)).json()["order"]
-    assert order["prompt"] == "cyberpunk neon city portrait"
+    assert "cyberpunk neon city portrait" in order["prompt"]
+    assert "Negative constraints:" in order["prompt"]
+
+
+def test_prompt_enhancer_can_be_disabled_for_custom_prompt() -> None:
+    client = _client()
+    uid = "u-prompt-raw"
+    _ensure_user(client, uid)
+    _seed_user(uid, paid_credits=100)
+
+    result = _generate(client, uid, prompt="raw portrait prompt", enhance_prompt=False)
+    order_id = result["order"]["order_id"]
+    order = client.get(f"/v1/orders/{order_id}", headers=_headers(uid)).json()["order"]
+
+    assert order["prompt"] == "raw portrait prompt"
+    assert "Negative constraints:" not in order["prompt"]
+
+
+def test_style_prompt_is_compiled_when_custom_prompt_not_provided() -> None:
+    client = _client()
+    uid = "u-style-compiled"
+    _ensure_user(client, uid)
+    _seed_user(uid, paid_credits=100)
+
+    result = _generate(client, uid, prompt="")
+    order_id = result["order"]["order_id"]
+    order = client.get(f"/v1/orders/{order_id}", headers=_headers(uid)).json()["order"]
+
+    assert "Stylization level" in order["prompt"]
+    assert "Style anchors:" in order["prompt"]
+    assert "Negative constraints:" in order["prompt"]
 
 
 def test_model_id_stored_in_order() -> None:
@@ -316,11 +390,11 @@ def test_model_id_stored_in_order() -> None:
     _ensure_user(client, uid)
     _seed_user(uid, paid_credits=100)
 
-    result = _generate(client, uid, model_id="nano-banana-v2")
+    result = _generate(client, uid, model_id="nb2-2k")
     order_id = result["order"]["order_id"]
 
     photos = client.get("/v1/me/photos", headers=_headers(uid)).json()["photos"]
-    assert photos[0]["model_id"] == "nano-banana-v2"
+    assert photos[0]["model_id"] == "nb2-2k"
 
 
 # ─────────────────── direct file upload ──────────────────────────
@@ -373,7 +447,7 @@ def test_generate_after_direct_file_upload() -> None:
 
     res = client.post(
         "/v1/generate",
-        json={"source_key": source_key, "model_id": "nano-banana-v1",
+        json={"source_key": source_key, "model_id": "nb2-1k",
               "style_code": "hollywood", "aspect_ratio": "1:1"},
         headers=_headers(uid),
     )
@@ -389,8 +463,8 @@ def test_multiple_orders_appear_in_gallery_newest_first() -> None:
     _ensure_user(client, uid)
     _seed_user(uid, paid_credits=100)
 
-    r1 = _generate(client, uid, model_id="nano-banana-v1")
-    r2 = _generate(client, uid, model_id="nano-banana-v2")
+    r1 = _generate(client, uid, model_id="nb2-1k")
+    r2 = _generate(client, uid, model_id="nb2-2k")
 
     photos = client.get("/v1/me/photos", headers=_headers(uid)).json()["photos"]
     assert len(photos) == 2
@@ -405,15 +479,15 @@ def test_history_endpoint_returns_orders() -> None:
     _ensure_user(client, uid)
     _seed_user(uid, paid_credits=100)
 
-    _generate(client, uid, model_id="nano-banana-v1")
-    _generate(client, uid, model_id="nano-banana-v2")
+    _generate(client, uid, model_id="nb2-1k")
+    _generate(client, uid, model_id="nb2-2k")
 
     res = client.get("/v1/me/history", headers=_headers(uid))
     assert res.status_code == 200
     orders = res.json()["orders"]
     assert len(orders) == 2
     model_ids = {o["model_id"] for o in orders}
-    assert model_ids == {"nano-banana-v1", "nano-banana-v2"}
+    assert model_ids == {"nb2-1k", "nb2-2k"}
 
 
 def test_gallery_does_not_leak_other_users_photos() -> None:
@@ -423,14 +497,14 @@ def test_gallery_does_not_leak_other_users_photos() -> None:
         _ensure_user(client, uid)
         _seed_user(uid, paid_credits=50)
 
-    _generate(client, uid_a, model_id="nano-banana-v1")
-    _generate(client, uid_b, model_id="nano-banana-v2")
+    _generate(client, uid_a, model_id="nb2-1k")
+    _generate(client, uid_b, model_id="nb2-2k")
 
     photos_a = client.get("/v1/me/photos", headers=_headers(uid_a)).json()["photos"]
     photos_b = client.get("/v1/me/photos", headers=_headers(uid_b)).json()["photos"]
 
-    assert len(photos_a) == 1 and photos_a[0]["model_id"] == "nano-banana-v1"
-    assert len(photos_b) == 1 and photos_b[0]["model_id"] == "nano-banana-v2"
+    assert len(photos_a) == 1 and photos_a[0]["model_id"] == "nb2-1k"
+    assert len(photos_b) == 1 and photos_b[0]["model_id"] == "nb2-2k"
 
 
 def test_second_account_isolation_blocks_cross_account_reads_and_mutations() -> None:
@@ -441,8 +515,8 @@ def test_second_account_isolation_blocks_cross_account_reads_and_mutations() -> 
         _ensure_user(client, uid)
         _seed_user(uid, paid_credits=50)
 
-    owner_result = _generate(client, owner_id, model_id="nano-banana-v1")
-    second_result = _generate(client, second_id, model_id="nano-banana-v2")
+    owner_result = _generate(client, owner_id, model_id="nb2-1k")
+    second_result = _generate(client, second_id, model_id="nb2-2k")
     owner_order_id = owner_result["order"]["order_id"]
     second_order_id = second_result["order"]["order_id"]
 
@@ -510,15 +584,15 @@ def test_generate_response_contains_required_fields() -> None:
     _ensure_user(client, uid)
     _seed_user(uid, paid_credits=50)
 
-    result = _generate(client, uid, model_id="nano-banana-v2", style_code="cyberpunk",
+    result = _generate(client, uid, model_id="nb2-2k", style_code="cyberpunk",
                        aspect_ratio="16:9", prompt="neon city")
 
     assert result["result"] == "enqueued"
     order = result["order"]
     assert "order_id" in order
-    assert order["model_id"] == "nano-banana-v2"
+    assert order["model_id"] == "nb2-2k"
     assert order["style_code"] == "cyberpunk"
-    assert order["credit_cost"] == 20
+    assert order["credit_cost"] == 15
     assert "wallet" in result
     assert "job" in result
     assert result["job"]["provider"] == "nano_banana"
@@ -534,7 +608,7 @@ def test_new_user_welcome_coins_deducted_on_generation() -> None:
     balance = client.get("/v1/me/balance", headers=_headers(uid)).json()["wallet"]
     assert balance["paid_credits"] == 20
 
-    result = _generate(client, uid, model_id="nano-banana-v1")  # costs 10 coins
+    result = _generate(client, uid, model_id="nb2-1k")  # costs 10 coins
 
     assert result["result"] == "enqueued"
     assert result["wallet"]["paid_credits"] == 10  # 20 − 10

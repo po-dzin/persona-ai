@@ -43,7 +43,7 @@ const _styleTypeIsDomain: Assert<IsExact<typeof styleDomain, Style>> = true;
 const generateRequest: GenerateRequest = {
   userId: "u-1",
   sourceKey: "uploads/a.jpg",
-  modelId: "nano-banana-v1",
+  modelId: "nb2-1k",
   styleCode: "hollywood",
   prompt: "studio portrait",
   aspectRatio: "1:1",
@@ -84,7 +84,7 @@ const invalidDtoPayload: GeneratePayloadDto = {
   // @ts-expect-error DTO contracts must remain snake_case.
   userId: "u-1",
   sourceKey: "uploads/a.jpg",
-  modelId: "nano-banana-v1",
+  modelId: "nb2-1k",
   styleCode: "hollywood",
 };
 void invalidDtoPayload;
