@@ -163,6 +163,7 @@ def create_order(data: CreateOrderRequest, request: Request, user_id: str = Depe
             model_id=data.model_id,
             prompt=data.prompt,
             aspect_ratio=data.aspect_ratio,
+            enhance_prompt=data.enhance_prompt,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -214,6 +215,7 @@ async def generate(data: GenerateRequest, request: Request, user_id: str = Depen
                 style_code=data.style_code,
                 prompt=data.prompt,
                 aspect_ratio=data.aspect_ratio,
+                enhance_prompt=data.enhance_prompt,
             ),
         )
     except ValueError as exc:

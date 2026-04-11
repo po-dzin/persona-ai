@@ -17,6 +17,7 @@ class CreateOrderRequest(BaseModel):
     model_id: str | None = Field(default=None, validation_alias=AliasChoices("model_id", "modelId"))
     prompt: str | None = None
     aspect_ratio: str = Field(default="1:1", min_length=3, validation_alias=AliasChoices("aspect_ratio", "aspectRatio"))
+    enhance_prompt: bool = Field(default=True, validation_alias=AliasChoices("enhance_prompt", "enhancePrompt"))
 
 
 class StartOrderRequest(BaseModel):
@@ -32,6 +33,7 @@ class GenerateRequest(BaseModel):
     style_code: str = Field(default="hollywood", min_length=1, validation_alias=AliasChoices("style_code", "styleCode"))
     prompt: str | None = None
     aspect_ratio: str = Field(default="1:1", min_length=3, validation_alias=AliasChoices("aspect_ratio", "aspectRatio"))
+    enhance_prompt: bool = Field(default=True, validation_alias=AliasChoices("enhance_prompt", "enhancePrompt"))
 
 
 class PurchaseRequest(BaseModel):

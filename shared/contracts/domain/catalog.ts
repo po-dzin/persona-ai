@@ -1,5 +1,16 @@
 export type ProviderId = "nano_banana" | "stable_diffusion" | "flux" | "openai_image" | "recraft";
 
+export interface StylePromptSpec {
+  subject: string;
+  styleCore: string;
+  context: string;
+  camera: string;
+  lightColorTexture: string;
+  emotion: string;
+  outputIntent: string;
+  negative: string;
+}
+
 export interface AIModel {
   id: string;
   name: string;
@@ -15,6 +26,10 @@ export interface Style {
   category: string;
   gradient: string;
   promptTemplate: string;
+  promptSpec?: StylePromptSpec;
+  stylizationLevel?: 1 | 2 | 3 | 4 | 5;
+  styleAnchors?: string[];
+  variationAxes?: string[];
   isTrending?: boolean;
   isNew?: boolean;
 }
@@ -62,6 +77,7 @@ export interface GenerateRequest {
   styleCode: string;
   prompt?: string;
   aspectRatio?: string;
+  enhancePrompt?: boolean;
 }
 
 export interface GenerateOrder {

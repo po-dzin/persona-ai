@@ -24,12 +24,23 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
     generatingOrderIds ? generatingOrderIds.has(photo.orderId) : isPhotoGenerating(photo);
   const queuedCount = photos.filter((p) => isUiGenerating(p)).length;
   const styleByCode = useMemo(() => Object.fromEntries(styles.map((s) => [s.id, s])), [styles]);
-  const filterItems = useMemo(() => ["Все", "Избранное", ...styles.map((s) => s.name)], [styles]);
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    for (const style of styles) {
+      if (!seen.has(style.category)) {
+        seen.add(style.category);
+        ordered.push(style.category);
+      }
+    }
+    return ordered;
+  }, [styles]);
+  const filterItems = useMemo(() => ["Все", "Избранные", ...categories], [categories]);
 
   const filtered = photos.filter((p) => {
     if (filter === "Все") return true;
-    if (filter === "Избранное") return favorites.has(p.orderId);
-    return styleByCode[p.styleCode]?.name === filter;
+    if (filter === "Избранные") return favorites.has(p.orderId);
+    return styleByCode[p.styleCode]?.category === filter;
   });
 
   const datedItems = filtered.map((photo, index) => {
