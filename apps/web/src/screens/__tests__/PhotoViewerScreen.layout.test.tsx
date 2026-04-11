@@ -9,7 +9,7 @@ import { PhotoViewerScreen } from "../PhotoViewerScreen";
 const basePhoto: PhotoRecord = {
   orderId: "ord_1",
   styleCode: "hollywood",
-  modelId: "nano-banana-v1",
+  modelId: "nb2-1k",
   status: "done",
   prompt: "cinematic portrait",
   resultUrl: "https://cdn.example.com/photo.jpg",

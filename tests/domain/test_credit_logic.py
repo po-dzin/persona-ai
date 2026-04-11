@@ -1,11 +1,13 @@
 
 from dataclasses import replace as dc_replace
 
+import pytest
+
 from app.core.db import UserRow, get_session
 import app.services.vertical_slice as vertical_slice_mod
 from app.services.vertical_slice import VerticalSliceService
 
-DEFAULT_MODEL = "nano-banana-v1"
+DEFAULT_MODEL = "nb2-1k"
 WELCOME_COINS = 20  # coins granted to every new user on signup
 
 
@@ -52,9 +54,9 @@ def test_paid_credit_spend_and_paywall() -> None:
 def test_paid_credit_spend_and_technical_refund() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u1")
-    _seed_user("u1", paid_credits=50)
+    _seed_user("u1", paid_credits=35)
 
-    order_id = create_order(svc, model_id="nano-banana-pro")
+    order_id = create_order(svc, model_id="nb-pro-4k")
     started = svc.start_order(order_id)
     assert started["result"] == "enqueued"
     assert started["wallet"]["paid_credits"] == 0
@@ -65,15 +67,15 @@ def test_paid_credit_spend_and_technical_refund() -> None:
         payload={"order_id": order_id, "event_type": "technical_failed"},
     )
     assert out["accepted"] is True
-    assert svc.get_balance("u1")["paid_credits"] == 50
+    assert svc.get_balance("u1")["paid_credits"] == 35
 
 
 def test_policy_failure_no_auto_refund() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u1")
-    _seed_user("u1", paid_credits=50)
+    _seed_user("u1", paid_credits=35)
 
-    order_id = create_order(svc, model_id="nano-banana-pro")
+    order_id = create_order(svc, model_id="nb-pro-4k")
     started = svc.start_order(order_id)
     assert started["result"] == "enqueued"
 
@@ -90,8 +92,8 @@ def test_policy_failure_no_auto_refund() -> None:
 def test_model_routing_is_deterministic() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u1")
-    _seed_user("u1", paid_credits=50)
-    order_id = create_order(svc, model_id="nano-banana-pro")
+    _seed_user("u1", paid_credits=35)
+    order_id = create_order(svc, model_id="nb-pro-4k")
     started = svc.start_order(order_id)
     assert started["job"]["provider"] == "nano_banana"
 
@@ -118,13 +120,11 @@ def test_volume_bonus_credits_on_purchase() -> None:
     assert res["wallet"]["paid_credits"] == before + 150
 
 
-def test_purchase_accepts_legacy_package_codes() -> None:
+def test_purchase_rejects_legacy_package_codes() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u-legacy")
-    before = svc.get_balance("u-legacy")["paid_credits"]
-
-    res = svc.purchase("u-legacy", "STARTER_STARS")
-    assert res["wallet"]["paid_credits"] == before + 150
+    with pytest.raises(ValueError, match="package_not_found"):
+        svc.purchase("u-legacy", "STARTER_STARS")
 
 
 def test_demo_mode_test_package_gives_1000_credits(monkeypatch) -> None:
@@ -146,12 +146,12 @@ def test_demo_mode_coins_spent_normally_refunded_on_failure(monkeypatch) -> None
 
     svc = vertical_slice_mod.VerticalSliceService()
     svc.get_or_create_user("u-demo-refund")
-    _seed_user("u-demo-refund", paid_credits=50)
+    _seed_user("u-demo-refund", paid_credits=35)
 
-    order_id = create_order(svc, user_id="u-demo-refund", model_id="nano-banana-pro")
+    order_id = create_order(svc, user_id="u-demo-refund", model_id="nb-pro-4k")
     started = svc.start_order(order_id)
     assert started["result"] == "enqueued"
-    # Coins are deducted normally (50 cost for pro)
+    # Coins are deducted normally (35 cost for NB Pro 4k)
     assert started["wallet"]["paid_credits"] == 0
 
     # Technical failure → coins are refunded
@@ -160,4 +160,4 @@ def test_demo_mode_coins_spent_normally_refunded_on_failure(monkeypatch) -> None
         event_id="evt-tech-demo-1",
         payload={"order_id": order_id, "event_type": "technical_failed"},
     )
-    assert svc.get_balance("u-demo-refund")["paid_credits"] == 50
+    assert svc.get_balance("u-demo-refund")["paid_credits"] == 35

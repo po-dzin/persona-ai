@@ -97,7 +97,8 @@ describe("FlowStyleScreen", () => {
 
     const customFields = customContent?.children ?? [];
     expect(customFields).toHaveLength(4);
-    expect(customFields[0]).toHaveTextContent("Модель");
+    expect(customFields[0]).toHaveTextContent("Model Family");
+    expect(customFields[0]).toHaveTextContent("Quality");
     expect(customFields[1]).toHaveTextContent("Фото");
     expect(customFields[2]).toHaveTextContent("Описание стиля");
     expect(customFields[3]).toHaveTextContent("Соотношение сторон");
@@ -146,9 +147,107 @@ describe("FlowStyleScreen", () => {
       expect.objectContaining({
         sourceTab: "custom",
         prompt: "Сдержанный editorial стиль",
-        modelId: "nano-banana-v1",
+        modelId: "nb2-1k",
         aspectRatio: "1:1",
+        enhancePrompt: true,
         photoFile: file,
+      }),
+    );
+  });
+
+  it("hides 1k quality for NB Pro family", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <FlowStyleScreen
+        isOpen
+        styles={FALLBACK_STYLES}
+        models={FALLBACK_MODELS}
+        selectedStyle={FALLBACK_STYLES[0]}
+        onSelectStyle={vi.fn()}
+        onContinue={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Кастом" }));
+    await user.click(screen.getByRole("radio", { name: "NB Pro" }));
+
+    const qualityGroup = screen.getByRole("radiogroup", { name: "Quality" });
+    expect(within(qualityGroup).queryByRole("radio", { name: "1k" })).not.toBeInTheDocument();
+    expect(within(qualityGroup).getByRole("radio", { name: "2k" })).toBeInTheDocument();
+    expect(within(qualityGroup).getByRole("radio", { name: "4k" })).toBeInTheDocument();
+  });
+
+  it("allows disabling prompt enhancer and passes the flag to onContinue", async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+
+    const { container } = render(
+      <FlowStyleScreen
+        isOpen
+        styles={FALLBACK_STYLES}
+        models={FALLBACK_MODELS}
+        selectedStyle={FALLBACK_STYLES[0]}
+        onSelectStyle={vi.fn()}
+        onContinue={onContinue}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Кастом" }));
+    const enhancerSwitch = screen.getByRole("switch", { name: /Prompt Enhancer/i });
+    expect(enhancerSwitch).toHaveAttribute("aria-checked", "true");
+    await user.click(enhancerSwitch);
+    expect(enhancerSwitch).toHaveAttribute("aria-checked", "false");
+
+    await user.type(
+      screen.getByPlaceholderText("Опишите желаемый стиль фотосессии..."),
+      "Raw prompt only",
+    );
+    const file = new File(["fake"], "portrait.png", { type: "image/png" });
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+    await user.upload(input as HTMLInputElement, file);
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+
+    expect(onContinue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: "Raw prompt only",
+        enhancePrompt: false,
+      }),
+    );
+  });
+
+  it("builds model_id from selected family + quality in custom flow", async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+
+    const { container } = render(
+      <FlowStyleScreen
+        isOpen
+        styles={FALLBACK_STYLES}
+        models={FALLBACK_MODELS}
+        selectedStyle={FALLBACK_STYLES[0]}
+        onSelectStyle={vi.fn()}
+        onContinue={onContinue}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Кастом" }));
+    await user.click(screen.getByRole("radio", { name: "FLUX.2 Max" }));
+    await user.click(screen.getByRole("radio", { name: "4k" }));
+    await user.type(screen.getByPlaceholderText("Опишите желаемый стиль фотосессии..."), "flux max look");
+    const file = new File(["fake"], "portrait.png", { type: "image/png" });
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement | null;
+    expect(input).not.toBeNull();
+    await user.upload(input as HTMLInputElement, file);
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+
+    expect(onContinue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelId: "flux2-max-4k",
       }),
     );
   });

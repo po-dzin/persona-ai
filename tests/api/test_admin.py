@@ -198,7 +198,7 @@ def test_admin_revenue_structure(monkeypatch):
     assert body["totals"]["payments"] == 1
     assert body["totals"]["paying_users"] == 1
     assert len(body["by_package"]) >= 1
-    assert body["by_package"][0]["package_code"] in ("STARTER", "STARTER_STARS")
+    assert body["by_package"][0]["package_code"] == "STARTER"
     assert len(body["recent"]) >= 1
 
 
@@ -210,7 +210,7 @@ def test_admin_generations_structure():
     up = client.post("/v1/uploads", json={"filename": "g.jpg"},
                      headers=_user_headers("u-gen-admin")).json()
     client.post("/v1/generate",
-                json={"source_key": up["source_key"], "model_id": "nano-banana-v1",
+                json={"source_key": up["source_key"], "model_id": "nb2-1k",
                       "style_code": "hollywood", "aspect_ratio": "1:1"},
                 headers=_user_headers("u-gen-admin"))
 
@@ -311,7 +311,7 @@ def test_admin_user_detail_full_profile(monkeypatch):
     client.get("/v1/me/balance", headers=hdrs)
     up = client.post("/v1/uploads", json={"filename": "d.jpg"}, headers=hdrs).json()
     client.post("/v1/generate",
-                json={"source_key": up["source_key"], "model_id": "nano-banana-v1",
+                json={"source_key": up["source_key"], "model_id": "nb2-1k",
                       "style_code": "anime", "aspect_ratio": "1:1"},
                 headers=hdrs)
     client.post("/v1/purchase",
@@ -336,3 +336,75 @@ def test_admin_user_detail_full_profile(monkeypatch):
     payment = body["payments"][0]
     assert payment["package_code"] == "BASIC"
     assert payment["amount"] == 537
+
+
+# ───────────────────── lifecycle endpoints ───────────────────────
+
+def test_admin_lifecycle_overview_has_states():
+    client = _client()
+    client.get("/v1/me/balance", headers=_user_headers("u-life-ov"))
+    res = client.get("/admin/api/lifecycle/overview?days=30", headers=_admin_headers())
+    assert res.status_code == 200
+    body = res.json()
+    assert "states" in body
+    assert "S0" in body["states"]
+    assert "INACTIVE_30D" in body["states"]
+
+
+def test_admin_lifecycle_users_filter_and_timeline():
+    client = _client()
+    uid = "u-life-list"
+    client.get("/v1/me/profile", headers=_user_headers(uid))
+
+    res = client.get("/admin/api/lifecycle/users?state=S0", headers=_admin_headers())
+    assert res.status_code == 200
+    assert any(u["user_id"] == uid for u in res.json()["users"])
+
+    timeline = client.get(f"/admin/api/lifecycle/users/{uid}/timeline", headers=_admin_headers())
+    assert timeline.status_code == 200
+    body = timeline.json()
+    assert body["user"]["user_id"] == uid
+    assert "transitions" in body
+    assert "admin_actions" in body
+
+
+def test_admin_lifecycle_force_lock_unlock_recompute():
+    client = _client()
+    uid = "u-life-ctl"
+    client.get("/v1/me/profile", headers=_user_headers(uid))
+
+    force = client.post(
+        f"/admin/api/lifecycle/users/{uid}/transition",
+        headers=_admin_headers(),
+        json={"to_state": "S3", "reason": "manual test"},
+    )
+    assert force.status_code == 200
+    assert force.json()["to_state"] == "S3"
+
+    lock = client.post(
+        f"/admin/api/lifecycle/users/{uid}/lock",
+        headers=_admin_headers(),
+        json={"reason": "freeze"},
+    )
+    assert lock.status_code == 200
+    assert lock.json()["locked"] is True
+
+    recompute = client.post(
+        f"/admin/api/lifecycle/users/{uid}/recompute",
+        headers=_admin_headers(),
+        json={"reason": "recheck"},
+    )
+    assert recompute.status_code == 200
+
+    unlock = client.post(
+        f"/admin/api/lifecycle/users/{uid}/unlock",
+        headers=_admin_headers(),
+        json={"reason": "resume"},
+    )
+    assert unlock.status_code == 200
+    assert unlock.json()["locked"] is False
+
+    timeline = client.get(f"/admin/api/lifecycle/users/{uid}/timeline", headers=_admin_headers()).json()
+    assert any(a["action_type"] == "force_transition" for a in timeline["admin_actions"])
+    assert any(a["action_type"] == "lock" for a in timeline["admin_actions"])
+    assert any(a["action_type"] == "unlock" for a in timeline["admin_actions"])

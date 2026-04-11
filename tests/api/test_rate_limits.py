@@ -46,7 +46,7 @@ def test_generate_endpoint_returns_429_after_user_limit() -> None:
         "/v1/generate",
         json={
             "source_key": first_upload.json()["source_key"],
-            "model_id": "nano-banana-v1",
+            "model_id": "nb2-1k",
             "style_code": "hollywood",
             "aspect_ratio": "1:1",
         },
@@ -58,7 +58,7 @@ def test_generate_endpoint_returns_429_after_user_limit() -> None:
         "/v1/generate",
         json={
             "source_key": first_upload.json()["source_key"],
-            "model_id": "nano-banana-v1",
+            "model_id": "nb2-1k",
             "style_code": "hollywood",
             "aspect_ratio": "1:1",
         },

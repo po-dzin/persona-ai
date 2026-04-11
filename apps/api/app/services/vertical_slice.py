@@ -10,7 +10,14 @@ from app.adapters.http_client import ProviderHTTPError
 from app.adapters.provider_registry import build_provider_registry
 from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, get_session
 from app.core.settings import settings
+from app.services.lifecycle import (
+    mark_generation_succeeded,
+    mark_payment_succeeded,
+    recompute_user_state,
+)
 from app.services.package_codes import normalize_package_code
+from app.services.prompt_compiler import compile_prompt, compile_prompt_template
+from app.services.style_catalog import load_style_catalog
 
 logger = logging.getLogger(__name__)
 
@@ -42,138 +49,377 @@ def _to_iso(val: Any) -> str:
     return str(val)
 
 
+def _style_entry(
+    *,
+    style_id: str,
+    name: str,
+    category: str,
+    gradient: str,
+    prompt_spec: dict[str, str],
+    stylization_level: int,
+    style_anchors: list[str],
+    variation_axes: list[str],
+    is_trending: bool = False,
+    is_new: bool = False,
+) -> dict[str, Any]:
+    style: dict[str, Any] = {
+        "id": style_id,
+        "name": name,
+        "category": category,
+        "gradient": gradient,
+        "prompt_spec": prompt_spec,
+        "stylization_level": stylization_level,
+        "style_anchors": style_anchors,
+        "variation_axes": variation_axes,
+        "is_trending": is_trending,
+        "is_new": is_new,
+    }
+    style["prompt_template"] = compile_prompt_template(style)
+    return style
+
+
 STYLE_CATALOG: tuple[dict[str, Any], ...] = (
-    {
-        "id": "hollywood",
-        "name": "Голливуд",
-        "category": "Тренды",
-        "gradient": "linear-gradient(145deg, #3D2855, #7B5FC0, #B896E8)",
-        "prompt_template": "Cinematic hollywood portrait, dramatic lighting, premium retouch",
-        "is_trending": True,
-    },
-    {
-        "id": "glamour-90s",
-        "name": "Гламур 90-х",
-        "category": "Тренды",
-        "gradient": "linear-gradient(145deg, #3D1E28, #6B2E42, #9B4A68)",
-        "prompt_template": "90s glamour portrait, glossy style, magazine lighting",
-        "is_trending": True,
-    },
-    {
-        "id": "cyberpunk",
-        "name": "Киберпанк",
-        "category": "Тренды",
-        "gradient": "linear-gradient(145deg, #1E3A4A, #2E6890, #4A98C4)",
-        "prompt_template": "Cyberpunk portrait, neon accents, glossy editorial mood",
-        "is_new": True,
-    },
-    {
-        "id": "business",
-        "name": "Бизнес-портрет",
-        "category": "Бизнес и карьера",
-        "gradient": "linear-gradient(145deg, #1E2040, #2E3870, #4A58A0)",
-        "prompt_template": "Professional business headshot, neutral background, sharp focus",
-    },
-    {
-        "id": "linkedin",
-        "name": "LinkedIn",
-        "category": "Бизнес и карьера",
-        "gradient": "linear-gradient(145deg, #1E3A4A, #2E6890, #4A98C4)",
-        "prompt_template": "LinkedIn profile portrait, business casual, clean studio setup",
-    },
-    {
-        "id": "ceo-style",
-        "name": "CEO-стиль",
-        "category": "Бизнес и карьера",
-        "gradient": "linear-gradient(145deg, #3D3A1E, #6B642E, #9B944A)",
-        "prompt_template": "Executive ceo portrait, premium editorial look, confident pose",
-    },
-    {
-        "id": "k-pop",
-        "name": "K-pop",
-        "category": "Тренды",
-        "gradient": "linear-gradient(145deg, #3D3A1E, #6B642E, #9B944A)",
-        "prompt_template": "K-pop idol concept portrait, pastel palette, studio lighting",
-    },
-    {
-        "id": "anime",
-        "name": "Аниме",
-        "category": "Арт и креатив",
-        "gradient": "linear-gradient(145deg, #3D1E3A, #6B2E64, #9B4A90)",
-        "prompt_template": "Anime inspired portrait, cel shading, expressive eyes",
-        "is_new": True,
-    },
-    {
-        "id": "nature",
-        "name": "Природа",
-        "category": "Лайфстайл",
-        "gradient": "linear-gradient(145deg, #1E3D2A, #2E6B48, #4A9B70)",
-        "prompt_template": "Natural lifestyle portrait outdoors, soft sunlight, fresh colors",
-    },
-    {
-        "id": "vintage",
-        "name": "Винтаж",
-        "category": "Лайфстайл",
-        "gradient": "linear-gradient(145deg, #3D3020, #6B5530, #A08050)",
-        "prompt_template": "Vintage portrait session, film grain, retro wardrobe",
-    },
-    {
-        "id": "travel",
-        "name": "Путешествие",
-        "category": "Лайфстайл",
-        "gradient": "linear-gradient(145deg, #3D3A1E, #6B642E, #9B944A)",
-        "prompt_template": "Travel portrait near landmarks, bright daylight, candid mood",
-    },
-    {
-        "id": "cozy-evening",
-        "name": "Уютный вечер",
-        "category": "Лайфстайл",
-        "gradient": "linear-gradient(145deg, #3D1E3A, #6B2E64, #9B4A90)",
-        "prompt_template": "Cozy evening portrait, warm ambient lights, soft atmosphere",
-        "is_new": True,
-    },
-    {
-        "id": "oil-paint",
-        "name": "Масло",
-        "category": "Арт и креатив",
-        "gradient": "linear-gradient(145deg, #3D2855, #7B5FC0, #B896E8)",
-        "prompt_template": "Oil painting portrait, rich brush texture, gallery style",
-    },
-    {
-        "id": "comic",
-        "name": "Комикс",
-        "category": "Арт и креатив",
-        "gradient": "linear-gradient(145deg, #3D1E28, #6B2E42, #9B4A68)",
-        "prompt_template": "Comic book portrait, bold outlines, high contrast colors",
-    },
-    {
-        "id": "wedding",
-        "name": "Свадьба",
-        "category": "Особый повод",
-        "gradient": "linear-gradient(145deg, #3D1E28, #6B2E42, #9B4A68)",
-        "prompt_template": "Wedding portrait, elegant white tones, romantic cinematic lighting",
-    },
-    {
-        "id": "birthday",
-        "name": "День рождения",
-        "category": "Особый повод",
-        "gradient": "linear-gradient(145deg, #1E3D2A, #2E6B48, #4A9B70)",
-        "prompt_template": "Birthday celebration portrait, festive mood, colorful decorations",
-    },
-    {
-        "id": "graduation",
-        "name": "Выпускной",
-        "category": "Особый повод",
-        "gradient": "linear-gradient(145deg, #3D2855, #7B5FC0, #B896E8)",
-        "prompt_template": "Graduation portrait, academic robe, celebratory style",
-    },
+    _style_entry(
+        style_id="hollywood",
+        name="Голливуд",
+        category="Студийный портрет",
+        gradient="linear-gradient(145deg, #3D2855, #7B5FC0, #B896E8)",
+        prompt_spec={
+            "subject": "confident person, close-up portrait, natural facial proportions",
+            "style_core": "cinematic Hollywood glamour",
+            "context": "minimal premium studio backdrop",
+            "camera": "close-up portrait, editorial framing, 85mm lens look, shallow depth of field",
+            "light_color_texture": "dramatic soft spotlight, warm luxury tones, polished cinematic texture",
+            "emotion": "iconic confidence and star-like presence",
+            "output_intent": "premium social media portrait",
+            "negative": "no uncanny expression, no duplicate facial features",
+        },
+        stylization_level=3,
+        style_anchors=["cinematic lighting", "premium retouch", "editorial framing", "luxury tones"],
+        variation_axes=["camera angle", "expression", "light", "palette shift"],
+        is_trending=True,
+    ),
+    _style_entry(
+        style_id="glamour-90s",
+        name="Гламур 90-х",
+        category="Фешн",
+        gradient="linear-gradient(145deg, #3D1E28, #6B2E42, #9B4A68)",
+        prompt_spec={
+            "subject": "bold person portrait with confident pose",
+            "style_core": "90s flash editorial glamour",
+            "context": "night luxury fashion setting",
+            "camera": "medium close-up, paparazzi editorial framing",
+            "light_color_texture": "hard flash, glossy makeup finish, rich contrast",
+            "emotion": "bold charisma and rebellious edge",
+            "output_intent": "fashion editorial shot",
+            "negative": "no muddy contrast, no over-smoothed skin",
+        },
+        stylization_level=3,
+        style_anchors=["hard flash", "glossy finish", "paparazzi vibe", "90s aesthetic"],
+        variation_axes=["camera angle", "wardrobe", "palette shift", "motion"],
+        is_trending=True,
+    ),
+    _style_entry(
+        style_id="cyberpunk",
+        name="Киберпанк",
+        category="Арт и креатив",
+        gradient="linear-gradient(145deg, #1E3A4A, #2E6890, #4A98C4)",
+        prompt_spec={
+            "subject": "bold person portrait with strong silhouette",
+            "style_core": "cyberpunk night portrait",
+            "context": "futuristic neon-lit city street",
+            "camera": "dynamic close-up, cinematic framing, shallow depth of field",
+            "light_color_texture": "neon rim light, deep blue and magenta palette, glossy urban texture",
+            "emotion": "mysterious intensity and high energy",
+            "output_intent": "dramatic creative portrait",
+            "negative": "no low-detail neon artifacts, no crushed facial shadows",
+        },
+        stylization_level=4,
+        style_anchors=["neon rim light", "urban dystopia", "glossy texture", "cinematic depth"],
+        variation_axes=["camera angle", "background", "light", "color mode"],
+        is_new=True,
+    ),
+    _style_entry(
+        style_id="business",
+        name="Бизнес-портрет",
+        category="Бизнес и карьера",
+        gradient="linear-gradient(145deg, #1E2040, #2E3870, #4A58A0)",
+        prompt_spec={
+            "subject": "professional person portrait with composed posture",
+            "style_core": "clean founder portrait",
+            "context": "refined modern office interior",
+            "camera": "medium shot, clean 50mm portrait look, centered composition",
+            "light_color_texture": "soft directional key light, muted premium neutrals, crisp clarity",
+            "emotion": "calm authority and trust",
+            "output_intent": "LinkedIn and executive branding portrait",
+            "negative": "no cluttered background, no exaggerated contrast",
+        },
+        stylization_level=2,
+        style_anchors=["tailored wardrobe", "clean office", "neutral palette", "sharp framing"],
+        variation_axes=["camera distance", "background", "expression"],
+    ),
+    _style_entry(
+        style_id="linkedin",
+        name="LinkedIn",
+        category="Бизнес и карьера",
+        gradient="linear-gradient(145deg, #1E3A4A, #2E6890, #4A98C4)",
+        prompt_spec={
+            "subject": "approachable professional head-and-shoulders portrait",
+            "style_core": "clean professional profile aesthetic",
+            "context": "minimal studio with neutral background",
+            "camera": "headshot framing, front angle, 85mm portrait look",
+            "light_color_texture": "soft even lighting, neutral color palette, natural skin texture",
+            "emotion": "approachable confidence",
+            "output_intent": "LinkedIn profile photo",
+            "negative": "no dramatic shadows, no oversaturated tones",
+        },
+        stylization_level=1,
+        style_anchors=["professional headshot", "neutral background", "clean light"],
+        variation_axes=["expression", "camera angle", "light"],
+    ),
+    _style_entry(
+        style_id="ceo-style",
+        name="CEO-стиль",
+        category="Бизнес и карьера",
+        gradient="linear-gradient(145deg, #3D3A1E, #6B642E, #9B944A)",
+        prompt_spec={
+            "subject": "executive portrait with calm dominant posture",
+            "style_core": "premium executive editorial portrait",
+            "context": "luxury office or boardroom setting",
+            "camera": "editorial medium shot, 3/4 angle, sharp portrait framing",
+            "light_color_texture": "directional studio light, premium neutral palette, polished texture",
+            "emotion": "calm authority and strategic confidence",
+            "output_intent": "executive personal brand portrait",
+            "negative": "no casual clutter, no playful props",
+        },
+        stylization_level=3,
+        style_anchors=["executive wardrobe", "boardroom context", "premium neutrals", "authoritative pose"],
+        variation_axes=["camera angle", "wardrobe", "expression"],
+    ),
+    _style_entry(
+        style_id="k-pop",
+        name="K-pop",
+        category="Фешн",
+        gradient="linear-gradient(145deg, #3D3A1E, #6B642E, #9B944A)",
+        prompt_spec={
+            "subject": "youthful idol-style portrait with expressive pose",
+            "style_core": "K-pop concept editorial",
+            "context": "stylized studio set with clean pop backdrop",
+            "camera": "medium close-up, centered idol framing",
+            "light_color_texture": "beauty studio lighting, pastel dream palette, glossy finish",
+            "emotion": "playful charisma and polished confidence",
+            "output_intent": "social media avatar and trend portrait",
+            "negative": "no uncanny doll-like face, no waxy skin",
+        },
+        stylization_level=3,
+        style_anchors=["pastel palette", "beauty light", "idol styling", "polished finish"],
+        variation_axes=["expression", "wardrobe", "palette shift"],
+        is_trending=True,
+    ),
+    _style_entry(
+        style_id="anime",
+        name="Аниме",
+        category="Арт и креатив",
+        gradient="linear-gradient(145deg, #3D1E3A, #6B2E64, #9B4A90)",
+        prompt_spec={
+            "subject": "anime-inspired character portrait based on real person likeness",
+            "style_core": "anime-inspired cinematic illustration",
+            "context": "stylized cinematic environment with depth",
+            "camera": "dynamic portrait framing, expressive composition",
+            "light_color_texture": "vibrant color grading, clean cel-shaded texture",
+            "emotion": "heroic intensity and emotional clarity",
+            "output_intent": "creative character portrait",
+            "negative": "no broken anatomy, no mismatched eye direction",
+        },
+        stylization_level=5,
+        style_anchors=["cel shading", "expressive eyes", "anime composition", "vibrant palette"],
+        variation_axes=["camera angle", "background", "motion", "color mode"],
+        is_new=True,
+    ),
+    _style_entry(
+        style_id="nature",
+        name="Природа",
+        category="Лайфстайл",
+        gradient="linear-gradient(145deg, #1E3D2A, #2E6B48, #4A9B70)",
+        prompt_spec={
+            "subject": "relaxed person lifestyle portrait",
+            "style_core": "dreamy nature film look",
+            "context": "organic outdoor setting with natural depth",
+            "camera": "medium shot, candid framing, 50mm look",
+            "light_color_texture": "natural light, earthy palette, soft analog texture",
+            "emotion": "peaceful warmth and authenticity",
+            "output_intent": "lifestyle social media portrait",
+            "negative": "no artificial studio look, no harsh flash",
+        },
+        stylization_level=2,
+        style_anchors=["natural light", "earthy palette", "organic setting", "relaxed expression"],
+        variation_axes=["background", "camera distance", "expression", "light"],
+    ),
+    _style_entry(
+        style_id="vintage",
+        name="Винтаж",
+        category="Лайфстайл",
+        gradient="linear-gradient(145deg, #3D3020, #6B5530, #A08050)",
+        prompt_spec={
+            "subject": "nostalgic portrait with timeless posture",
+            "style_core": "analog vintage portrait aesthetic",
+            "context": "retro-inspired environment",
+            "camera": "medium close-up, classic portrait composition",
+            "light_color_texture": "soft warm light, faded palette, subtle film grain",
+            "emotion": "nostalgic tenderness",
+            "output_intent": "memory-style portrait",
+            "negative": "no modern neon colors, no digital oversharpening",
+        },
+        stylization_level=3,
+        style_anchors=["film grain", "retro palette", "analog softness", "timeless mood"],
+        variation_axes=["color mode", "background", "camera angle"],
+    ),
+    _style_entry(
+        style_id="travel",
+        name="Путешествие",
+        category="Лайфстайл",
+        gradient="linear-gradient(145deg, #3D3A1E, #6B642E, #9B944A)",
+        prompt_spec={
+            "subject": "adventurous lifestyle portrait",
+            "style_core": "travel diary portrait aesthetic",
+            "context": "recognizable destination environment",
+            "camera": "medium shot with environmental context, dynamic composition",
+            "light_color_texture": "bright daylight, balanced warm-cool travel palette, natural texture",
+            "emotion": "open curiosity and joyful energy",
+            "output_intent": "travel diary image",
+            "negative": "no cluttered tourist crowd focus, no blurred face",
+        },
+        stylization_level=2,
+        style_anchors=["destination cues", "daylight", "candid framing", "adventure mood"],
+        variation_axes=["background", "camera distance", "expression"],
+    ),
+    _style_entry(
+        style_id="cozy-evening",
+        name="Уютный вечер",
+        category="Лайфстайл",
+        gradient="linear-gradient(145deg, #3D1E3A, #6B2E64, #9B4A90)",
+        prompt_spec={
+            "subject": "intimate evening portrait",
+            "style_core": "cozy cinematic home mood",
+            "context": "warm indoor evening interior",
+            "camera": "medium close-up, intimate framing",
+            "light_color_texture": "warm ambient practical lights, soft shadows, matte cozy texture",
+            "emotion": "intimate warmth and serenity",
+            "output_intent": "personal story portrait",
+            "negative": "no harsh cold lighting, no noisy grain artifacts",
+        },
+        stylization_level=2,
+        style_anchors=["warm ambience", "intimate framing", "soft shadows"],
+        variation_axes=["light", "expression", "background"],
+        is_new=True,
+    ),
+    _style_entry(
+        style_id="oil-paint",
+        name="Масло",
+        category="Арт и креатив",
+        gradient="linear-gradient(145deg, #3D2855, #7B5FC0, #B896E8)",
+        prompt_spec={
+            "subject": "portrait transformed into painterly interpretation",
+            "style_core": "classical oil painting portrait",
+            "context": "gallery-like timeless setting",
+            "camera": "classical portrait composition",
+            "light_color_texture": "rich brushstroke texture, painterly color depth, soft dramatic lighting",
+            "emotion": "elevated artistic elegance",
+            "output_intent": "artistic keepsake portrait",
+            "negative": "no low-detail brush artifacts, no plastic digital finish",
+        },
+        stylization_level=5,
+        style_anchors=["visible brushstrokes", "classical composition", "gallery quality"],
+        variation_axes=["color mode", "light", "background"],
+    ),
+    _style_entry(
+        style_id="comic",
+        name="Комикс",
+        category="Арт и креатив",
+        gradient="linear-gradient(145deg, #3D1E28, #6B2E42, #9B4A68)",
+        prompt_spec={
+            "subject": "character-like portrait with expressive pose",
+            "style_core": "comic book portrait illustration",
+            "context": "graphic comic-inspired backdrop",
+            "camera": "dynamic medium shot with dramatic angle",
+            "light_color_texture": "bold ink contours, high-contrast color blocks, halftone texture",
+            "emotion": "energetic and heroic",
+            "output_intent": "creative poster-like portrait",
+            "negative": "no muddy linework, no low-contrast colors",
+        },
+        stylization_level=5,
+        style_anchors=["bold outlines", "graphic contrast", "comic energy"],
+        variation_axes=["camera angle", "motion", "palette shift"],
+    ),
+    _style_entry(
+        style_id="wedding",
+        name="Свадьба",
+        category="Праздники",
+        gradient="linear-gradient(145deg, #3D1E28, #6B2E42, #9B4A68)",
+        prompt_spec={
+            "subject": "romantic portrait with elegant styling",
+            "style_core": "romantic wedding photography",
+            "context": "wedding celebration environment with floral cues",
+            "camera": "medium close-up, timeless editorial framing",
+            "light_color_texture": "soft romantic light, clean ivory palette, polished texture",
+            "emotion": "romantic tenderness and joy",
+            "output_intent": "wedding keepsake portrait",
+            "negative": "no cluttered event distractions, no harsh flash",
+        },
+        stylization_level=3,
+        style_anchors=["romantic light", "floral cues", "elegant styling", "timeless frame"],
+        variation_axes=["background", "expression", "camera distance"],
+    ),
+    _style_entry(
+        style_id="birthday",
+        name="День рождения",
+        category="Праздники",
+        gradient="linear-gradient(145deg, #1E3D2A, #2E6B48, #4A9B70)",
+        prompt_spec={
+            "subject": "joyful celebration portrait",
+            "style_core": "luxury birthday celebration aesthetic",
+            "context": "decorated festive party environment",
+            "camera": "lively medium shot with editorial framing",
+            "light_color_texture": "warm celebratory lighting, rich festive tones, soft glamorous texture",
+            "emotion": "playful radiant joy",
+            "output_intent": "birthday story cover",
+            "negative": "no background clutter overload, no face motion blur",
+        },
+        stylization_level=3,
+        style_anchors=["celebration cues", "festive tones", "joyful mood", "editorial framing"],
+        variation_axes=["expression", "background", "motion", "palette shift"],
+    ),
+    _style_entry(
+        style_id="graduation",
+        name="Выпускной",
+        category="Праздники",
+        gradient="linear-gradient(145deg, #3D2855, #7B5FC0, #B896E8)",
+        prompt_spec={
+            "subject": "proud graduate portrait",
+            "style_core": "graduation keepsake portrait style",
+            "context": "academic celebratory setting",
+            "camera": "medium portrait shot, clean framing",
+            "light_color_texture": "balanced daylight or soft studio light, refined celebratory palette",
+            "emotion": "proud confidence and optimism",
+            "output_intent": "graduation keepsake portrait",
+            "negative": "no distracting background objects, no muddy skin tones",
+        },
+        stylization_level=2,
+        style_anchors=["academic cues", "clean composition", "celebratory mood"],
+        variation_axes=["background", "camera angle", "expression"],
+    ),
 )
+
+# Canonical style source of truth comes from shared/contracts/style_specs.json.
+# Keep STYLE_CATALOG tuple type for backward compatibility in this module.
+STYLE_CATALOG = tuple(load_style_catalog())
 
 STYLE_BY_ID = {style["id"]: style for style in STYLE_CATALOG}
 GENERATION_PROVIDER_ALIASES = {
     "replicate": "stable_diffusion",
     "runway": "stable_diffusion",
 }
+DEFAULT_STYLE_MODEL_ID = "nb2-1k"
 
 _VALID_ASPECT_RATIOS = frozenset({"1:1", "16:9", "9:16", "3:4", "4:3", "21:9", "5:4", "2:3"})
 _DEMO_TEST_PACKAGE = {
@@ -209,9 +455,12 @@ class VerticalSliceService:
                     first_name=first_name,
                     username=username,
                     paid_credits=20,
+                    lifecycle_state="S0",
+                    lifecycle_state_updated_at=now_iso(),
                     created_at=now_iso(),
                 )
                 db.add(user)
+                recompute_user_state(db, user, source="system", reason="user_created")
                 db.commit()
                 db.refresh(user)
             else:
@@ -339,15 +588,26 @@ class VerticalSliceService:
         model_id: str | None = None,
         prompt: str | None = None,
         aspect_ratio: str = "1:1",
+        enhance_prompt: bool = True,
     ) -> OrderRow:
         self.get_or_create_user(user_id)
         model = self._resolve_model(model_id)
         style = STYLE_BY_ID.get(style_code)
-        prompt_value = (prompt or (style["prompt_template"] if style else "") or "").strip()
+        order_id = str(uuid4())
+        if enhance_prompt:
+            compiled_prompt = compile_prompt(
+                style=style,
+                model_id=model["id"],
+                user_prompt=prompt,
+                seed=order_id,
+            )
+            prompt_value = str(compiled_prompt["prompt_text"]).strip()
+        else:
+            prompt_value = (prompt or (style["prompt_template"] if style else "") or "").strip()
         if aspect_ratio not in _VALID_ASPECT_RATIOS:
             aspect_ratio = "1:1"
         order = OrderRow(
-            order_id=str(uuid4()),
+            order_id=order_id,
             user_id=user_id,
             style_code=style_code,
             source_key=source_key,
@@ -374,6 +634,7 @@ class VerticalSliceService:
         style_code: str = "hollywood",
         prompt: str | None = None,
         aspect_ratio: str = "1:1",
+        enhance_prompt: bool = True,
     ) -> dict[str, Any]:
         order = self.create_order(
             user_id,
@@ -382,6 +643,7 @@ class VerticalSliceService:
             model_id=model_id,
             prompt=prompt,
             aspect_ratio=aspect_ratio,
+            enhance_prompt=enhance_prompt,
         )
         return self.start_order(order.order_id)
 
@@ -409,6 +671,7 @@ class VerticalSliceService:
             else:
                 order.status = "awaiting_credit_or_payment"
                 order.updated_at = now_iso()
+                recompute_user_state(db, user, source="system", reason="paywall_required")
                 db.commit()
                 return {
                     "result": "paywall_required",
@@ -461,8 +724,10 @@ class VerticalSliceService:
                 order.result_url = submit.result_url
                 job.status = "done"
                 job.updated_at = now_iso()
+                mark_generation_succeeded(db, user, order_id=order.order_id)
             else:
                 order.status = "processing"
+                recompute_user_state(db, user, source="system", reason="order_processing")
 
             order.updated_at = now_iso()
             db.commit()
@@ -614,6 +879,9 @@ class VerticalSliceService:
                     if job:
                         job.status = "done"
                         job.updated_at = now_iso()
+                    user = db.get(UserRow, order.user_id)
+                    if user and order.result_url:
+                        mark_generation_succeeded(db, user, order_id=order.order_id)
                 elif event_type == "processing":
                     order.status = "processing"
                     if job:
@@ -686,12 +954,15 @@ class VerticalSliceService:
                         user = UserRow(
                             user_id=uid,
                             paid_credits=0,
+                            lifecycle_state="S0",
+                            lifecycle_state_updated_at=now_iso(),
                             created_at=now_iso(),
                         )
                         db.add(user)
                     base_credits = package["credits"]
                     bonus_credits = package["bonus_coins"]
                     user.paid_credits += base_credits + bonus_credits
+                    mark_payment_succeeded(db, user, payment_id=payment_id)
                     logger.info(
                         "payment_credited user_id=%s package=%s credits=%d+%d total_now=%d",
                         uid, package_code, base_credits, bonus_credits, user.paid_credits,
@@ -710,7 +981,7 @@ class VerticalSliceService:
 
     def _resolve_model(self, model_id: str | None) -> dict[str, Any]:
         if not model_id:
-            return dict(MODEL_CATALOG[0])
+            return dict(MODEL_BY_ID[DEFAULT_STYLE_MODEL_ID])
         try:
             return dict(MODEL_BY_ID[model_id])
         except KeyError as exc:

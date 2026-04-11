@@ -62,8 +62,27 @@ def test_catalog_endpoints_styles_and_models() -> None:
 
     assert styles.status_code == 200
     assert models.status_code == 200
-    assert len(styles.json()["styles"]) >= 3
-    assert len(models.json()["models"]) == 3
+    assert len(styles.json()["styles"]) >= 100
+    model_rows = models.json()["models"]
+    assert len(model_rows) == 11
+    by_id = {row["id"]: row for row in model_rows}
+    assert by_id["nb2-1k"]["coins"] == 10
+    assert by_id["nb2-2k"]["coins"] == 15
+    assert by_id["nb2-4k"]["coins"] == 22
+    assert by_id["nb-pro-2k"]["coins"] == 20
+    assert by_id["nb-pro-4k"]["coins"] == 35
+    assert by_id["flux2-pro-1k"]["coins"] == 7
+    assert by_id["flux2-pro-2k"]["coins"] == 14
+    assert by_id["flux2-pro-4k"]["coins"] == 27
+    assert by_id["flux2-max-1k"]["coins"] == 12
+    assert by_id["flux2-max-2k"]["coins"] == 22
+    assert by_id["flux2-max-4k"]["coins"] == 42
+    first_style = styles.json()["styles"][0]
+    assert "prompt_template" in first_style
+    assert "prompt_spec" in first_style
+    assert "stylization_level" in first_style
+    assert "style_anchors" in first_style
+    assert "variation_axes" in first_style
 
 
 def test_paywall_then_purchase_then_resume() -> None:
@@ -78,7 +97,7 @@ def test_paywall_then_purchase_then_resume() -> None:
     up = client.post("/v1/uploads", json={"filename": "a.jpg"}, headers=hdrs).json()
     order = client.post(
         "/v1/orders",
-        json={"style_code": "hollywood", "source_key": up["source_key"], "model_id": "nano-banana-v1"},
+        json={"style_code": "hollywood", "source_key": up["source_key"], "model_id": "nb2-1k"},
         headers=hdrs,
     ).json()["order"]
 
@@ -90,7 +109,7 @@ def test_paywall_then_purchase_then_resume() -> None:
     up2 = client.post("/v1/uploads", json={"filename": "b.jpg"}, headers=hdrs).json()
     order2 = client.post(
         "/v1/orders",
-        json={"style_code": "hollywood", "source_key": up2["source_key"], "model_id": "nano-banana-v1"},
+        json={"style_code": "hollywood", "source_key": up2["source_key"], "model_id": "nb2-1k"},
         headers=hdrs,
     ).json()["order"]
 
@@ -125,18 +144,17 @@ def test_purchase_basic_applies_volume_bonus() -> None:
     assert res.json()["wallet"]["paid_credits"] == before + 370
 
 
-def test_purchase_accepts_legacy_package_code() -> None:
+def test_purchase_rejects_legacy_package_code() -> None:
     client = _client()
     hdrs = _headers("u-legacy-api")
 
-    before = client.get("/v1/me/balance", headers=hdrs).json()["wallet"]["paid_credits"]
     res = client.post(
         "/v1/purchase",
         json={"package_code": "STARTER_STARS", "provider": "telegram"},
         headers=hdrs,
     )
-    assert res.status_code == 200
-    assert res.json()["wallet"]["paid_credits"] == before + 150
+    assert res.status_code == 400
+    assert res.json()["detail"] == "package_not_found"
 
 
 def test_purchase_invoice_returns_invoice_link_even_in_demo_mode(monkeypatch) -> None:
@@ -226,7 +244,7 @@ def test_generate_and_provider_webhook_finalize_photo() -> None:
         "/v1/generate",
         json={
             "source_key": up["source_key"],
-            "model_id": "nano-banana-v1",
+            "model_id": "nb2-1k",
             "style_code": "cyberpunk",
             "aspect_ratio": "1:1",
         },
@@ -264,7 +282,7 @@ def test_generate_accepts_camel_case_payload_fields() -> None:
         "/v1/generate",
         json={
             "sourceKey": up["source_key"],
-            "modelId": "nano-banana-v1",
+            "modelId": "nb2-1k",
             "styleCode": "anime",
             "aspectRatio": "3:4",
         },
@@ -273,7 +291,7 @@ def test_generate_accepts_camel_case_payload_fields() -> None:
     assert generated.status_code == 200
     payload = generated.json()
     assert payload["result"] == "enqueued"
-    assert payload["order"]["model_id"] == "nano-banana-v1"
+    assert payload["order"]["model_id"] == "nb2-1k"
     assert payload["order"]["source_key"] == up["source_key"]
 
 
@@ -299,7 +317,7 @@ def test_order_access_forbidden_for_other_user() -> None:
     up = client.post("/v1/uploads", json={"filename": "a.jpg"}, headers=owner_hdrs).json()
     order = client.post(
         "/v1/orders",
-        json={"style_code": "hollywood", "source_key": up["source_key"], "model_id": "nano-banana-v1"},
+        json={"style_code": "hollywood", "source_key": up["source_key"], "model_id": "nb2-1k"},
         headers=owner_hdrs,
     ).json()["order"]
     order_id = order["order_id"]
@@ -322,7 +340,7 @@ def test_delete_photo_removes_it_from_user_gallery() -> None:
         "/v1/generate",
         json={
             "source_key": up["source_key"],
-            "model_id": "nano-banana-v1",
+            "model_id": "nb2-1k",
             "style_code": "hollywood",
             "aspect_ratio": "1:1",
         },
@@ -396,11 +414,11 @@ def test_profile_endpoint_returns_real_stats() -> None:
     assert profile["generations_count"] == 0
     assert profile["paid_credits"] == 20
 
-    # Create and start an order (costs 10 paid coins for nano-banana-v1)
+    # Create and start an order (costs 10 paid coins for nb2-1k)
     up = client.post("/v1/uploads", json={"filename": "p.jpg"}, headers=hdrs).json()
     order = client.post(
         "/v1/orders",
-        json={"style_code": "hollywood", "source_key": up["source_key"], "model_id": "nano-banana-v1"},
+        json={"style_code": "hollywood", "source_key": up["source_key"], "model_id": "nb2-1k"},
         headers=hdrs,
     ).json()["order"]
     client.post(f"/v1/orders/{order['order_id']}/start", json={}, headers=hdrs)

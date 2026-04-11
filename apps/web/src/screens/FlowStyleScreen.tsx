@@ -22,9 +22,36 @@ interface FlowStyleScreenProps {
     prompt: string;
     aspectRatio: string;
     sourceTab: SourceTab;
+    enhancePrompt?: boolean;
     photoFile?: File | null;
   }) => void;
   onClose: () => void;
+}
+
+type ModelFamilyId = "nb2" | "nb-pro" | "flux2-pro" | "flux2-max";
+
+const DEFAULT_STYLE_MODEL_ID = "nb2-1k";
+const QUALITY_ORDER: Array<"1k" | "2k" | "4k"> = ["1k", "2k", "4k"];
+const FAMILY_ORDER: ModelFamilyId[] = ["nb2", "nb-pro", "flux2-pro", "flux2-max"];
+const FAMILY_LABELS: Record<ModelFamilyId, string> = {
+  "nb2": "NB2",
+  "nb-pro": "NB Pro",
+  "flux2-pro": "FLUX.2 Pro",
+  "flux2-max": "FLUX.2 Max",
+};
+
+function parseModelId(modelId?: string | null): { family: ModelFamilyId; quality: "1k" | "2k" | "4k" } {
+  const fallback = { family: "nb2" as ModelFamilyId, quality: "1k" as const };
+  if (!modelId) return fallback;
+  if (modelId.startsWith("nb2-")) return { family: "nb2", quality: modelId.endsWith("-4k") ? "4k" : modelId.endsWith("-2k") ? "2k" : "1k" };
+  if (modelId.startsWith("nb-pro-")) return { family: "nb-pro", quality: modelId.endsWith("-4k") ? "4k" : "2k" };
+  if (modelId.startsWith("flux2-pro-")) return { family: "flux2-pro", quality: modelId.endsWith("-4k") ? "4k" : modelId.endsWith("-2k") ? "2k" : "1k" };
+  if (modelId.startsWith("flux2-max-")) return { family: "flux2-max", quality: modelId.endsWith("-4k") ? "4k" : modelId.endsWith("-2k") ? "2k" : "1k" };
+  return fallback;
+}
+
+function buildModelId(family: ModelFamilyId, quality: "1k" | "2k" | "4k"): string {
+  return `${family}-${quality}`;
 }
 
 function ratioRectSize(value: string): { width: number; height: number } {
@@ -76,14 +103,16 @@ export function FlowStyleScreen({
   const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
   const [tab, setTab] = useState<SourceTab>(initialTab);
-  const [customModel, setCustomModel] = useState(initialCustomModelId ?? "nano-banana-v1");
+  const initialModel = parseModelId(initialCustomModelId ?? DEFAULT_STYLE_MODEL_ID);
+  const [customFamily, setCustomFamily] = useState<ModelFamilyId>(initialModel.family);
+  const [customQuality, setCustomQuality] = useState<"1k" | "2k" | "4k">(initialModel.quality);
   const [customPrompt, setCustomPrompt] = useState(initialCustomPrompt);
   const [ratio, setRatio] = useState("1:1");
   const [customPhoto, setCustomPhoto] = useState<File | null>(null);
   const [customPhotoUrl, setCustomPhotoUrl] = useState<string | null>(null);
   const [customPhotoError, setCustomPhotoError] = useState<string | null>(null);
+  const [enhancePrompt, setEnhancePrompt] = useState(true);
   const [isPromptFocused, setIsPromptFocused] = useState(false);
-  const [modelDropOpen, setModelDropOpen] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
   const promptRevealDelayMs = useMemo(
     () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-fast", 150)),
@@ -117,9 +146,12 @@ export function FlowStyleScreen({
     if (!opening) return;
     setTab(initialTab);
     setCustomPrompt(initialCustomPrompt);
-    setCustomModel(initialCustomModelId ?? "nano-banana-v1");
+    const nextModel = parseModelId(initialCustomModelId ?? DEFAULT_STYLE_MODEL_ID);
+    setCustomFamily(nextModel.family);
+    setCustomQuality(nextModel.quality);
     setCustomPhoto(null);
     setCustomPhotoError(null);
+    setEnhancePrompt(true);
     setCustomPhotoUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -127,6 +159,27 @@ export function FlowStyleScreen({
   }, [isOpen, initialTab, initialCustomPrompt, initialCustomModelId]);
 
   const pickPhoto = () => inputRef.current?.click();
+
+  const availableQualityOptions = useMemo(() => {
+    const available = new Set(
+      models
+        .filter((model) => model.id.startsWith(`${customFamily}-`))
+        .map((model) => parseModelId(model.id).quality),
+    );
+    return QUALITY_ORDER.filter((quality) => available.has(quality));
+  }, [customFamily, models]);
+
+  useEffect(() => {
+    if (availableQualityOptions.includes(customQuality)) return;
+    setCustomQuality(availableQualityOptions[0] ?? "1k");
+  }, [availableQualityOptions, customQuality]);
+
+  const customModelId = useMemo(() => {
+    const exact = buildModelId(customFamily, customQuality);
+    if (models.some((model) => model.id === exact)) return exact;
+    return models.find((model) => model.id.startsWith(`${customFamily}-`))?.id ?? DEFAULT_STYLE_MODEL_ID;
+  }, [customFamily, customQuality, models]);
+  const customModelCost = models.find((model) => model.id === customModelId)?.coins ?? 10;
 
   const handleCustomFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -230,38 +283,39 @@ export function FlowStyleScreen({
         <>
           <div className="custom-content">
             <div className="custom-field custom-field-relative">
-              <div className="custom-label">Модель</div>
-              <button
-                className="model-trigger"
-                onClick={() => setModelDropOpen((v) => !v)}
-                aria-haspopup="listbox"
-                aria-expanded={modelDropOpen}
-              >
-                <span>{models.find((m) => m.id === customModel)?.name ?? customModel} — {models.find((m) => m.id === customModel)?.coins ?? 10} 🪙</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={"model-trigger-chevron" + (modelDropOpen ? " open" : "")}>
-                  <path d="M6 9l6 6 6-6" stroke="var(--sem-color-text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-              {modelDropOpen && (
-                <div className="model-dropdown" role="listbox">
-                  {models.map((m) => (
-                    <button
-                      key={m.id}
-                      className={"model-dropdown-item" + (m.id === customModel ? " selected" : "")}
-                      role="option"
-                      aria-selected={m.id === customModel}
-                      onClick={() => { setCustomModel(m.id); setModelDropOpen(false); }}
-                    >
-                      <span>{m.name} — {m.coins} 🪙</span>
-                      {m.id === customModel ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path d="M5 13l4 4L19 7" stroke="var(--sem-color-accent-light)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="custom-label">Model Family</div>
+              <div className="model-family-grid" role="radiogroup" aria-label="Model Family">
+                {FAMILY_ORDER.map((family) => (
+                  <button
+                    key={family}
+                    type="button"
+                    className={"family-chip" + (customFamily === family ? " active" : "")}
+                    role="radio"
+                    aria-checked={customFamily === family}
+                    onClick={() => setCustomFamily(family)}
+                  >
+                    {FAMILY_LABELS[family]}
+                  </button>
+                ))}
+              </div>
+              <div className="custom-label custom-label-secondary">Quality</div>
+              <div className="quality-chip-row" role="radiogroup" aria-label="Quality">
+                {availableQualityOptions.map((quality) => (
+                  <button
+                    key={quality}
+                    type="button"
+                    className={"quality-chip" + (customQuality === quality ? " active" : "")}
+                    role="radio"
+                    aria-checked={customQuality === quality}
+                    onClick={() => setCustomQuality(quality)}
+                  >
+                    {quality}
+                  </button>
+                ))}
+              </div>
+              <div className="custom-meta-row">
+                <span className="custom-meta-value">{customModelCost} 🪙</span>
+              </div>
             </div>
 
             <div className="custom-field">
@@ -324,6 +378,23 @@ export function FlowStyleScreen({
                 onBlur={() => setIsPromptFocused(false)}
                 placeholder="Опишите желаемый стиль фотосессии..."
               />
+              <button
+                type="button"
+                className={"enhancer-toggle" + (enhancePrompt ? " active" : "")}
+                role="switch"
+                aria-checked={enhancePrompt}
+                onClick={() => setEnhancePrompt((prev) => !prev)}
+              >
+                <span className="enhancer-toggle-copy">
+                  <span className="enhancer-toggle-title">Prompt Enhancer</span>
+                  <span className="enhancer-toggle-subtitle">
+                    {enhancePrompt ? "Включен: структурирует и стабилизирует промпт" : "Выключен: отправляется raw-промпт"}
+                  </span>
+                </span>
+                <span className={"enhancer-toggle-track" + (enhancePrompt ? " active" : "")}>
+                  <span className="enhancer-toggle-thumb" />
+                </span>
+              </button>
             </div>
 
             <div className="custom-field">
@@ -347,10 +418,11 @@ export function FlowStyleScreen({
               className={"flow-btn " + (canCreateCustom ? "purple" : "disabled")}
               disabled={!canCreateCustom || isCreating}
               onClick={() => onContinue({
-                modelId: customModel,
+                modelId: customModelId,
                 prompt: customPrompt,
                 aspectRatio: ratio,
                 sourceTab: "custom",
+                enhancePrompt,
                 photoFile: customPhoto,
               })}
             >

@@ -163,7 +163,7 @@ describe("App flows", () => {
     photosState = [{
       orderId: "ord-processing-1",
       styleCode: "anime",
-      modelId: "nano-banana-v1",
+      modelId: "nb2-1k",
       status: "processing",
       isFavorite: false,
       createdAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
@@ -206,7 +206,7 @@ describe("App flows", () => {
     photosState = [{
       orderId: "ord-done-1",
       styleCode: "hollywood",
-      modelId: "nano-banana-v1",
+      modelId: "nb2-1k",
       status: "done",
       prompt: "cinematic portrait",
       resultUrl: "https://example.com/result.jpg",

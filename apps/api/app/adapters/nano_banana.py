@@ -12,11 +12,13 @@ _GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 # Internal model_id → Gemini model name
 _MODEL_MAP: dict[str, str] = {
-    "nano-banana-v1":  "gemini-2.5-flash-image",           # fast v1
-    "nano-banana-v2":  "gemini-3.1-flash-image-preview",   # fast v2
-    "nano-banana-pro": "gemini-3-pro-image-preview",        # pro
+    "nb2-1k": "gemini-3.1-flash-image-preview",
+    "nb2-2k": "gemini-3.1-flash-image-preview",
+    "nb2-4k": "gemini-3.1-flash-image-preview",
+    "nb-pro-2k": "gemini-3-pro-image-preview",
+    "nb-pro-4k": "gemini-3-pro-image-preview",
 }
-_DEFAULT_MODEL = "gemini-2.5-flash-image"
+_DEFAULT_MODEL = "gemini-3.1-flash-image-preview"
 _RETRYABLE_HTTP_CODES = (429, 500, 502, 503, 504)
 _MAX_ATTEMPTS = 3
 
@@ -40,9 +42,8 @@ class NanoBananaAdapter(MockPhotoProvider):
     """
     Nano Banana = Google Gemini image generation via AI Studio API.
 
-    nano-banana-v1  → gemini-2.5-flash-image          (fast v1,  10 coins)
-    nano-banana-v2  → gemini-3.1-flash-image-preview  (fast v2,  20 coins)
-    nano-banana-pro → gemini-3-pro-image-preview       (pro,      50 coins)
+    nb2-*     → gemini-3.1-flash-image-preview
+    nb-pro-*  → gemini-3-pro-image-preview
 
     Image-to-image: source photo is included as inlineData so the model
     applies the requested style TO the person rather than generating from scratch.

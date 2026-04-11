@@ -50,11 +50,21 @@
 
 | Model | ID | Provider | Price (🪙) |
 |-------|-------|----------|--------:|
-| Nano Banana | `nano-banana-v1` | nano_banana | 10 |
-| Stable Diffusion 3.5 Turbo | `sd-3.5-turbo` | stable_diffusion | 15 |
-| Recraft V4 | `recraft-v4` | recraft | 25 |
-| OpenAI GPT-image-1.5 | `gpt-image-1.5` | openai_image | 30 |
-| FLUX.1 Kontext [pro] | `flux-kontxt-pro` | flux | 40 |
+| Nano Banana 2 · 1k | `nb2-1k` | nano_banana | 10 |
+| Nano Banana 2 · 2k | `nb2-2k` | nano_banana | 15 |
+| Nano Banana 2 · 4k | `nb2-4k` | nano_banana | 22 |
+| Nano Banana Pro · 2k | `nb-pro-2k` | nano_banana | 20 |
+| Nano Banana Pro · 4k | `nb-pro-4k` | nano_banana | 35 |
+| FLUX.2 Pro · 1k | `flux2-pro-1k` | flux | 7 |
+| FLUX.2 Pro · 2k | `flux2-pro-2k` | flux | 14 |
+| FLUX.2 Pro · 4k | `flux2-pro-4k` | flux | 27 |
+| FLUX.2 Max · 1k | `flux2-max-1k` | flux | 12 |
+| FLUX.2 Max · 2k | `flux2-max-2k` | flux | 22 |
+| FLUX.2 Max · 4k | `flux2-max-4k` | flux | 42 |
+
+- MVP model families: `Nano Banana 2`, `Nano Banana Pro`, `FLUX.2 Pro`, `FLUX.2 Max`
+- Quality tiers: `1k / 2k / 4k`
+- Styles flow default: `nb2-1k` (fixed, hidden from user)
 
 ## 7) Coin packages
 

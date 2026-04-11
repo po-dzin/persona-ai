@@ -8,13 +8,12 @@ from app.adapters.provider_base import ProviderSubmitResult
 
 # Catalogue model_id → BFL API endpoint slug
 _BFL_ENDPOINT: dict[str, str] = {
-    "flux-kontxt-pro": "flux-kontext-pro",
-    "flux-kontext-pro": "flux-kontext-pro",
-    "flux-kontext-max": "flux-kontext-max",
-    "flux-2-max": "flux-2-max",
-    "flux-2-pro": "flux-2-pro",
-    "flux-2-flex": "flux-2-flex",
-    "flux-2-klein": "flux-2-klein",
+    "flux2-pro-1k": "flux-2-pro",
+    "flux2-pro-2k": "flux-2-pro",
+    "flux2-pro-4k": "flux-2-pro",
+    "flux2-max-1k": "flux-2-max",
+    "flux2-max-2k": "flux-2-max",
+    "flux2-max-4k": "flux-2-max",
 }
 
 _ASPECT_TO_WH: dict[str, tuple[int, int]] = {
@@ -28,6 +27,12 @@ _ASPECT_TO_WH: dict[str, tuple[int, int]] = {
 # BFL polling terminal statuses
 _TERMINAL_OK = {"Ready"}
 _TERMINAL_ERR = {"Error", "Failed", "Content Moderated", "Request Moderated"}
+
+_QUALITY_MULTIPLIER = {
+    "1k": 1.0,
+    "2k": 2**0.5,
+    "4k": 2.0,
+}
 
 
 class FluxAdapter(MockPhotoProvider):
@@ -71,10 +76,11 @@ class FluxAdapter(MockPhotoProvider):
                 aspect_ratio=aspect_ratio,
             )
 
-        endpoint_slug = _BFL_ENDPOINT.get(model_id, "flux-kontext-pro")
+        endpoint_slug = _BFL_ENDPOINT.get(model_id, "flux-2-pro")
         url = f"{self.api_base_url}/{endpoint_slug}"
         headers = {"x-key": self.api_key}
-        w, h = _ASPECT_TO_WH.get(aspect_ratio, (1024, 1024))
+        base_w, base_h = _ASPECT_TO_WH.get(aspect_ratio, (1024, 1024))
+        w, h = _apply_quality_scale(model_id=model_id, width=base_w, height=base_h)
 
         payload: dict = {
             "prompt": prompt,
@@ -82,8 +88,8 @@ class FluxAdapter(MockPhotoProvider):
             "width": w,
             "height": h,
         }
-        # Kontext models support img2img via input_image
-        if "kontext" in endpoint_slug and source_image_url:
+        # Keep img2img for supported BFL endpoints.
+        if source_image_url:
             payload["input_image"] = source_image_url
 
         try:
@@ -155,3 +161,19 @@ class FluxAdapter(MockPhotoProvider):
             and self.real_calls_enabled
             and bool(self.api_key)
         )
+
+
+def _apply_quality_scale(*, model_id: str, width: int, height: int) -> tuple[int, int]:
+    quality = _extract_quality(model_id)
+    multiplier = _QUALITY_MULTIPLIER.get(quality, 1.0)
+    scaled_w = max(512, int(round(width * multiplier)))
+    scaled_h = max(512, int(round(height * multiplier)))
+    return scaled_w, scaled_h
+
+
+def _extract_quality(model_id: str) -> str:
+    if model_id.endswith("-2k"):
+        return "2k"
+    if model_id.endswith("-4k"):
+        return "4k"
+    return "1k"
