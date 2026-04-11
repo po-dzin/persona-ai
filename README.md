@@ -8,13 +8,13 @@ This repository contains a mock-first implementation aligned with the photo-firs
 - `apps/api` — FastAPI API contracts and in-memory vertical-slice domain implementation.
 - `workers/celery` — Celery worker/beat task scaffold.
 - `shared/contracts` — canonical statuses, tariffs, SLA, retention constants.
-- `infra/db/migrations` — Postgres schema + package seeds (`150/350/800/2000/5000`).
+- `infra/db/migrations` — Postgres schema + canonical package seeds (`STARTER/BASIC/POPULAR/PRO/ULTRA`).
 - `specs` — source-of-truth product/architecture/database/tariff specs.
 
 ## Locked product constants
 
 - Surfaces: Mini App + Web
-- Tariffs: `Starter/Basic/Popular/Pro/Ultra = 150/350/800/2000/5000`
+- Tariffs: base `150/350/800/2000/5000`, total delivered `150/370/880/2300/6000`
 - Onboarding bonus: `20 paid coins per user_id`
 - SLA copy: `30–120 sec`
 - Retention: `source 48h`, `result 30d`

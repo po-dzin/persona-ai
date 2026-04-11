@@ -37,7 +37,7 @@ export default function Users() {
     <div className="page-root">
       <div className="page-header">
         <h1 className="page-title">Пользователи</h1>
-        {data && <span style={{ color: "var(--muted)", fontSize: 13 }}>Всего: {data.total.toLocaleString()}</span>}
+        {data && <span className="page-meta">Всего: {data.total.toLocaleString()}</span>}
       </div>
 
       {/* Controls */}
@@ -67,7 +67,7 @@ export default function Users() {
         </div>
       </div>
 
-      {error && <div style={{ color: "var(--red)", marginBottom: 12 }}>Ошибка: {error}</div>}
+      {error && <div className="page-error-inline">Ошибка: {error}</div>}
 
       <Card>
         <div className="card-scroll-x">
@@ -86,20 +86,20 @@ export default function Users() {
               {data?.users.map((u) => (
                 <tr
                   key={u.user_id}
-                  style={{ cursor: "pointer" }}
+                  className="table-row-clickable"
                   onClick={() => openUser(u.user_id)}
                 >
                   <td>
-                    <div style={{ fontWeight: 500 }}>{u.first_name ?? "—"}</div>
-                    {u.username && <div style={{ fontSize: 11, color: "var(--muted)" }}>@{u.username}</div>}
+                    <div className="cell-strong">{u.first_name ?? "—"}</div>
+                    {u.username && <div className="cell-xs-muted">@{u.username}</div>}
                   </td>
-                  <td style={{ fontFamily: "monospace", fontSize: 12, color: "var(--muted)" }}>{u.user_id}</td>
-                  <td style={{ fontWeight: 600 }}>{u.paid_credits}</td>
+                  <td className="cell-mono-sm">{u.user_id}</td>
+                  <td className="cell-strong">{u.paid_credits}</td>
                   <td>{u.gens_done}</td>
-                  <td style={{ color: u.total_stars > 0 ? "var(--yellow)" : "var(--muted)" }}>
+                  <td className={u.total_stars > 0 ? "cell-yellow-strong" : "cell-muted"}>
                     {u.total_stars > 0 ? `⭐ ${u.total_stars}` : "—"}
                   </td>
-                  <td style={{ color: "var(--muted)", fontSize: 12 }}>{formatDateTimeShort(u.created_at)}</td>
+                  <td className="cell-sm-muted">{formatDateTimeShort(u.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -108,19 +108,19 @@ export default function Users() {
 
         {/* Pagination */}
         {data && data.pages > 1 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 16 }}>
+          <div className="pager">
             <button
               disabled={page === 1}
               onClick={() => { const p = page - 1; setPage(p); load(p); }}
-              style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: page === 1 ? "var(--muted)" : "var(--text)" }}
+              className="pager-btn"
             >
               ←
             </button>
-            <span style={{ color: "var(--muted)", fontSize: 13 }}>{page} / {data.pages}</span>
+            <span className="page-meta">{page} / {data.pages}</span>
             <button
               disabled={page >= data.pages}
               onClick={() => { const p = page + 1; setPage(p); load(p); }}
-              style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid var(--border)", background: "transparent", color: page >= data.pages ? "var(--muted)" : "var(--text)" }}
+              className="pager-btn"
             >
               →
             </button>
@@ -140,27 +140,27 @@ function UserDetail({ detail, onBack }: { detail: UserDetailData; onBack: () => 
     <div>
       <button
         onClick={onBack}
-        style={{ marginBottom: 20, padding: "6px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "transparent", color: "var(--muted)" }}
+        className="back-btn"
       >
         ← Назад
       </button>
 
-      <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>
+      <h1 className="detail-title">
         {name}
-        {user.username != null && <span style={{ color: "var(--muted)", fontWeight: 400, marginLeft: 8, fontSize: 15 }}>@{String(user.username)}</span>}
+        {user.username != null && <span className="detail-title-sub">@{String(user.username)}</span>}
       </h1>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 14, marginBottom: 20 }}>
+      <div className="stats-grid detail-stats-grid">
         <StatCard label="Монеты" value={user.paid_credits as number} />
-        <StatCard label="Генераций" value={stats.done_orders} color="var(--green)" />
-        <StatCard label="Ошибок" value={stats.failed_orders} color={stats.failed_orders > 0 ? "var(--red)" : "var(--text)"} />
+        <StatCard label="Генераций" value={stats.done_orders} tone="success" />
+        <StatCard label="Ошибок" value={stats.failed_orders} tone={stats.failed_orders > 0 ? "danger" : "default"} />
         <StatCard label="Монет потрачено" value={stats.coins_spent} />
-        <StatCard label="Stars оплачено" value={stats.total_stars_paid > 0 ? `⭐ ${stats.total_stars_paid}` : "—"} color={stats.total_stars_paid > 0 ? "var(--yellow)" : "var(--text)"} />
+        <StatCard label="Stars оплачено" value={stats.total_stars_paid > 0 ? `⭐ ${stats.total_stars_paid}` : "—"} tone={stats.total_stars_paid > 0 ? "warning" : "default"} />
       </div>
 
       <div className="split-grid">
         <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--muted)" }}>ПОСЛЕДНИЕ ЗАКАЗЫ</div>
+          <div className="card-title">ПОСЛЕДНИЕ ЗАКАЗЫ</div>
           <div className="card-scroll-x">
             <table>
               <thead>
@@ -170,9 +170,9 @@ function UserDetail({ detail, onBack }: { detail: UserDetailData; onBack: () => 
                 {orders.map((o) => (
                   <tr key={o.order_id as string}>
                     <td><StatusBadge status={o.status as string} /></td>
-                    <td style={{ fontSize: 12 }}>{o.style_code as string}</td>
-                    <td style={{ color: "var(--muted)" }}>{o.credit_cost as number}</td>
-                    <td style={{ fontSize: 11, color: "var(--muted)" }}>{formatDateTimeShort(o.created_at as string)}</td>
+                    <td className="cell-sm">{o.style_code as string}</td>
+                    <td className="cell-muted">{o.credit_cost as number}</td>
+                    <td className="cell-xs-muted">{formatDateTimeShort(o.created_at as string)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -181,9 +181,9 @@ function UserDetail({ detail, onBack }: { detail: UserDetailData; onBack: () => 
         </Card>
 
         <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--muted)" }}>ПЛАТЕЖИ</div>
+          <div className="card-title">ПЛАТЕЖИ</div>
           {payments.length === 0
-            ? <div style={{ color: "var(--muted)", fontSize: 13 }}>Платежей нет</div>
+            ? <div className="muted-body">Платежей нет</div>
             : (
               <div className="card-scroll-x">
                 <table>
@@ -193,9 +193,9 @@ function UserDetail({ detail, onBack }: { detail: UserDetailData; onBack: () => 
                   <tbody>
                     {payments.map((p) => (
                       <tr key={p.payment_id as string}>
-                        <td style={{ fontSize: 12 }}>{p.package_code as string}</td>
-                        <td style={{ color: "var(--yellow)", fontWeight: 600 }}>⭐ {p.amount as number}</td>
-                        <td style={{ fontSize: 11, color: "var(--muted)" }}>{formatDateTimeShort(p.created_at as string)}</td>
+                        <td className="cell-sm">{p.package_code as string}</td>
+                        <td className="cell-yellow-strong">⭐ {p.amount as number}</td>
+                        <td className="cell-xs-muted">{formatDateTimeShort(p.created_at as string)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -210,11 +210,8 @@ function UserDetail({ detail, onBack }: { detail: UserDetailData; onBack: () => 
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    done: "var(--green)", failed: "var(--red)", processing: "var(--yellow)",
-  };
   return (
-    <span style={{ color: colors[status] ?? "var(--muted)", fontSize: 12, fontWeight: 500 }}>
+    <span className={`status-badge status-badge--${status}`}>
       {status}
     </span>
   );

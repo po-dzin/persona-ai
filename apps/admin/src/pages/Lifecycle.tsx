@@ -77,7 +77,7 @@ export default function Lifecycle() {
         <PeriodPicker value={days} onChange={setDays} options={[7, 30, 90]} />
       </div>
 
-      {error && <div style={{ color: "var(--red)", marginBottom: 12 }}>Ошибка: {error}</div>}
+      {error && <div className="page-error-inline">Ошибка: {error}</div>}
 
       {overview && (
         <div className="stats-grid stats-grid--compact">
@@ -91,24 +91,24 @@ export default function Lifecycle() {
 
       <div className="split-grid split-grid--wide-left">
         <Card>
-          <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+          <div className="lifecycle-controls">
             <input
               placeholder="Поиск пользователя..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ minWidth: 220, flex: 1 }}
+              className="lifecycle-search"
             />
             <select
               value={state}
               onChange={(e) => setState(e.target.value)}
-              style={{ background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", borderRadius: 10, padding: "8px 10px" }}
+              className="lifecycle-select"
             >
               <option value="">Все статусы</option>
               {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 
-          <div className="card-scroll-x" style={{ maxHeight: 500 }}>
+          <div className="card-scroll-x lifecycle-table-scroll">
             <table>
               <thead>
                 <tr>
@@ -121,12 +121,12 @@ export default function Lifecycle() {
               </thead>
               <tbody>
                 {(users?.users ?? []).map((u) => (
-                  <tr key={u.user_id} style={{ cursor: "pointer" }} onClick={() => openUser(u.user_id)}>
+                  <tr key={u.user_id} className="table-row-clickable" onClick={() => openUser(u.user_id)}>
                     <td>{u.username ? `@${u.username}` : u.user_id}</td>
                     <td>{u.lifecycle_state}</td>
                     <td>{u.lifecycle_locked ? "да" : "нет"}</td>
                     <td>{u.paid_credits}</td>
-                    <td style={{ color: "var(--muted)", fontSize: 12 }}>{formatDateTimeShort(u.lifecycle_state_updated_at ?? u.created_at)}</td>
+                    <td className="cell-sm-muted">{formatDateTimeShort(u.lifecycle_state_updated_at ?? u.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -134,34 +134,34 @@ export default function Lifecycle() {
           </div>
         </Card>
 
-        <div style={{ display: "grid", gap: 16 }}>
+        <div className="stack-gap">
           <Card>
-            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 8 }}>ПЕРЕХОДЫ / ДЕНЬ</div>
+            <div className="card-title card-title--mini-gap">ПЕРЕХОДЫ / ДЕНЬ</div>
             <LineChart data={chartData} series={[{ key: "transitions", color: "#7c6af7", label: "Переходы" }]} />
           </Card>
 
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-              <div style={{ fontSize: 13, color: "var(--muted)" }}>ТАЙМЛАЙН ПОЛЬЗОВАТЕЛЯ</div>
-              {selectedUser && <div style={{ fontSize: 12, color: "var(--text)" }}>{selectedUser}</div>}
+            <div className="timeline-header">
+              <div className="card-title card-title--tight">ТАЙМЛАЙН ПОЛЬЗОВАТЕЛЯ</div>
+              {selectedUser && <div className="timeline-user-id">{selectedUser}</div>}
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-              <button onClick={() => doAction("force")}>Сменить статус</button>
-              <button onClick={() => doAction("lock")}>Заблокировать</button>
-              <button onClick={() => doAction("unlock")}>Разблокировать</button>
-              <button onClick={() => doAction("recompute")}>Пересчитать</button>
+            <div className="timeline-actions">
+              <button className="secondary-btn" onClick={() => doAction("force")}>Сменить статус</button>
+              <button className="secondary-btn" onClick={() => doAction("lock")}>Заблокировать</button>
+              <button className="secondary-btn" onClick={() => doAction("unlock")}>Разблокировать</button>
+              <button className="secondary-btn" onClick={() => doAction("recompute")}>Пересчитать</button>
             </div>
-            <div style={{ maxHeight: 260, overflow: "auto", border: "1px solid var(--border)", borderRadius: 8, padding: 8 }}>
+            <div className="timeline-box">
               {!timeline
-                ? <div style={{ color: "var(--muted)" }}>Выберите пользователя</div>
+                ? <div className="muted-body">Выберите пользователя</div>
                 : timeline.transitions.length === 0
-                  ? <div style={{ color: "var(--muted)" }}>Переходов пока нет</div>
+                  ? <div className="muted-body">Переходов пока нет</div>
                   : timeline.transitions.map((t) => (
-                    <div key={t.transition_id} style={{ padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
-                      <div style={{ fontSize: 12, color: "var(--text)" }}>
-                        {t.from_state ?? "—"} → {t.to_state} <span style={{ color: "var(--muted)" }}>({t.source})</span>
+                    <div key={t.transition_id} className="timeline-item">
+                      <div className="timeline-item-main">
+                        {t.from_state ?? "—"} → {t.to_state} <span className="timeline-item-source">({t.source})</span>
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--muted)" }}>{t.reason} · {formatDateTimeShort(t.created_at)}</div>
+                      <div className="timeline-item-meta">{t.reason} · {formatDateTimeShort(t.created_at)}</div>
                     </div>
                   ))
               }

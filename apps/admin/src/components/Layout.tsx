@@ -73,7 +73,7 @@ export default function Layout({ page, onNavigate, onReturnToApp, children }: Pr
           {mobileOpen ? <IconClose /> : <IconMenu />}
         </button>
         <div className="topbar-title">
-          Persona <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400, marginLeft: 4 }}>Админка</span>
+          Persona <span className="topbar-subtitle">Админка</span>
         </div>
       </header>
 

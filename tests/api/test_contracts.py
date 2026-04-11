@@ -130,7 +130,7 @@ def test_paywall_then_purchase_then_resume() -> None:
 
 
 def test_purchase_basic_applies_volume_bonus() -> None:
-    """BASIC package must credit exactly 365 coins (bonus already included) on top of existing balance."""
+    """BASIC package must credit exactly 370 coins (base + bonus) on top of existing balance."""
     client = _client()
     hdrs = _headers("u-basic-bonus")
 

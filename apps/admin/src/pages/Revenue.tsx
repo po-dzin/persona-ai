@@ -6,11 +6,11 @@ import PeriodPicker from "../components/PeriodPicker";
 import { formatDateTimeShort } from "../utils/format";
 
 const PACKAGE_LABELS: Record<string, string> = {
-  STARTER_STARS: "Starter 150",
-  BASIC_STARS: "Basic 365",
-  POPULAR_STARS: "Popular 875",
-  PRO_STARS: "Pro 2300",
-  ULTRA_STARS: "Ultra 6000",
+  STARTER: "Starter 150",
+  BASIC: "Basic 370",
+  POPULAR: "Popular 880",
+  PRO: "Pro 2300",
+  ULTRA: "Ultra 6000",
 };
 
 export default function Revenue() {
@@ -43,16 +43,16 @@ export default function Revenue() {
 
       {/* Totals */}
       <div className="stats-grid">
-        <StatCard label="Stars за период" value={`⭐ ${totals.stars.toLocaleString()}`} sub={`≈ ${usd(totals.stars)}`} color="var(--yellow)" />
+        <StatCard label="Stars за период" value={`⭐ ${totals.stars.toLocaleString()}`} sub={`≈ ${usd(totals.stars)}`} tone="warning" />
         <StatCard label="Платежей" value={totals.payments} />
         <StatCard label="Уникальных плательщиков" value={totals.paying_users} />
         <StatCard label="ARPPU" value={`⭐ ${totals.arppu_stars}`} sub={`≈ ${usd(totals.arppu_stars)}`} />
-        <StatCard label="Рефанды" value={totals.refunded} color={totals.refunded > 0 ? "var(--red)" : "var(--text)"} />
+        <StatCard label="Рефанды" value={totals.refunded} tone={totals.refunded > 0 ? "danger" : "default"} />
       </div>
 
       {/* By package bar chart */}
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, color: "var(--muted)" }}>ПРОДАЖИ ПО ПАКЕТАМ (STARS)</div>
+      <Card>
+        <div className="card-title card-title--spacious">ПРОДАЖИ ПО ПАКЕТАМ (STARS)</div>
         <BarChart
           data={by_package.map((p) => ({
             label: PACKAGE_LABELS[p.package_code] ?? p.package_code,
@@ -62,7 +62,7 @@ export default function Revenue() {
         />
 
         {/* Table */}
-        <div className="card-scroll-x" style={{ marginTop: 16 }}>
+        <div className="card-scroll-x card-scroll-x--mt">
           <table>
             <thead>
               <tr>
@@ -78,8 +78,8 @@ export default function Revenue() {
                 <tr key={p.package_code}>
                   <td>{PACKAGE_LABELS[p.package_code] ?? p.package_code}</td>
                   <td>{p.payments_count}</td>
-                  <td style={{ color: "var(--yellow)", fontWeight: 600 }}>⭐ {p.total_stars.toLocaleString()}</td>
-                  <td style={{ color: "var(--muted)" }}>{usd(p.total_stars)}</td>
+                  <td className="cell-yellow-strong">⭐ {p.total_stars.toLocaleString()}</td>
+                  <td className="cell-muted">{usd(p.total_stars)}</td>
                   <td>{p.unique_buyers}</td>
                 </tr>
               ))}
@@ -90,7 +90,7 @@ export default function Revenue() {
 
       {/* Recent payments */}
       <Card>
-        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, color: "var(--muted)" }}>ПОСЛЕДНИЕ ПЛАТЕЖИ</div>
+        <div className="card-title card-title--spacious">ПОСЛЕДНИЕ ПЛАТЕЖИ</div>
         <div className="card-scroll-x">
           <table>
             <thead>
@@ -106,13 +106,13 @@ export default function Revenue() {
               {recent.map((p) => (
                 <tr key={p.payment_id}>
                   <td>
-                    <div style={{ fontWeight: 500 }}>{p.first_name ?? p.user_id}</div>
-                    {p.username && <div style={{ fontSize: 11, color: "var(--muted)" }}>@{p.username}</div>}
+                    <div className="cell-strong">{p.first_name ?? p.user_id}</div>
+                    {p.username && <div className="cell-xs-muted">@{p.username}</div>}
                   </td>
                   <td>{PACKAGE_LABELS[p.package_code] ?? p.package_code}</td>
-                  <td style={{ color: "var(--yellow)", fontWeight: 600 }}>⭐ {p.amount}</td>
-                  <td style={{ color: "var(--muted)" }}>{p.provider}</td>
-                  <td style={{ color: "var(--muted)", fontSize: 12 }}>{formatDateTimeShort(p.created_at)}</td>
+                  <td className="cell-yellow-strong">⭐ {p.amount}</td>
+                  <td className="cell-muted">{p.provider}</td>
+                  <td className="cell-sm-muted">{formatDateTimeShort(p.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -123,7 +123,7 @@ export default function Revenue() {
   );
 }
 
-function Spin() { return <div style={{ color: "var(--muted)", padding: 40 }}>Загрузка...</div>; }
+function Spin() { return <div className="loading-box">Загрузка...</div>; }
 function Err({ msg }: { msg: string }) {
-  return <div style={{ color: "var(--red)", padding: 20 }}>Ошибка: {msg}</div>;
+  return <div className="error-box">Ошибка: {msg}</div>;
 }

@@ -14,7 +14,16 @@ interface LineChartProps {
   height?: number;
 }
 
-const Y_AXIS_W = 38; // fixed px width of Y-axis column
+const CHART_HEIGHT_CLASS: Record<number, string> = {
+  130: "chart-h-130",
+  150: "chart-h-150",
+  160: "chart-h-160",
+  180: "chart-h-180",
+};
+
+function chartHeightClass(height: number): string {
+  return CHART_HEIGHT_CLASS[height] ?? "chart-h-160";
+}
 
 export function LineChart({ data, series, height = 160 }: LineChartProps) {
   if (!data.length) return <Empty height={height} />;
@@ -43,26 +52,16 @@ export function LineChart({ data, series, height = 160 }: LineChartProps) {
   const xLabels = data
     .map((d, i) => ({ label: formatDayMonth(String(d.day)), i }))
     .filter(({ i }) => i % labelStep === 0 || i === data.length - 1);
+  const heightClass = chartHeightClass(height);
 
   return (
     <div>
       {/* Chart row: Y-axis + SVG — same explicit height, always aligned */}
-      <div style={{ display: "flex" }}>
+      <div className="line-chart-row">
         {/* Y-axis labels */}
-        <div style={{
-          width: Y_AXIS_W,
-          height,
-          flexShrink: 0,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          paddingTop: padT,
-          paddingBottom: padB,
-          alignItems: "flex-end",
-          paddingRight: 6,
-        }}>
+        <div className={`line-chart-y-axis ${heightClass}`}>
           {yLabels.map(({ val }, i) => (
-            <span key={i} style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1 }}>
+            <span key={i} className="line-chart-y-label">
               {val >= 10000 ? `${(val / 1000).toFixed(0)}k` : val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
             </span>
           ))}
@@ -71,7 +70,7 @@ export function LineChart({ data, series, height = 160 }: LineChartProps) {
         {/* SVG: lines + grid, no text */}
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          style={{ flex: 1, height, display: "block" }}
+          className={`line-chart-svg ${heightClass}`}
           preserveAspectRatio="none"
           aria-hidden="true"
         >
@@ -96,9 +95,9 @@ export function LineChart({ data, series, height = 160 }: LineChartProps) {
       </div>
 
       {/* X-axis labels — HTML row, indented to match SVG start */}
-      <div style={{ display: "flex", marginLeft: Y_AXIS_W, justifyContent: "space-between", marginTop: 4, gap: 8 }}>
+      <div className="line-chart-x-axis">
         {xLabels.map(({ label, i }) => (
-          <span key={i} style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>{label}</span>
+          <span key={i} className="line-chart-x-label">{label}</span>
         ))}
       </div>
     </div>
@@ -122,12 +121,13 @@ export function BarChart({ data, color = "#7c6af7", height = 130 }: BarChartProp
   const maxVal = Math.max(...data.map((d) => d.value), 1);
   const slotW = W / data.length;
   const barW = Math.max(8, slotW * 0.6);
+  const heightClass = chartHeightClass(height);
 
   return (
     <div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        style={{ width: "100%", height, display: "block" }}
+        className={`bar-chart-svg ${heightClass}`}
         preserveAspectRatio="none"
         aria-hidden="true"
       >
@@ -151,19 +151,9 @@ export function BarChart({ data, color = "#7c6af7", height = 130 }: BarChartProp
       </svg>
 
       {/* Category labels */}
-      <div style={{ display: "flex" }}>
+      <div className="bar-chart-label-row">
         {data.map((d, i) => (
-          <div key={i} style={{
-            flex: 1,
-            textAlign: "center",
-            fontSize: 11,
-            color: "var(--muted)",
-            paddingTop: 5,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            padding: "5px 2px 0",
-          }}>
+          <div key={i} className="bar-chart-label">
             {d.label}
           </div>
         ))}
@@ -174,7 +164,7 @@ export function BarChart({ data, color = "#7c6af7", height = 130 }: BarChartProp
 
 function Empty({ height }: { height: number }) {
   return (
-    <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 13 }}>
+    <div className={`chart-empty ${chartHeightClass(height)}`}>
       Нет данных
     </div>
   );

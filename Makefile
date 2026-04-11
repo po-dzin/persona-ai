@@ -21,7 +21,8 @@ smoke:
 ci-gate:
 	$(PYTHON) scripts/spec_lint.py
 	$(VENV_PY) -m pytest -q
-	cd apps/web && npm run build
+	cd apps/web && npm run check:premerge
+	cd apps/admin && npm run check:premerge
 
 api:
 	uvicorn app.main:app --host 0.0.0.0 --port 8000 --app-dir apps/api

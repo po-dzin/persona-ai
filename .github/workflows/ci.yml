@@ -41,3 +41,19 @@ jobs:
 
       - name: Web pre-merge gates
         run: npm --prefix apps/web run check:premerge
+
+  validate-admin-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/admin/package-lock.json
+
+      - name: Install admin dependencies
+        run: npm --prefix apps/admin ci
+
+      - name: Admin pre-merge gates
+        run: npm --prefix apps/admin run check:premerge
