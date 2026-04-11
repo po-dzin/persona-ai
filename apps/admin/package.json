@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5174",
+    "check:token-drift": "node scripts/check-token-drift.mjs",
+    "check:premerge": "npm run check:token-drift && npm run build",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },

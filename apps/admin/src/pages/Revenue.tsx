@@ -43,11 +43,11 @@ export default function Revenue() {
 
       {/* Totals */}
       <div className="stats-grid">
-        <StatCard label="Stars за период" value={`⭐ ${totals.stars.toLocaleString()}`} sub={`≈ ${usd(totals.stars)}`} color="var(--yellow)" />
+        <StatCard label="Stars за период" value={`⭐ ${totals.stars.toLocaleString()}`} sub={`≈ ${usd(totals.stars)}`} tone="warning" />
         <StatCard label="Платежей" value={totals.payments} />
         <StatCard label="Уникальных плательщиков" value={totals.paying_users} />
         <StatCard label="ARPPU" value={`⭐ ${totals.arppu_stars}`} sub={`≈ ${usd(totals.arppu_stars)}`} />
-        <StatCard label="Рефанды" value={totals.refunded} color={totals.refunded > 0 ? "var(--red)" : "var(--text)"} />
+        <StatCard label="Рефанды" value={totals.refunded} tone={totals.refunded > 0 ? "danger" : "default"} />
       </div>
 
       {/* By package bar chart */}

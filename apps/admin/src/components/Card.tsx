@@ -1,41 +1,37 @@
-import type { ReactNode, CSSProperties } from "react";
+import type { ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
-  style?: CSSProperties;
+  className?: string;
 }
 
-export function Card({ children, style }: Props) {
+export function Card({ children, className }: Props) {
   return (
-    <div style={{
-      background: "var(--surface)",
-      border: "1px solid var(--border)",
-      borderRadius: "var(--radius)",
-      padding: 20,
-      ...style,
-    }}>
+    <div className={["card", className].filter(Boolean).join(" ")}>
       {children}
     </div>
   );
 }
 
+type StatTone = "default" | "success" | "danger" | "warning" | "muted";
+
 interface StatCardProps {
   label: string;
   value: string | number;
   sub?: string;
-  color?: string;
+  tone?: StatTone;
 }
 
-export function StatCard({ label, value, sub, color }: StatCardProps) {
+export function StatCard({ label, value, sub, tone = "default" }: StatCardProps) {
   return (
-    <Card style={{ padding: 14 }}>
-      <div style={{ color: "var(--muted)", fontSize: 11, textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 6, lineHeight: 1.3 }}>
+    <Card className="card--compact">
+      <div className="stat-card-label">
         {label}
       </div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: color ?? "var(--text)", lineHeight: 1 }}>
+      <div className={`stat-card-value stat-card-value--${tone}`}>
         {value}
       </div>
-      {sub && <div style={{ color: "var(--muted)", fontSize: 11, marginTop: 5 }}>{sub}</div>}
+      {sub && <div className="stat-card-sub">{sub}</div>}
     </Card>
   );
 }
