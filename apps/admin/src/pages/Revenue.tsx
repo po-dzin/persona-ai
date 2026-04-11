@@ -3,6 +3,7 @@ import { api, type RevenueData } from "../api";
 import { StatCard, Card } from "../components/Card";
 import { BarChart } from "../components/Chart";
 import PeriodPicker from "../components/PeriodPicker";
+import { formatDateTimeShort } from "../utils/format";
 
 const PACKAGE_LABELS: Record<string, string> = {
   STARTER_STARS: "Starter 150",
@@ -34,14 +35,14 @@ export default function Revenue() {
   const usd = (stars: number) => `$${(stars * 0.0151).toFixed(2)}`;
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700 }}>Revenue</h1>
+    <div className="page-root">
+      <div className="page-header">
+        <h1 className="page-title">Выручка</h1>
         <PeriodPicker value={days} onChange={setDays} options={[7, 30, 90]} />
       </div>
 
       {/* Totals */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 14, marginBottom: 24 }}>
+      <div className="stats-grid">
         <StatCard label="Stars за период" value={`⭐ ${totals.stars.toLocaleString()}`} sub={`≈ ${usd(totals.stars)}`} color="var(--yellow)" />
         <StatCard label="Платежей" value={totals.payments} />
         <StatCard label="Уникальных плательщиков" value={totals.paying_users} />
@@ -61,7 +62,7 @@ export default function Revenue() {
         />
 
         {/* Table */}
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
+        <div className="card-scroll-x" style={{ marginTop: 16 }}>
           <table>
             <thead>
               <tr>
@@ -90,7 +91,7 @@ export default function Revenue() {
       {/* Recent payments */}
       <Card>
         <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 14, color: "var(--muted)" }}>ПОСЛЕДНИЕ ПЛАТЕЖИ</div>
-        <div style={{ overflowX: "auto" }}>
+        <div className="card-scroll-x">
           <table>
             <thead>
               <tr>
@@ -111,7 +112,7 @@ export default function Revenue() {
                   <td>{PACKAGE_LABELS[p.package_code] ?? p.package_code}</td>
                   <td style={{ color: "var(--yellow)", fontWeight: 600 }}>⭐ {p.amount}</td>
                   <td style={{ color: "var(--muted)" }}>{p.provider}</td>
-                  <td style={{ color: "var(--muted)", fontSize: 12 }}>{fmtDate(p.created_at)}</td>
+                  <td style={{ color: "var(--muted)", fontSize: 12 }}>{formatDateTimeShort(p.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -120,11 +121,6 @@ export default function Revenue() {
       </Card>
     </div>
   );
-}
-
-function fmtDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function Spin() { return <div style={{ color: "var(--muted)", padding: 40 }}>Загрузка...</div>; }

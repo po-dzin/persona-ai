@@ -34,10 +34,7 @@ flowchart LR
 
   subgraph X[External Providers]
     NB[Nano Banana]
-    SD[Stable Diffusion]
     FL[FLUX]
-    OI[OpenAI Image]
-    RCF[Recraft]
     TG[Telegram Stars]
     ST[Stripe]
   end
@@ -49,18 +46,12 @@ flowchart LR
   CE --> Q
   Q --> W
   W --> NB
-  W --> SD
   W --> FL
-  W --> OI
-  W --> RCF
   W --> OBJ
   W --> DB
 
   NB -->|callback| WH
-  SD -->|callback| WH
   FL -->|callback| WH
-  OI -->|callback| WH
-  RCF -->|callback| WH
   TG -->|payment webhook| WH
   ST -->|payment webhook| WH
   WH --> DB
@@ -76,7 +67,7 @@ flowchart LR
   API -. extends .-> P11
   W -. evolves .-> P2
 
-  class MA,WEB,API,WH,CE,Q,W,RC,DB,OBJ,NB,SD,FL,OI,RCF,TG,ST mvp;
+  class MA,WEB,API,WH,CE,Q,W,RC,DB,OBJ,NB,FL,TG,ST mvp;
 ```
 
 ## 2) Order sequence: upload → credit check → queue → callback → result/refund
@@ -96,10 +87,10 @@ sequenceDiagram
 
   U->>APP: Upload photo + choose style
   APP->>API: POST /v1/orders/start
-  API->>CE: check credits/free_eligibility
-  CE->>DB: read wallet + free_credits_granted
+  API->>CE: check paid credits
+  CE->>DB: read wallet balance
 
-  alt Credits available (free or paid)
+  alt Credits available
     CE->>DB: reserve/debit 1 credit (atomic)
     CE-->>API: approved
   else No credits
@@ -113,7 +104,7 @@ sequenceDiagram
   W->>PR: submit generation with callback_url
   PR-->>WH: provider callback (processing/done/failed)
   WH->>DB: insert webhook_events(provider,event_id)
-  WH->>DB: idempotent job/order update
+  WH->>DB: idempotent job/order update (no lifecycle transition on fail-only events)
 
   alt Done
     WH->>DB: set order=done, persist result asset
@@ -129,6 +120,6 @@ sequenceDiagram
 
 ## 3) Phase boundaries
 
-- MVP: `Mini App + Web`, `FastAPI`, `Redis + Celery Workers + Celery Beat`, `Postgres`, `Object Storage`, `5 official photo providers`, `Stars + Stripe`, `Webhook + Reconciliation`.
+- MVP: `Mini App + Web`, `FastAPI`, `Redis + Celery Workers + Celery Beat`, `Postgres`, `Object Storage`, `official providers (Nano Banana + FLUX)`, `Stars + Stripe`, `Webhook + Reconciliation`.
 - Phase 1.1: `Gifts`, `Referrals`, `Profile dashboards`.
 - Phase 2: `Multi-provider routing`, `optional self-hosted GPU`.

@@ -43,7 +43,7 @@ END $$;
 
 DO $$ BEGIN
     CREATE TYPE wallet_tx_type AS ENUM (
-        'trial_grant',
+        'onboarding_bonus',
         'package_purchase',
         'debit_generation',
         'refund_generation',
@@ -73,7 +73,8 @@ CREATE TABLE IF NOT EXISTS users (
     first_name text,
     avatar_url text,
     locale text DEFAULT 'ru',
-    free_credits_granted boolean NOT NULL DEFAULT false,
+    paid_credits integer NOT NULL DEFAULT 20,
+    lifecycle_state text NOT NULL DEFAULT 'S0',
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     CHECK (telegram_user_id IS NOT NULL OR web_user_external_id IS NOT NULL)
@@ -120,7 +121,6 @@ CREATE TABLE IF NOT EXISTS orders (
     style_code text NOT NULL,
     status order_status NOT NULL DEFAULT 'draft',
     credit_cost integer NOT NULL DEFAULT 1 CHECK (credit_cost > 0),
-    is_free_credit_used boolean NOT NULL DEFAULT false,
     source_asset_id uuid,
     result_asset_id uuid,
     fail_reason_code text,

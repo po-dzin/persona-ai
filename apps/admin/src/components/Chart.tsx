@@ -6,6 +6,7 @@
  *   Both Y-labels div and SVG share the same explicit height → always aligned.
  * - BarChart: SVG bars + HTML category labels row below.
  */
+import { formatDayMonth } from "../utils/format";
 
 interface LineChartProps {
   data: Array<{ day: string; [key: string]: number | string }>;
@@ -40,7 +41,7 @@ export function LineChart({ data, series, height = 160 }: LineChartProps) {
   }));
 
   const xLabels = data
-    .map((d, i) => ({ label: String(d.day).slice(5), i }))
+    .map((d, i) => ({ label: formatDayMonth(String(d.day)), i }))
     .filter(({ i }) => i % labelStep === 0 || i === data.length - 1);
 
   return (
@@ -95,9 +96,9 @@ export function LineChart({ data, series, height = 160 }: LineChartProps) {
       </div>
 
       {/* X-axis labels — HTML row, indented to match SVG start */}
-      <div style={{ display: "flex", marginLeft: Y_AXIS_W, justifyContent: "space-between", marginTop: 4 }}>
+      <div style={{ display: "flex", marginLeft: Y_AXIS_W, justifyContent: "space-between", marginTop: 4, gap: 8 }}>
         {xLabels.map(({ label, i }) => (
-          <span key={i} style={{ fontSize: 11, color: "var(--muted)" }}>{label}</span>
+          <span key={i} style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap" }}>{label}</span>
         ))}
       </div>
     </div>

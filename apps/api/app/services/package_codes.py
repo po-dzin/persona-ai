@@ -7,8 +7,6 @@ def normalize_package_code(package_code: str) -> str:
     code = package_code.strip().upper()
     if code.startswith("PACKAGE_"):
         code = code.removeprefix("PACKAGE_")
-    if code.endswith("_STARS"):
-        code = code.removesuffix("_STARS")
     return code
 
 

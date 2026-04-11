@@ -34,7 +34,8 @@ erDiagram
     bigint telegram_user_id UK
     text web_user_external_id UK
     text username
-    boolean free_credits_granted
+    int paid_credits
+    text lifecycle_state
     timestamptz created_at
   }
 
@@ -74,7 +75,6 @@ erDiagram
     text style_code
     text status
     int credit_cost
-    bool is_free_credit_used
     uuid source_asset_id FK
     uuid result_asset_id FK
     text idempotency_key UK

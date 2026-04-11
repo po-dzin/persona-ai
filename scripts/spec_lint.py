@@ -41,7 +41,7 @@ REQUIRED_GLOBAL = [
 REQUIRED_BY_FILE = {
     "specs/photo_animation_mvp_spec.md": [r"Mini App \+ Web", r"Nano Banana", r"webhook_events"],
     "specs/00_unified_spec.md": [r"150/370/880/2300/6000", r"webhook_events\(provider,event_id\)"],
-    "specs/08_tariff_spec.md": [r"10–40", r"Starter/Basic/Popular/Pro/Ultra", r"150/370/880/2300/6000"],
+    "specs/08_tariff_spec.md": [r"7–42", r"Starter/Basic/Popular/Pro/Ultra", r"150/370/880/2300/6000"],
     "specs/06_technical_architecture_diagrams.md": [r"Redis \+ Celery", r"webhook_events\(provider,event_id\)"],
 }
 
