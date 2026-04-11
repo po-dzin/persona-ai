@@ -8,7 +8,7 @@
 ## Канонические решения (фиксируем)
 
 1. Surface: **Telegram Mini App + Web** (один frontend-код, разные входы).
-2. Монетизация: **5 пакетов 150/350/800/2000/5000** + **онбординг-бонус 20 монет** для нового пользователя.
+2. Монетизация: **5 пакетов Starter/Basic/Popular/Pro/Ultra** (base: `150/350/800/2000/5000`, total delivered: `150/370/880/2300/6000`) + **онбординг-бонус 20 монет** для нового пользователя.
 3. Стек: **FastAPI + Redis + Celery + Celery Beat + DB-backed job state + provider webhooks + reconciliation**.
 4. AI в MVP: **official-only** photo providers: Nano Banana, Stable Diffusion, FLUX, OpenAI Image, Recraft.
 5. Платежи: **Telegram Stars primary**, **Stripe web fallback**.
@@ -68,5 +68,5 @@
 - `apps/web` — Mini App + Web UI, экранный граф из `persona-prototype-v59.html`.
 - `apps/api` — FastAPI contracts + vertical slice domain logic.
 - `workers/celery` — queue worker and beat tasks.
-- `infra/db/migrations` — schema + tariff seed (`150/350/800/2000/5000`).
+- `infra/db/migrations` — schema + tariff seed (canonical codes `STARTER/BASIC/POPULAR/PRO/ULTRA`).
 - `shared/contracts` — shared constants and contract types.

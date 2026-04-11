@@ -2,7 +2,7 @@
 End-to-end tests for the generation flow.
 
 Covers:
-  - All three models (v1 / v2 / pro) via POST /v1/generate
+  - Canonical model families (NB2 / NB Pro / FLUX.2) via POST /v1/generate
   - Correct coin deduction per model
   - Synchronous provider completion (order immediately done)
   - Async provider: order stays processing until webhook
