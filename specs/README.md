@@ -8,7 +8,7 @@
 ## Канонические решения (фиксируем)
 
 1. Surface: **Telegram Mini App + Web** (один frontend-код, разные входы).
-2. Монетизация: **5 пакетов 150/350/800/2000/5000** + **1 бесплатная генерация** для нового пользователя.
+2. Монетизация: **5 пакетов 150/350/800/2000/5000** + **онбординг-бонус 20 монет** для нового пользователя.
 3. Стек: **FastAPI + Redis + Celery + Celery Beat + DB-backed job state + provider webhooks + reconciliation**.
 4. AI в MVP: **official-only** photo providers: Nano Banana, Stable Diffusion, FLUX, OpenAI Image, Recraft.
 5. Платежи: **Telegram Stars primary**, **Stripe web fallback**.
@@ -27,6 +27,7 @@
 - `07_database_er_diagram.md` — ER-диаграмма БД (Mermaid).
 - `08_tariff_spec.md` — тарифная спецификация и правила кредитов/рефандов.
 - `09_multi_agent_spec.md` — разделение ownership для parallel delivery.
+- `10_state_machine_spec.md` — lifecycle state machine (core backend) + admin control-plane contract.
 - `schema.sql` — стартовая SQL-схема Postgres.
 
 ## UI token canon

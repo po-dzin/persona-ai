@@ -5,8 +5,9 @@ import Dashboard from "./pages/Dashboard";
 import Revenue from "./pages/Revenue";
 import Generations from "./pages/Generations";
 import Users from "./pages/Users";
+import Lifecycle from "./pages/Lifecycle";
 
-export type Page = "dashboard" | "revenue" | "generations" | "users";
+export type Page = "dashboard" | "revenue" | "generations" | "users" | "lifecycle";
 
 function hasTgInitData(): boolean {
   // Read tgInitData from URL hash fragment only (not query string) —
@@ -46,24 +47,20 @@ export default function App() {
     return <Login onLogin={(t) => { localStorage.setItem("admin_token", t); setToken(t); }} />;
   }
 
-  const logout = () => {
-    localStorage.removeItem("admin_token");
-    sessionStorage.removeItem("admin_tg_init_data");
-    setToken("");
-    // Navigate to /admin without tgInitData query param so hasTgInitData()
-    // returns false and the login screen is shown instead of auto re-auth.
-    window.location.replace("/admin/");
+  const returnToApp = () => {
+    window.location.assign("/");
   };
 
   return (
     <>
       <a href="#main-content" className="skip-link">Перейти к содержимому</a>
-      <Layout page={page} onNavigate={setPage} onLogout={logout}>
+      <Layout page={page} onNavigate={setPage} onReturnToApp={returnToApp}>
         <div id="main-content">
           {page === "dashboard" && <Dashboard />}
           {page === "revenue" && <Revenue />}
           {page === "generations" && <Generations />}
           {page === "users" && <Users />}
+          {page === "lifecycle" && <Lifecycle />}
         </div>
       </Layout>
     </>

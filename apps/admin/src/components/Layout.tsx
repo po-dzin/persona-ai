@@ -6,10 +6,10 @@ import {
   IconRevenue,
   IconGenerations,
   IconUsers,
+  IconLifecycle,
   IconLogout,
   IconMenu,
   IconClose,
-  IconLogo,
   IconChevronLeft,
   IconChevronRight,
 } from "./Icons";
@@ -21,10 +21,11 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { id: "dashboard",   label: "Dashboard",       Icon: IconDashboard },
-  { id: "revenue",     label: "Revenue",         Icon: IconRevenue },
+  { id: "dashboard",   label: "Дашборд",         Icon: IconDashboard },
+  { id: "revenue",     label: "Выручка",         Icon: IconRevenue },
   { id: "generations", label: "Генерации",       Icon: IconGenerations },
   { id: "users",       label: "Пользователи",    Icon: IconUsers },
+  { id: "lifecycle",   label: "Жизненный цикл",  Icon: IconLifecycle },
 ];
 
 /** On tablet (640–1023px) start collapsed (rail), desktop starts expanded. */
@@ -36,11 +37,11 @@ function initCollapsed() {
 interface Props {
   page: Page;
   onNavigate: (p: Page) => void;
-  onLogout: () => void;
+  onReturnToApp: () => void;
   children: ReactNode;
 }
 
-export default function Layout({ page, onNavigate, onLogout, children }: Props) {
+export default function Layout({ page, onNavigate, onReturnToApp, children }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(initCollapsed);
 
@@ -68,11 +69,11 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
     <div className={layoutClass}>
       {/* Mobile top bar */}
       <header className="topbar">
-        <button className="topbar-burger" onClick={() => setMobileOpen((v) => !v)} aria-label="Menu">
+        <button className="topbar-burger" onClick={() => setMobileOpen((v) => !v)} aria-label="Меню">
           {mobileOpen ? <IconClose /> : <IconMenu />}
         </button>
         <div className="topbar-title">
-          Persona <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400, marginLeft: 4 }}>Admin</span>
+          Persona <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400, marginLeft: 4 }}>Админка</span>
         </div>
       </header>
 
@@ -85,7 +86,7 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
       <aside className={sidebarClass}>
         <div className="sidebar-logo">
           <span className="sidebar-logo-text">Persona</span>
-          <span className="sidebar-logo-sub">Admin</span>
+          <span className="sidebar-logo-sub">Админка</span>
           {/* Collapse toggle — desktop/tablet only */}
           <button
             className="sidebar-collapse-btn"
@@ -114,9 +115,9 @@ export default function Layout({ page, onNavigate, onLogout, children }: Props) 
         </nav>
 
         <div className="sidebar-footer">
-          <button className="nav-item nav-item--logout" onClick={onLogout} title="Выйти" aria-label="Выйти из панели">
+          <button className="nav-item nav-item--logout" onClick={onReturnToApp} title="Вернуться в приложение" aria-label="Вернуться в приложение">
             <span className="nav-item-icon"><IconLogout size={18} /></span>
-            <span className="nav-item-label">Выйти</span>
+            <span className="nav-item-label">В приложение</span>
           </button>
         </div>
       </aside>

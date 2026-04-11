@@ -55,6 +55,16 @@ export function IconUsers({ size = 18 }: IconProps) {
   );
 }
 
+export function IconLifecycle({ size = 18 }: IconProps) {
+  return (
+    <svg {...props(size)}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 16 14" />
+      <circle cx="12" cy="12" r="1" />
+    </svg>
+  );
+}
+
 export function IconLogout({ size = 18 }: IconProps) {
   return (
     <svg {...props(size)}>

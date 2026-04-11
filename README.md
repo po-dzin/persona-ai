@@ -15,7 +15,7 @@ This repository contains a mock-first implementation aligned with the photo-firs
 
 - Surfaces: Mini App + Web
 - Tariffs: `Starter/Basic/Popular/Pro/Ultra = 150/350/800/2000/5000`
-- Free trial: `1 free generation per user_id`
+- Onboarding bonus: `20 paid coins per user_id`
 - SLA copy: `30–120 sec`
 - Retention: `source 48h`, `result 30d`
 - Idempotency: `webhook_events(provider,event_id)`

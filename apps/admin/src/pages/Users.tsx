@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type UsersData, type UserDetailData } from "../api";
 import { Card, StatCard } from "../components/Card";
+import { formatDateTimeShort } from "../utils/format";
 
 type Filter = "" | "paying" | "active";
 
@@ -33,44 +34,43 @@ export default function Users() {
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700 }}>Пользователи</h1>
+    <div className="page-root">
+      <div className="page-header">
+        <h1 className="page-title">Пользователи</h1>
         {data && <span style={{ color: "var(--muted)", fontSize: 13 }}>Всего: {data.total.toLocaleString()}</span>}
       </div>
 
       {/* Controls */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <label htmlFor="users-search" style={{ display: "contents" }}>
+      <div className="users-controls">
+        <label htmlFor="users-search" className="users-search-wrap">
           <input
             id="users-search"
             placeholder="Поиск по ID, username, имени..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ flex: 1, minWidth: 220 }}
+            className="users-search-input"
             aria-label="Поиск пользователей"
           />
         </label>
-        {(["", "paying", "active"] as Filter[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => { setFilter(f); setPage(1); }}
-            style={{
-              padding: "8px 14px", borderRadius: 8, border: "1px solid",
-              borderColor: filter === f ? "var(--accent)" : "var(--border)",
-              background: filter === f ? "var(--accent-dim)" : "transparent",
-              color: filter === f ? "var(--accent)" : "var(--muted)",
-            }}
-          >
-            {f === "" ? "Все" : f === "paying" ? "Платящие" : "Активные (7д)"}
-          </button>
-        ))}
+        <div className="users-filters-scroll" role="region" aria-label="Фильтры пользователей">
+          <div className="users-filters-row">
+            {(["", "paying", "active"] as Filter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => { setFilter(f); setPage(1); }}
+                className={`filter-chip${filter === f ? " filter-chip--active" : ""}`}
+              >
+                {f === "" ? "Все" : f === "paying" ? "Платящие" : "Активные (7д)"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {error && <div style={{ color: "var(--red)", marginBottom: 12 }}>Ошибка: {error}</div>}
 
       <Card>
-        <div style={{ overflowX: "auto" }}>
+        <div className="card-scroll-x">
           <table>
             <thead>
               <tr>
@@ -99,7 +99,7 @@ export default function Users() {
                   <td style={{ color: u.total_stars > 0 ? "var(--yellow)" : "var(--muted)" }}>
                     {u.total_stars > 0 ? `⭐ ${u.total_stars}` : "—"}
                   </td>
-                  <td style={{ color: "var(--muted)", fontSize: 12 }}>{fmtDate(u.created_at)}</td>
+                  <td style={{ color: "var(--muted)", fontSize: 12 }}>{formatDateTimeShort(u.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -158,24 +158,26 @@ function UserDetail({ detail, onBack }: { detail: UserDetailData; onBack: () => 
         <StatCard label="Stars оплачено" value={stats.total_stars_paid > 0 ? `⭐ ${stats.total_stars_paid}` : "—"} color={stats.total_stars_paid > 0 ? "var(--yellow)" : "var(--text)"} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div className="split-grid">
         <Card>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--muted)" }}>ПОСЛЕДНИЕ ЗАКАЗЫ</div>
-          <table>
-            <thead>
-              <tr><th>Статус</th><th>Стиль</th><th>🪙</th><th>Дата</th></tr>
-            </thead>
-            <tbody>
-              {orders.map((o) => (
-                <tr key={o.order_id as string}>
-                  <td><StatusBadge status={o.status as string} /></td>
-                  <td style={{ fontSize: 12 }}>{o.style_code as string}</td>
-                  <td style={{ color: "var(--muted)" }}>{o.credit_cost as number}</td>
-                  <td style={{ fontSize: 11, color: "var(--muted)" }}>{fmtDate(o.created_at as string)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="card-scroll-x">
+            <table>
+              <thead>
+                <tr><th>Статус</th><th>Стиль</th><th>🪙</th><th>Дата</th></tr>
+              </thead>
+              <tbody>
+                {orders.map((o) => (
+                  <tr key={o.order_id as string}>
+                    <td><StatusBadge status={o.status as string} /></td>
+                    <td style={{ fontSize: 12 }}>{o.style_code as string}</td>
+                    <td style={{ color: "var(--muted)" }}>{o.credit_cost as number}</td>
+                    <td style={{ fontSize: 11, color: "var(--muted)" }}>{formatDateTimeShort(o.created_at as string)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
 
         <Card>
@@ -183,20 +185,22 @@ function UserDetail({ detail, onBack }: { detail: UserDetailData; onBack: () => 
           {payments.length === 0
             ? <div style={{ color: "var(--muted)", fontSize: 13 }}>Платежей нет</div>
             : (
-              <table>
-                <thead>
-                  <tr><th>Пакет</th><th>Stars</th><th>Дата</th></tr>
-                </thead>
-                <tbody>
-                  {payments.map((p) => (
-                    <tr key={p.payment_id as string}>
-                      <td style={{ fontSize: 12 }}>{p.package_code as string}</td>
-                      <td style={{ color: "var(--yellow)", fontWeight: 600 }}>⭐ {p.amount as number}</td>
-                      <td style={{ fontSize: 11, color: "var(--muted)" }}>{fmtDate(p.created_at as string)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="card-scroll-x">
+                <table>
+                  <thead>
+                    <tr><th>Пакет</th><th>Stars</th><th>Дата</th></tr>
+                  </thead>
+                  <tbody>
+                    {payments.map((p) => (
+                      <tr key={p.payment_id as string}>
+                        <td style={{ fontSize: 12 }}>{p.package_code as string}</td>
+                        <td style={{ color: "var(--yellow)", fontWeight: 600 }}>⭐ {p.amount as number}</td>
+                        <td style={{ fontSize: 11, color: "var(--muted)" }}>{formatDateTimeShort(p.created_at as string)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )
           }
         </Card>
@@ -214,9 +218,4 @@ function StatusBadge({ status }: { status: string }) {
       {status}
     </span>
   );
-}
-
-function fmtDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }

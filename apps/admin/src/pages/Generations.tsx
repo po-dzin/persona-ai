@@ -3,6 +3,7 @@ import { api, type GenerationsData } from "../api";
 import { StatCard, Card } from "../components/Card";
 import { BarChart } from "../components/Chart";
 import PeriodPicker from "../components/PeriodPicker";
+import { formatDateTimeShort } from "../utils/format";
 
 const STATUS_COLORS: Record<string, string> = {
   done: "var(--green)",
@@ -37,18 +38,18 @@ export default function Generations() {
   const errRate = total ? ((failed / total) * 100).toFixed(1) : "0";
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700 }}>Генерации</h1>
+    <div className="page-root">
+      <div className="page-header">
+        <h1 className="page-title">Генерации</h1>
         <PeriodPicker value={days} onChange={setDays} />
       </div>
 
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 14, marginBottom: 24 }}>
+      <div className="stats-grid">
         <StatCard label="Всего" value={total.toLocaleString()} />
         <StatCard label="Успешно" value={done.toLocaleString()} color="var(--green)" />
         <StatCard label="Ошибки" value={failed.toLocaleString()} color={failed > 0 ? "var(--red)" : "var(--text)"} />
-        <StatCard label="Error rate" value={`${errRate}%`} color={Number(errRate) > 5 ? "var(--red)" : "var(--text)"} />
+        <StatCard label="Доля ошибок" value={`${errRate}%`} color={Number(errRate) > 5 ? "var(--red)" : "var(--text)"} />
         {avg_gen_seconds != null && (
           <StatCard label="Среднее время" value={`${avg_gen_seconds}с`} />
         )}
@@ -70,7 +71,7 @@ export default function Generations() {
         </div>
       </Card>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+      <div className="split-grid" style={{ marginBottom: 16 }}>
         {/* Top styles */}
         <Card>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--muted)" }}>ТОП СТИЛЕЙ</div>
@@ -89,9 +90,9 @@ export default function Generations() {
               <tr>
                 <th>Модель</th>
                 <th>Всего</th>
-                <th>Done</th>
-                <th>Fail%</th>
-                <th>Avg🪙</th>
+                <th>Успешно</th>
+                <th>Ошибки %</th>
+                <th>Ср. стоимость</th>
               </tr>
             </thead>
             <tbody>
@@ -116,12 +117,12 @@ export default function Generations() {
       {recent_failed.length > 0 && (
         <Card>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--red)" }}>ПОСЛЕДНИЕ ОШИБКИ</div>
-          <div style={{ overflowX: "auto" }}>
+          <div className="card-scroll-x">
             <table>
               <thead>
                 <tr>
-                  <th>Order</th>
-                  <th>User</th>
+                  <th>Заказ</th>
+                  <th>Пользователь</th>
                   <th>Модель</th>
                   <th>Стиль</th>
                   <th>Причина</th>
@@ -140,7 +141,7 @@ export default function Generations() {
                     <td style={{ color: "var(--red)", fontSize: 12 }}>{f.fail_reason_code ?? "—"}</td>
                     <td style={{ color: "var(--muted)", fontSize: 12 }}>{f.provider ?? "—"}</td>
                     <td style={{ color: "var(--muted)" }}>{f.attempts ?? 0}</td>
-                    <td style={{ color: "var(--muted)", fontSize: 11 }}>{fmtDate(f.created_at)}</td>
+                    <td style={{ color: "var(--muted)", fontSize: 11 }}>{formatDateTimeShort(f.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -150,11 +151,6 @@ export default function Generations() {
       )}
     </div>
   );
-}
-
-function fmtDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function Spin() { return <div style={{ color: "var(--muted)", padding: 40 }}>Загрузка...</div>; }

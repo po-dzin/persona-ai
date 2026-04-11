@@ -34,13 +34,13 @@ export default function Login({ onLogin }: Props) {
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 8, color: "var(--accent)" }}>
             <IconLogo size={36} />
           </div>
-          <h1 style={{ fontSize: 20, fontWeight: 600 }}>Persona Admin</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 600 }}>Persona Админка</h1>
           <p style={{ color: "var(--muted)", marginTop: 4 }}>Введите токен для входа</p>
         </div>
 
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 24 }}>
           <label style={{ display: "block", marginBottom: 6, color: "var(--muted)", fontSize: 12, textTransform: "uppercase", letterSpacing: ".05em" }}>
-            Admin Token
+            Токен администратора
           </label>
           <input
             type="password"

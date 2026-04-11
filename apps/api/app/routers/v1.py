@@ -25,6 +25,7 @@ from app.models.api_models import (
     UploadRequest,
     WebhookRequest,
 )
+from app.services.lifecycle import mark_bot_started, mark_miniapp_opened
 from app.services.vertical_slice import VerticalSliceService
 
 router = APIRouter(prefix="/v1", tags=["v1"])
@@ -98,11 +99,20 @@ def get_profile(
     x_telegram_init_data: str = Header(default=""),
 ):
     tg_user = parse_tg_user(x_telegram_init_data)
-    return {"profile": get_service(request).get_profile(
+    svc = get_service(request)
+    profile = svc.get_profile(
         user_id,
         first_name=tg_user.get("first_name") if tg_user else None,
         username=tg_user.get("username") if tg_user else None,
-    )}
+    )
+    if tg_user:
+        from app.core.db import get_session, UserRow
+
+        with get_session() as db:
+            user = db.get(UserRow, user_id)
+            if user:
+                mark_miniapp_opened(db, user)
+    return {"profile": profile}
 
 
 @router.get("/me/photos")
@@ -163,6 +173,7 @@ def create_order(data: CreateOrderRequest, request: Request, user_id: str = Depe
             model_id=data.model_id,
             prompt=data.prompt,
             aspect_ratio=data.aspect_ratio,
+            enhance_prompt=data.enhance_prompt,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -214,6 +225,7 @@ async def generate(data: GenerateRequest, request: Request, user_id: str = Depen
                 style_code=data.style_code,
                 prompt=data.prompt,
                 aspect_ratio=data.aspect_ratio,
+                enhance_prompt=data.enhance_prompt,
             ),
         )
     except ValueError as exc:
@@ -464,11 +476,13 @@ async def _handle_tg_update(update: dict[str, Any], svc: VerticalSliceService) -
 
     if text.startswith("/start") and chat_id:
         if user_id:
-            svc.get_or_create_user(
-                user_id,
-                first_name=user.get("first_name"),
-                username=user.get("username"),
-            )
+            svc.get_or_create_user(user_id, first_name=user.get("first_name"), username=user.get("username"))
+            from app.core.db import get_session, UserRow
+
+            with get_session() as db:
+                db_user = db.get(UserRow, user_id)
+                if db_user:
+                    mark_bot_started(db, db_user)
         await send_start_message(chat_id)
         return
 
