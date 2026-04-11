@@ -22,6 +22,7 @@ from app.core.settings import settings
 from app.routers.v1 import router as v1_router
 from app.routers.admin import router as admin_router
 from app.services.vertical_slice import VerticalSliceService
+from app.services.lifecycle import run_backfill_once
 
 
 _logger = logging.getLogger(__name__)
@@ -59,6 +60,15 @@ def _register_tg_webhook() -> None:
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_db()
+    try:
+        from app.core.db import get_session
+
+        with get_session() as session:
+            ran, users_count = run_backfill_once(session)
+            if ran:
+                _logger.info("lifecycle_backfill_completed users=%s", users_count)
+    except Exception:
+        _logger.exception("lifecycle_backfill_failed")
     _warn_missing_secrets()
     _register_tg_webhook()
     yield

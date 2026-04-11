@@ -27,14 +27,14 @@ export default function Dashboard() {
   const queueTotal = Object.values(queue.jobs).reduce((a, b) => a + b, 0);
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700 }}>Dashboard</h1>
+    <div className="page-root">
+      <div className="page-header">
+        <h1 className="page-title">Дашборд</h1>
         <PeriodPicker value={days} onChange={setDays} />
       </div>
 
       {/* Top stat cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 12, marginBottom: 24 }}>
+      <div className="stats-grid stats-grid--compact">
         <StatCard label="Всего пользователей" value={users.total.toLocaleString()} sub={`+${users.new_period} за период`} />
         <StatCard label="Новые сегодня" value={users.new_today} sub={`DAU: ${users.dau}`} />
         <StatCard label="Платящих" value={users.paying.toLocaleString()} sub={`Конверсия ${users.conversion_pct}%`} color="var(--green)" />
@@ -46,7 +46,7 @@ export default function Dashboard() {
 
       {/* Charts */}
       {ts && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
+        <div className="stats-grid stats-grid--charts">
           <Card>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--muted)" }}>НОВЫЕ ПОЛЬЗОВАТЕЛИ</div>
             <LineChart
@@ -91,7 +91,7 @@ export default function Dashboard() {
       {queueTotal > 0 && (
         <Card style={{ marginTop: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, color: "var(--muted)" }}>ОЧЕРЕДЬ JOBS</div>
-          <div style={{ display: "flex", gap: 16 }}>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             {Object.entries(queue.jobs).map(([status, cnt]) => (
               <div key={status} style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 14px" }}>
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{cnt}</div>

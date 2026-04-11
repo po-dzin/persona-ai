@@ -30,6 +30,19 @@ export function mapStyleDto(dto: StyleDto): Style {
     category: dto.category,
     gradient: dto.gradient,
     promptTemplate: dto.prompt_template,
+    promptSpec: dto.prompt_spec ? {
+      subject: dto.prompt_spec.subject,
+      styleCore: dto.prompt_spec.style_core,
+      context: dto.prompt_spec.context,
+      camera: dto.prompt_spec.camera,
+      lightColorTexture: dto.prompt_spec.light_color_texture,
+      emotion: dto.prompt_spec.emotion,
+      outputIntent: dto.prompt_spec.output_intent,
+      negative: dto.prompt_spec.negative,
+    } : undefined,
+    stylizationLevel: dto.stylization_level,
+    styleAnchors: dto.style_anchors,
+    variationAxes: dto.variation_axes,
     isTrending: dto.is_trending,
     isNew: dto.is_new,
   };
@@ -98,6 +111,7 @@ export function mapGenerateRequestToDto(input: GenerateRequest): GeneratePayload
     style_code: input.styleCode,
     prompt: input.prompt,
     aspect_ratio: input.aspectRatio,
+    enhance_prompt: input.enhancePrompt,
   };
 }
 

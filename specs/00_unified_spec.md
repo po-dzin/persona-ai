@@ -44,7 +44,7 @@
 
 - **Frontend**: Preact + TypeScript + Vite (Telegram Mini App + Web)
 - **API**: FastAPI + Postgres + Redis + Celery Workers
-- **AI providers**: Nano Banana, Stable Diffusion, FLUX, OpenAI Image, Recraft (official-only)
+- **AI providers**: Nano Banana + FLUX (official-only)
 - **Payments**: Telegram Stars (primary)
 - **Webhook dedup**: `webhook_events(provider,event_id)` as single source for idempotency
 
@@ -62,7 +62,8 @@
 - Base coins: `150/350/800/2000/5000`; bonus coins: `0/20/80/300/1000`
 - Prices in Telegram Stars: `230/537/1227/3067/7667 ⭐`
 - Volume bonuses: `—/+5%/+10%/+15%/+20%`
-- Per-model pricing: `10–40 🪙` per generation depending on AI model
+- Onboarding bonus: `20` coins on first user creation
+- Per-model pricing: `7–42 🪙` per generation depending on AI model
 
 ## Out of MVP (moved to Phase 2+)
 

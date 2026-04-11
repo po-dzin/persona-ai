@@ -6,18 +6,36 @@ All timestamps stored as TIMESTAMPTZ (PostgreSQL) or ISO strings (SQLite dev).
 from __future__ import annotations
 
 import hmac
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from app.core.auth import parse_tg_user
-from app.core.db import get_session, _is_sqlite
+from app.core.db import (
+    UserRow,
+    get_session,
+    _is_sqlite,
+)
 from app.core.rate_limit import admin_limiter
 from app.core.settings import settings
+from app.services.lifecycle import (
+    LIFECYCLE_STATES,
+    admin_force_transition,
+    admin_lock_state,
+    admin_recompute_state,
+    admin_unlock_state,
+)
 
 router = APIRouter(prefix="/admin/api", tags=["admin"])
+
+
+@dataclass(frozen=True)
+class AdminActor:
+    actor: str
 
 
 # ─────────────────────────── auth ────────────────────────────────
@@ -28,6 +46,19 @@ def require_admin(
     x_telegram_init_data: str = Header(default=""),
     x_admin_token: str = Header(default=""),
 ) -> None:
+    _resolve_admin_actor(
+        request=request,
+        x_telegram_init_data=x_telegram_init_data,
+        x_admin_token=x_admin_token,
+    )
+
+
+def _resolve_admin_actor(
+    *,
+    request: Request,
+    x_telegram_init_data: str,
+    x_admin_token: str,
+) -> str:
     admin_limiter.check(request)
     """
     Two ways to authenticate:
@@ -38,15 +69,28 @@ def require_admin(
     if x_telegram_init_data.strip():
         user = parse_tg_user(x_telegram_init_data.strip())
         if user and str(user.get("id", "")) in settings.admin_user_ids:
-            return
+            return f"tg:{user.get('id')}"
         raise HTTPException(status_code=403, detail="not_admin")
 
     # Fallback: static token (for scripts/curl)
     if x_admin_token.strip() and settings.admin_secret_token:
         if hmac.compare_digest(x_admin_token.strip(), settings.admin_secret_token):
-            return
+            return "token:admin"
 
     raise HTTPException(status_code=401, detail="unauthorized")
+
+
+def get_admin_actor(
+    request: Request,
+    x_telegram_init_data: str = Header(default=""),
+    x_admin_token: str = Header(default=""),
+) -> AdminActor:
+    actor = _resolve_admin_actor(
+        request=request,
+        x_telegram_init_data=x_telegram_init_data,
+        x_admin_token=x_admin_token,
+    )
+    return AdminActor(actor=actor)
 
 
 # ─────────────────────── SQL helpers ─────────────────────────────
@@ -85,6 +129,15 @@ def _serialize(val: Any) -> Any:
 
 def _serialize_rows(rows: list[dict]) -> list[dict]:
     return [{k: _serialize(v) for k, v in row.items()} for row in rows]
+
+
+class LifecycleTransitionRequest(BaseModel):
+    to_state: str = Field(..., description="Target lifecycle state")
+    reason: str = Field(..., min_length=3, max_length=500)
+
+
+class LifecycleLockRequest(BaseModel):
+    reason: str = Field(..., min_length=3, max_length=500)
 
 
 # ─────────────────────────── endpoints ───────────────────────────
@@ -513,3 +566,217 @@ def user_detail(user_id: str):
         "orders": orders,
         "payments": payments,
     }
+
+
+@router.get("/lifecycle/overview", dependencies=[Depends(require_admin)])
+def lifecycle_overview(days: int = Query(default=30, ge=1, le=180)):
+    with get_session() as session:
+        states_rows = _rows(
+            session,
+            "SELECT lifecycle_state as state, COUNT(*) as cnt FROM users GROUP BY lifecycle_state",
+        )
+        states = {s["state"]: int(s["cnt"]) for s in states_rows}
+        for state in LIFECYCLE_STATES:
+            states.setdefault(state, 0)
+
+        locked_users = _scalar(session, "SELECT COUNT(*) FROM users WHERE lifecycle_locked = TRUE")
+        transitions_total = _scalar(
+            session,
+            f"SELECT COUNT(*) FROM lifecycle_transitions WHERE {_interval(days)}",
+        )
+        transitions_daily = _serialize_rows(
+            _rows(
+                session,
+                f"""
+                SELECT {_trunc_day()} as day, COUNT(*) as transitions
+                FROM lifecycle_transitions
+                WHERE {_interval(days)}
+                GROUP BY {_trunc_day()}
+                ORDER BY day
+                """,
+            )
+        )
+
+    return {
+        "period_days": days,
+        "states": states,
+        "locked_users": int(locked_users or 0),
+        "transitions_total": int(transitions_total or 0),
+        "transitions_daily": transitions_daily,
+    }
+
+
+@router.get("/lifecycle/users", dependencies=[Depends(require_admin)])
+def lifecycle_users(
+    state: str = Query(default="", description="Lifecycle state filter"),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=50, ge=10, le=200),
+    search: str = Query(default=""),
+):
+    if state and state not in LIFECYCLE_STATES:
+        raise HTTPException(status_code=400, detail="invalid_lifecycle_state")
+
+    offset = (page - 1) * limit
+    where = []
+    params: dict[str, Any] = {"limit": limit, "offset": offset}
+
+    if state:
+        where.append("u.lifecycle_state = :state")
+        params["state"] = state
+    if search:
+        if _is_sqlite:
+            where.append("(u.user_id LIKE :search OR u.username LIKE :search OR u.first_name LIKE :search)")
+        else:
+            where.append("(u.user_id ILIKE :search OR u.username ILIKE :search OR u.first_name ILIKE :search)")
+        params["search"] = f"%{search}%"
+
+    where_sql = f"WHERE {' AND '.join(where)}" if where else ""
+
+    sql = f"""
+        SELECT
+            u.user_id, u.first_name, u.username, u.paid_credits,
+            u.lifecycle_state, u.lifecycle_state_updated_at, u.lifecycle_locked,
+            u.last_success_generation_at, u.last_payment_at, u.created_at
+        FROM users u
+        {where_sql}
+        ORDER BY u.lifecycle_state_updated_at DESC NULLS LAST, u.created_at DESC
+        LIMIT :limit OFFSET :offset
+    """ if not _is_sqlite else f"""
+        SELECT
+            u.user_id, u.first_name, u.username, u.paid_credits,
+            u.lifecycle_state, u.lifecycle_state_updated_at, u.lifecycle_locked,
+            u.last_success_generation_at, u.last_payment_at, u.created_at
+        FROM users u
+        {where_sql}
+        ORDER BY u.lifecycle_state_updated_at DESC, u.created_at DESC
+        LIMIT :limit OFFSET :offset
+    """
+
+    count_sql = f"SELECT COUNT(*) FROM users u {where_sql}"
+
+    with get_session() as session:
+        rows = _serialize_rows(_rows(session, sql, params))
+        total = _scalar(session, count_sql, {k: v for k, v in params.items() if k not in ("limit", "offset")})
+
+    return {
+        "users": rows,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit if total else 1,
+    }
+
+
+@router.get("/lifecycle/users/{user_id}/timeline", dependencies=[Depends(require_admin)])
+def lifecycle_user_timeline(user_id: str):
+    with get_session() as session:
+        user = session.get(UserRow, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="user_not_found")
+
+        transitions = _serialize_rows(
+            _rows(
+                session,
+                """
+                SELECT transition_id, from_state, to_state, reason, source, actor, metadata_json, created_at
+                FROM lifecycle_transitions
+                WHERE user_id = :uid
+                ORDER BY created_at DESC
+                LIMIT 200
+                """,
+                {"uid": user_id},
+            )
+        )
+        admin_actions = _serialize_rows(
+            _rows(
+                session,
+                """
+                SELECT action_id, action_type, actor, reason, from_state, to_state, metadata_json, created_at
+                FROM lifecycle_admin_actions
+                WHERE user_id = :uid
+                ORDER BY created_at DESC
+                LIMIT 200
+                """,
+                {"uid": user_id},
+            )
+        )
+
+    return {
+        "user": {
+            "user_id": user.user_id,
+            "lifecycle_state": user.lifecycle_state,
+            "lifecycle_locked": bool(user.lifecycle_locked),
+            "lifecycle_state_updated_at": _serialize(user.lifecycle_state_updated_at),
+        },
+        "transitions": transitions,
+        "admin_actions": admin_actions,
+    }
+
+
+@router.post("/lifecycle/users/{user_id}/transition")
+def lifecycle_force_transition(
+    user_id: str,
+    payload: LifecycleTransitionRequest,
+    actor: AdminActor = Depends(get_admin_actor),
+):
+    if payload.to_state not in LIFECYCLE_STATES:
+        raise HTTPException(status_code=400, detail="invalid_lifecycle_state")
+
+    with get_session() as session:
+        user = session.get(UserRow, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="user_not_found")
+        from_state = user.lifecycle_state
+        to_state = admin_force_transition(
+            session,
+            user,
+            to_state=payload.to_state,
+            actor=actor.actor,
+            reason=payload.reason,
+        )
+
+    return {"ok": True, "from_state": from_state, "to_state": to_state}
+
+
+@router.post("/lifecycle/users/{user_id}/lock")
+def lifecycle_lock(
+    user_id: str,
+    payload: LifecycleLockRequest,
+    actor: AdminActor = Depends(get_admin_actor),
+):
+    with get_session() as session:
+        user = session.get(UserRow, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="user_not_found")
+        admin_lock_state(session, user, actor=actor.actor, reason=payload.reason)
+
+    return {"ok": True, "locked": True}
+
+
+@router.post("/lifecycle/users/{user_id}/unlock")
+def lifecycle_unlock(
+    user_id: str,
+    payload: LifecycleLockRequest,
+    actor: AdminActor = Depends(get_admin_actor),
+):
+    with get_session() as session:
+        user = session.get(UserRow, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="user_not_found")
+        state = admin_unlock_state(session, user, actor=actor.actor, reason=payload.reason)
+
+    return {"ok": True, "locked": False, "state": state}
+
+
+@router.post("/lifecycle/users/{user_id}/recompute")
+def lifecycle_recompute(
+    user_id: str,
+    payload: LifecycleLockRequest = Body(default=LifecycleLockRequest(reason="manual_recompute")),
+    actor: AdminActor = Depends(get_admin_actor),
+):
+    with get_session() as session:
+        user = session.get(UserRow, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="user_not_found")
+        state = admin_recompute_state(session, user, actor=actor.actor, reason=payload.reason)
+
+    return {"ok": True, "state": state}

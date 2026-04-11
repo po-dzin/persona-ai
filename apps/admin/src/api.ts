@@ -22,14 +22,26 @@ function authHeaders(): Record<string, string> {
   return { "X-Admin-Token": getStaticToken() };
 }
 
-async function request<T>(path: string, params?: Record<string, string | number>): Promise<T> {
+async function request<T>(
+  path: string,
+  params?: Record<string, string | number>,
+  init?: RequestInit,
+): Promise<T> {
   const url = new URL(BASE + path, window.location.origin);
   if (params) {
     Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)));
   }
   let res: Response;
   try {
-    res = await fetch(url.toString(), { headers: authHeaders() });
+    res = await fetch(url.toString(), {
+      method: "GET",
+      ...init,
+      headers: {
+        ...authHeaders(),
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...(init?.headers ?? {}),
+      },
+    });
   } catch {
     throw new Error("Нет соединения с API сервером");
   }
@@ -48,6 +60,35 @@ export const api = {
   timeseries: (days: number) => request<TimeseriesData>("/timeseries", { days }),
   revenue: (days: number) => request<RevenueData>("/revenue", { days }),
   generations: (days: number) => request<GenerationsData>("/generations", { days }),
+  lifecycleOverview: (days: number) => request<LifecycleOverviewData>("/lifecycle/overview", { days }),
+  lifecycleUsers: (params: { state?: string; page?: number; limit?: number; search?: string }) =>
+    request<LifecycleUsersData>("/lifecycle/users", params as Record<string, string | number>),
+  lifecycleTimeline: (userId: string) =>
+    request<LifecycleTimelineData>(`/lifecycle/users/${encodeURIComponent(userId)}/timeline`),
+  lifecycleForceTransition: (userId: string, toState: string, reason: string) =>
+    request<{ ok: boolean; from_state: string; to_state: string }>(
+      `/lifecycle/users/${encodeURIComponent(userId)}/transition`,
+      undefined,
+      { method: "POST", body: JSON.stringify({ to_state: toState, reason }) },
+    ),
+  lifecycleLock: (userId: string, reason: string) =>
+    request<{ ok: boolean; locked: boolean }>(
+      `/lifecycle/users/${encodeURIComponent(userId)}/lock`,
+      undefined,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    ),
+  lifecycleUnlock: (userId: string, reason: string) =>
+    request<{ ok: boolean; locked: boolean; state: string }>(
+      `/lifecycle/users/${encodeURIComponent(userId)}/unlock`,
+      undefined,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    ),
+  lifecycleRecompute: (userId: string, reason: string) =>
+    request<{ ok: boolean; state: string }>(
+      `/lifecycle/users/${encodeURIComponent(userId)}/recompute`,
+      undefined,
+      { method: "POST", body: JSON.stringify({ reason }) },
+    ),
   users: (params: { page?: number; limit?: number; search?: string; filter?: string }) =>
     request<UsersData>("/users", params as Record<string, string | number>),
   userDetail: (userId: string) => request<UserDetailData>(`/users/${encodeURIComponent(userId)}`),
@@ -159,4 +200,59 @@ export interface UserDetailData {
   };
   orders: Array<Record<string, unknown>>;
   payments: Array<Record<string, unknown>>;
+}
+
+export interface LifecycleOverviewData {
+  period_days: number;
+  states: Record<string, number>;
+  locked_users: number;
+  transitions_total: number;
+  transitions_daily: Array<{ day: string; transitions: number }>;
+}
+
+export interface LifecycleUsersData {
+  users: Array<{
+    user_id: string;
+    first_name: string | null;
+    username: string | null;
+    paid_credits: number;
+    lifecycle_state: string;
+    lifecycle_state_updated_at: string | null;
+    lifecycle_locked: boolean;
+    last_success_generation_at: string | null;
+    last_payment_at: string | null;
+    created_at: string;
+  }>;
+  total: number;
+  page: number;
+  pages: number;
+}
+
+export interface LifecycleTimelineData {
+  user: {
+    user_id: string;
+    lifecycle_state: string;
+    lifecycle_locked: boolean;
+    lifecycle_state_updated_at: string | null;
+  };
+  transitions: Array<{
+    transition_id: number;
+    from_state: string | null;
+    to_state: string;
+    reason: string;
+    source: string;
+    actor: string | null;
+    metadata_json: string | null;
+    created_at: string;
+  }>;
+  admin_actions: Array<{
+    action_id: number;
+    action_type: string;
+    actor: string;
+    reason: string;
+    from_state: string | null;
+    to_state: string | null;
+    metadata_json: string | null;
+    created_at: string;
+  }>;
 }

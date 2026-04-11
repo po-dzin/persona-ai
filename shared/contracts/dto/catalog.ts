@@ -9,12 +9,27 @@ export interface AIModelDto {
   official_only: boolean;
 }
 
+export interface StylePromptSpecDto {
+  subject: string;
+  style_core: string;
+  context: string;
+  camera: string;
+  light_color_texture: string;
+  emotion: string;
+  output_intent: string;
+  negative: string;
+}
+
 export interface StyleDto {
   id: string;
   name: string;
   category: string;
   gradient: string;
   prompt_template: string;
+  prompt_spec?: StylePromptSpecDto;
+  stylization_level?: 1 | 2 | 3 | 4 | 5;
+  style_anchors?: string[];
+  variation_axes?: string[];
   is_trending?: boolean;
   is_new?: boolean;
 }
@@ -62,6 +77,7 @@ export interface GeneratePayloadDto {
   style_code: string;
   prompt?: string;
   aspect_ratio?: string;
+  enhance_prompt?: boolean;
 }
 
 export interface GenerateOrderDto {
