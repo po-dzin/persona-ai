@@ -55,50 +55,52 @@ export function LineChart({ data, series, height = 160 }: LineChartProps) {
   const heightClass = chartHeightClass(height);
 
   return (
-    <div>
-      {/* Chart row: Y-axis + SVG — same explicit height, always aligned */}
-      <div className="line-chart-row">
-        {/* Y-axis labels */}
-        <div className={`line-chart-y-axis ${heightClass}`}>
-          {yLabels.map(({ val }, i) => (
-            <span key={i} className="line-chart-y-label">
-              {val >= 10000 ? `${(val / 1000).toFixed(0)}k` : val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
-            </span>
-          ))}
+    <div className="chart-scroll-x">
+      <div>
+        {/* Chart row: Y-axis + SVG — same explicit height, always aligned */}
+        <div className="line-chart-row">
+          {/* Y-axis labels */}
+          <div className={`line-chart-y-axis ${heightClass}`}>
+            {yLabels.map(({ val }, i) => (
+              <span key={i} className="line-chart-y-label">
+                {val >= 10000 ? `${(val / 1000).toFixed(0)}k` : val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val}
+              </span>
+            ))}
+          </div>
+
+          {/* SVG: lines + grid, no text */}
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            className={`line-chart-svg ${heightClass}`}
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            {/* horizontal grid lines */}
+            {yLabels.map(({ pct }, i) => {
+              const yy = padT + pct * chartH;
+              return <line key={i} x1={0} x2={W - padR} y1={yy} y2={yy} stroke="#2e3348" strokeWidth={1} />;
+            })}
+
+            {/* series */}
+            {series.map((s) => {
+              const pts = data.map((d, i) => `${x(i)},${y(Number(d[s.key]) || 0)}`).join(" ");
+              const areaBot = `${x(data.length - 1)},${padT + chartH} ${x(0)},${padT + chartH}`;
+              return (
+                <g key={s.key}>
+                  <polygon points={`${pts} ${areaBot}`} fill={s.color} fillOpacity={0.08} />
+                  <polyline points={pts} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" />
+                </g>
+              );
+            })}
+          </svg>
         </div>
 
-        {/* SVG: lines + grid, no text */}
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className={`line-chart-svg ${heightClass}`}
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          {/* horizontal grid lines */}
-          {yLabels.map(({ pct }, i) => {
-            const yy = padT + pct * chartH;
-            return <line key={i} x1={0} x2={W - padR} y1={yy} y2={yy} stroke="#2e3348" strokeWidth={1} />;
-          })}
-
-          {/* series */}
-          {series.map((s) => {
-            const pts = data.map((d, i) => `${x(i)},${y(Number(d[s.key]) || 0)}`).join(" ");
-            const areaBot = `${x(data.length - 1)},${padT + chartH} ${x(0)},${padT + chartH}`;
-            return (
-              <g key={s.key}>
-                <polygon points={`${pts} ${areaBot}`} fill={s.color} fillOpacity={0.08} />
-                <polyline points={pts} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" />
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* X-axis labels — HTML row, indented to match SVG start */}
-      <div className="line-chart-x-axis">
-        {xLabels.map(({ label, i }) => (
-          <span key={i} className="line-chart-x-label">{label}</span>
-        ))}
+        {/* X-axis labels — HTML row, indented to match SVG start */}
+        <div className="line-chart-x-axis">
+          {xLabels.map(({ label, i }) => (
+            <span key={i} className="line-chart-x-label">{label}</span>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -124,39 +126,41 @@ export function BarChart({ data, color = "#7c6af7", height = 130 }: BarChartProp
   const heightClass = chartHeightClass(height);
 
   return (
-    <div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className={`bar-chart-svg ${heightClass}`}
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
-        {data.map((d, i) => {
-          const bh = Math.max(2, (d.value / maxVal) * chartH);
-          const bx = i * slotW + (slotW - barW) / 2;
-          const by = padT + chartH - bh;
-          const labelX = bx + barW / 2;
-          const fmt = (v: number) => v >= 10000 ? `${(v/1000).toFixed(0)}k` : v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v);
-          return (
-            <g key={i}>
-              <rect x={bx} y={by} width={barW} height={bh} fill={color} rx={3} fillOpacity={0.85} />
-              {d.value > 0 && (
-                <text x={labelX} y={Math.max(padT - 4, by - 4)} fill="#c8cad8" fontSize={13} textAnchor="middle" fontWeight={500}>
-                  {fmt(d.value)}
-                </text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
+    <div className="chart-scroll-x">
+      <div>
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className={`bar-chart-svg ${heightClass}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          {data.map((d, i) => {
+            const bh = Math.max(2, (d.value / maxVal) * chartH);
+            const bx = i * slotW + (slotW - barW) / 2;
+            const by = padT + chartH - bh;
+            const labelX = bx + barW / 2;
+            const fmt = (v: number) => v >= 10000 ? `${(v/1000).toFixed(0)}k` : v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v);
+            return (
+              <g key={i}>
+                <rect x={bx} y={by} width={barW} height={bh} fill={color} rx={3} fillOpacity={0.85} />
+                {d.value > 0 && (
+                  <text x={labelX} y={Math.max(padT - 4, by - 4)} fill="#c8cad8" fontSize={13} textAnchor="middle" fontWeight={500}>
+                    {fmt(d.value)}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
 
-      {/* Category labels */}
-      <div className="bar-chart-label-row">
-        {data.map((d, i) => (
-          <div key={i} className="bar-chart-label">
-            {d.label}
-          </div>
-        ))}
+        {/* Category labels */}
+        <div className="bar-chart-label-row">
+          {data.map((d, i) => (
+            <div key={i} className="bar-chart-label">
+              {d.label}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

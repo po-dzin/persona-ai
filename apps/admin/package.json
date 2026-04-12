@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5174",
+    "test:mobile-contract": "node scripts/mobile-contract.test.mjs",
+    "test:e2e:mobile": "playwright test -c playwright.config.mjs",
     "check:token-drift": "node scripts/check-token-drift.mjs",
-    "check:premerge": "npm run check:token-drift && npm run build",
+    "check:premerge": "npm run test:mobile-contract && npm run check:token-drift && npm run build",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
@@ -15,6 +17,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/react": "^18.3.6",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
