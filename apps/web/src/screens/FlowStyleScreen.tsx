@@ -34,8 +34,8 @@ const DEFAULT_STYLE_MODEL_ID = "nb2-1k";
 const QUALITY_ORDER: Array<"1k" | "2k" | "4k"> = ["1k", "2k", "4k"];
 const FAMILY_ORDER: ModelFamilyId[] = ["nb2", "nb-pro", "flux2-pro", "flux2-max"];
 const FAMILY_LABELS: Record<ModelFamilyId, string> = {
-  "nb2": "NB2",
-  "nb-pro": "NB Pro",
+  "nb2": "Nano Banana 2",
+  "nb-pro": "Nano Banana Pro",
   "flux2-pro": "FLUX.2 Pro",
   "flux2-max": "FLUX.2 Max",
 };
@@ -169,6 +169,19 @@ export function FlowStyleScreen({
     return QUALITY_ORDER.filter((quality) => available.has(quality));
   }, [customFamily, models]);
 
+  const availableFamilies = useMemo(
+    () =>
+      FAMILY_ORDER.filter((family) =>
+        models.some((model) => model.id.startsWith(`${family}-`)),
+      ),
+    [models],
+  );
+
+  useEffect(() => {
+    if (availableFamilies.includes(customFamily)) return;
+    setCustomFamily(availableFamilies[0] ?? "nb2");
+  }, [availableFamilies, customFamily]);
+
   useEffect(() => {
     if (availableQualityOptions.includes(customQuality)) return;
     setCustomQuality(availableQualityOptions[0] ?? "1k");
@@ -266,8 +279,8 @@ export function FlowStyleScreen({
                     aria-pressed={selectedStyle?.id === style.id}
                   >
                     <div className="style-preview" style={{ background: style.gradient }}>
-                      {style.isTrending ? <span className="style-tag fire">Hot</span> : null}
-                      {style.isNew ? <span className="style-tag new">New</span> : null}
+                      {style.isTrending ? <span className="style-tag fire">Хит</span> : null}
+                      {style.isNew ? <span className="style-tag new">Новое</span> : null}
                       <div className="style-overlay">
                         <div className="style-name">{style.name}</div>
                       </div>
@@ -282,42 +295,6 @@ export function FlowStyleScreen({
       ) : (
         <>
           <div className="custom-content">
-            <div className="custom-field custom-field-relative">
-              <div className="custom-label">Model Family</div>
-              <div className="model-family-grid" role="radiogroup" aria-label="Model Family">
-                {FAMILY_ORDER.map((family) => (
-                  <button
-                    key={family}
-                    type="button"
-                    className={"family-chip" + (customFamily === family ? " active" : "")}
-                    role="radio"
-                    aria-checked={customFamily === family}
-                    onClick={() => setCustomFamily(family)}
-                  >
-                    {FAMILY_LABELS[family]}
-                  </button>
-                ))}
-              </div>
-              <div className="custom-label custom-label-secondary">Quality</div>
-              <div className="quality-chip-row" role="radiogroup" aria-label="Quality">
-                {availableQualityOptions.map((quality) => (
-                  <button
-                    key={quality}
-                    type="button"
-                    className={"quality-chip" + (customQuality === quality ? " active" : "")}
-                    role="radio"
-                    aria-checked={customQuality === quality}
-                    onClick={() => setCustomQuality(quality)}
-                  >
-                    {quality}
-                  </button>
-                ))}
-              </div>
-              <div className="custom-meta-row">
-                <span className="custom-meta-value">{customModelCost} 🪙</span>
-              </div>
-            </div>
-
             <div className="custom-field">
               <div className="custom-label">Фото</div>
                 <input
@@ -383,18 +360,48 @@ export function FlowStyleScreen({
                 className={"enhancer-toggle" + (enhancePrompt ? " active" : "")}
                 role="switch"
                 aria-checked={enhancePrompt}
+                aria-label="Улучшение промпта"
                 onClick={() => setEnhancePrompt((prev) => !prev)}
               >
                 <span className="enhancer-toggle-copy">
-                  <span className="enhancer-toggle-title">Prompt Enhancer</span>
+                  <span className="enhancer-toggle-title">Улучшение промпта</span>
                   <span className="enhancer-toggle-subtitle">
-                    {enhancePrompt ? "Включен: структурирует и стабилизирует промпт" : "Выключен: отправляется raw-промпт"}
+                    {enhancePrompt ? "Включено: структурирует и стабилизирует промпт" : "Выключено: отправляется исходный промпт"}
                   </span>
                 </span>
                 <span className={"enhancer-toggle-track" + (enhancePrompt ? " active" : "")}>
                   <span className="enhancer-toggle-thumb" />
                 </span>
               </button>
+            </div>
+
+            <div className="custom-field custom-field-relative">
+              <label className="custom-label" htmlFor="custom-model-family">Модель</label>
+              <select
+                id="custom-model-family"
+                className="custom-select"
+                value={customFamily}
+                onChange={(e) => setCustomFamily(e.target.value as ModelFamilyId)}
+              >
+                {availableFamilies.map((family) => (
+                  <option key={family} value={family}>
+                    {FAMILY_LABELS[family]}
+                  </option>
+                ))}
+              </select>
+              <label className="custom-label custom-label-secondary" htmlFor="custom-model-quality">Качество</label>
+              <select
+                id="custom-model-quality"
+                className="custom-select"
+                value={customQuality}
+                onChange={(e) => setCustomQuality(e.target.value as "1k" | "2k" | "4k")}
+              >
+                {availableQualityOptions.map((quality) => (
+                  <option key={quality} value={quality}>
+                    {quality}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="custom-field">
@@ -414,6 +421,9 @@ export function FlowStyleScreen({
           </div>
 
           <div className="flow-bottom-bar flow-bottom-bar-inline flow-bottom-bar-with-note">
+            <div className="custom-cost">
+              <span>Стоимость: <strong>{customModelCost} 🪙</strong></span>
+            </div>
             <button
               className={"flow-btn " + (canCreateCustom ? "purple" : "disabled")}
               disabled={!canCreateCustom || isCreating}

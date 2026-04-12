@@ -97,13 +97,16 @@ describe("FlowStyleScreen", () => {
 
     const customFields = customContent?.children ?? [];
     expect(customFields).toHaveLength(4);
-    expect(customFields[0]).toHaveTextContent("Model Family");
-    expect(customFields[0]).toHaveTextContent("Quality");
-    expect(customFields[1]).toHaveTextContent("Фото");
-    expect(customFields[2]).toHaveTextContent("Описание стиля");
+    expect(customFields[0]).toHaveTextContent("Фото");
+    expect(customFields[1]).toHaveTextContent("Описание стиля");
+    expect(customFields[2]).toHaveTextContent("Модель");
+    expect(customFields[2]).toHaveTextContent("Качество");
     expect(customFields[3]).toHaveTextContent("Соотношение сторон");
-    expect(customFields[1].querySelector('input[type="file"]')).toBeTruthy();
-    expect(customFields[1].querySelector(".upload-area")).toBeTruthy();
+    expect(customFields[0].querySelector('input[type="file"]')).toBeTruthy();
+    expect(customFields[0].querySelector(".upload-area")).toBeTruthy();
+    expect(customFields[2].querySelector('select#custom-model-family')).toBeTruthy();
+    expect(customFields[2].querySelector('select#custom-model-quality')).toBeTruthy();
+    expect(customBottomBar).toHaveTextContent("Стоимость:");
     expect(within(customBottomBar as HTMLElement).getByRole("button", { name: "Создать" })).toBeDisabled();
   });
 
@@ -171,12 +174,12 @@ describe("FlowStyleScreen", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Кастом" }));
-    await user.click(screen.getByRole("radio", { name: "NB Pro" }));
+    await user.selectOptions(screen.getByLabelText("Модель"), "nb-pro");
 
-    const qualityGroup = screen.getByRole("radiogroup", { name: "Quality" });
-    expect(within(qualityGroup).queryByRole("radio", { name: "1k" })).not.toBeInTheDocument();
-    expect(within(qualityGroup).getByRole("radio", { name: "2k" })).toBeInTheDocument();
-    expect(within(qualityGroup).getByRole("radio", { name: "4k" })).toBeInTheDocument();
+    const qualitySelect = screen.getByLabelText("Качество");
+    const options = within(qualitySelect).getAllByRole("option").map((option) => option.textContent);
+    expect(options).not.toContain("1k");
+    expect(options).toEqual(expect.arrayContaining(["2k", "4k"]));
   });
 
   it("allows disabling prompt enhancer and passes the flag to onContinue", async () => {
@@ -196,7 +199,7 @@ describe("FlowStyleScreen", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Кастом" }));
-    const enhancerSwitch = screen.getByRole("switch", { name: /Prompt Enhancer/i });
+    const enhancerSwitch = screen.getByRole("switch", { name: /Улучшение промпта/i });
     expect(enhancerSwitch).toHaveAttribute("aria-checked", "true");
     await user.click(enhancerSwitch);
     expect(enhancerSwitch).toHaveAttribute("aria-checked", "false");
@@ -236,8 +239,8 @@ describe("FlowStyleScreen", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Кастом" }));
-    await user.click(screen.getByRole("radio", { name: "FLUX.2 Max" }));
-    await user.click(screen.getByRole("radio", { name: "4k" }));
+    await user.selectOptions(screen.getByLabelText("Модель"), "flux2-max");
+    await user.selectOptions(screen.getByLabelText("Качество"), "4k");
     await user.type(screen.getByPlaceholderText("Опишите желаемый стиль фотосессии..."), "flux max look");
     const file = new File(["fake"], "portrait.png", { type: "image/png" });
     const input = container.querySelector('input[type="file"]') as HTMLInputElement | null;
