@@ -36,6 +36,7 @@
   --cmp-sidebar-full: 220px;
   --cmp-sidebar-rail: 64px;
   --cmp-topbar-h: 52px;
+  --cmp-safe-top: env(safe-area-inset-top, 0px);
 
   --bg: var(--sem-bg-page);
   --surface: var(--sem-bg-card);
@@ -53,6 +54,7 @@
   --sidebar-full: var(--cmp-sidebar-full);
   --sidebar-rail: var(--cmp-sidebar-rail);
   --topbar-h: var(--cmp-topbar-h);
+  --safe-top: var(--cmp-safe-top);
 }
 
 body {
@@ -64,6 +66,8 @@ body {
   line-height: 1.5;
   min-height: 100dvh;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  touch-action: pan-x pan-y;
 }
 
 /* Respect reduced motion */
@@ -168,7 +172,9 @@ tr:hover td { background: var(--surface2); }
 .topbar {
   display: none;
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: var(--safe-top);
+  left: 0;
+  right: 0;
   height: var(--topbar-h);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -388,7 +394,7 @@ svg text {
   .layout-main {
     margin-left: 0 !important;
     padding: 16px;
-    padding-top: calc(var(--topbar-h) + 16px);
+    padding-top: calc(var(--topbar-h) + var(--safe-top) + 16px);
   }
 
   .sidebar {
@@ -996,6 +1002,7 @@ svg text {
 
 .line-chart-row {
   display: flex;
+  min-width: 320px;
 }
 
 .line-chart-y-axis {
@@ -1038,6 +1045,7 @@ svg text {
 .bar-chart-svg {
   width: 100%;
   display: block;
+  min-width: 320px;
 }
 
 .bar-chart-label-row {
@@ -1061,6 +1069,13 @@ svg text {
   justify-content: center;
   color: var(--muted);
   font-size: 13px;
+}
+
+.chart-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chart-h-130 {
