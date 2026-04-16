@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from typing import Generator
+from uuid import uuid4
 
 from sqlalchemy import (
     Boolean,
@@ -11,6 +12,8 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
+    Uuid,
     create_engine,
     text,
 )
@@ -48,6 +51,9 @@ class UserRow(Base):
     __tablename__ = "users"
 
     user_id = Column(String, primary_key=True)
+    # Non-PK UUID used for RLS enforcement (app.current_user_id = this value).
+    # Nullable until 0005 migration backfills existing rows.
+    id = Column(Uuid(as_uuid=True), unique=True, nullable=True, default=uuid4)
     first_name = Column(String, nullable=True)
     username = Column(String, nullable=True)
     paid_credits = Column(Integer, default=0, nullable=False)
@@ -165,6 +171,24 @@ class AppMetaRow(Base):
     updated_at = Column(DateTime(timezone=True), nullable=False)
 
 
+class MediaAssetRow(Base):
+    __tablename__ = "media_assets"
+    __table_args__ = (
+        Index("idx_media_assets_expires_at", "expires_at"),
+        Index("idx_media_assets_order_id", "order_id"),
+        UniqueConstraint("storage_key", name="uq_media_assets_storage_key"),
+    )
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, nullable=False, index=True)
+    order_id = Column(String, nullable=True)
+    kind = Column(String, nullable=False)   # "source" | "result"
+    storage_bucket = Column(String, nullable=False)
+    storage_key = Column(String, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+
+
 def init_db() -> None:
     """Create all tables if they don't exist. Safe to call on every startup."""
     Base.metadata.create_all(bind=engine)
@@ -232,6 +256,21 @@ def _run_column_migrations() -> None:
                 conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_by TEXT"))
             if "lifecycle_lock_at" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_at TEXT"))
+            if "id" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN id TEXT"))
+                # Backfill new rows with a UUID string; SQLite has no gen_random_uuid()
+                conn.execute(text(
+                    "UPDATE users SET id = lower(hex(randomblob(4))) || '-' "
+                    "|| lower(hex(randomblob(2))) || '-4' "
+                    "|| substr(lower(hex(randomblob(2))),2) || '-' "
+                    "|| substr('89ab', abs(random()) % 4 + 1, 1) "
+                    "|| substr(lower(hex(randomblob(2))),2) || '-' "
+                    "|| lower(hex(randomblob(6))) "
+                    "WHERE id IS NULL"
+                ))
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_uuid ON users(id)"
+                ))
 
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS lifecycle_transitions (
@@ -276,6 +315,30 @@ def _run_column_migrations() -> None:
                 CREATE INDEX IF NOT EXISTS idx_lifecycle_admin_actions_created
                 ON lifecycle_admin_actions(created_at)
             """))
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS media_assets (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    order_id TEXT,
+                    kind TEXT NOT NULL,
+                    storage_bucket TEXT NOT NULL,
+                    storage_key TEXT NOT NULL,
+                    expires_at TEXT,
+                    created_at TEXT NOT NULL
+                )
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_media_assets_expires_at
+                ON media_assets(expires_at)
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_media_assets_order_id
+                ON media_assets(order_id)
+            """))
+            conn.execute(text("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_media_assets_storage_key
+                ON media_assets(storage_key)
+            """))
             conn.commit()
         else:
             # PostgreSQL: ADD COLUMN IF NOT EXISTS is idempotent
@@ -296,6 +359,21 @@ def _run_column_migrations() -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_lock_reason TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_lock_by TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_lock_at TIMESTAMPTZ"))
+            uuid_col_exists = conn.execute(text(
+                "SELECT 1 FROM information_schema.columns "
+                "WHERE table_name='users' AND column_name='id'"
+            )).fetchone()
+            if not uuid_col_exists:
+                conn.execute(text("ALTER TABLE users ADD COLUMN id UUID"))
+                conn.execute(text(
+                    "UPDATE users SET id = gen_random_uuid() WHERE id IS NULL"
+                ))
+                conn.execute(text(
+                    "ALTER TABLE users ADD CONSTRAINT users_id_unique UNIQUE (id)"
+                ))
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_uuid ON users(id)"
+                ))
             # ── Drop obsolete free-trial columns ─────────────────────────────
             # free_credit_available: migrate old users first (give 20 coins) then drop.
             fca_exists = conn.execute(text(
@@ -427,7 +505,61 @@ def _run_column_migrations() -> None:
                 ON lifecycle_admin_actions(created_at)
             """))
 
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS media_assets (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    order_id TEXT,
+                    kind TEXT NOT NULL,
+                    storage_bucket TEXT NOT NULL,
+                    storage_key TEXT NOT NULL,
+                    expires_at TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ NOT NULL,
+                    CONSTRAINT uq_media_assets_storage_key UNIQUE (storage_key)
+                )
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_media_assets_expires_at
+                ON media_assets(expires_at)
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_media_assets_order_id
+                ON media_assets(order_id)
+            """))
+            # Idempotent: add unique constraint on existing tables that predate this migration
+            conn.execute(text("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.table_constraints
+                        WHERE constraint_name = 'uq_media_assets_storage_key'
+                          AND table_name = 'media_assets'
+                    ) THEN
+                        ALTER TABLE media_assets
+                            ADD CONSTRAINT uq_media_assets_storage_key UNIQUE (storage_key);
+                    END IF;
+                END $$
+            """))
+
             conn.commit()
+
+
+def set_rls_context(db: Session, user_uuid) -> None:
+    """Activate per-transaction RLS enforcement for the given user UUID.
+
+    Uses set_config(..., is_local=true) so the setting reverts automatically
+    when the transaction ends — no manual cleanup needed.
+
+    No-op on SQLite (RLS is a PostgreSQL-only feature).
+    No-op if user_uuid is None (e.g. admin / cron paths).
+    """
+    if _is_sqlite or user_uuid is None:
+        return
+    db.execute(
+        text("SELECT set_config('app.current_user_id', :uuid, true)"),
+        {"uuid": str(user_uuid)},
+    )
+    db.execute(text("SELECT set_config('app.rls_mode', 'enforce', true)"))
 
 
 @contextmanager

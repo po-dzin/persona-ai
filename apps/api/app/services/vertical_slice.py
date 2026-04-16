@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -8,7 +8,7 @@ import logging
 
 from app.adapters.http_client import ProviderHTTPError
 from app.adapters.provider_registry import build_provider_registry
-from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, get_session
+from app.core.db import JobRow, MediaAssetRow, OrderRow, PaymentRow, UserRow, get_session, set_rls_context
 from app.core.settings import settings
 from app.services.lifecycle import (
     mark_generation_succeeded,
@@ -415,10 +415,7 @@ STYLE_CATALOG: tuple[dict[str, Any], ...] = (
 STYLE_CATALOG = tuple(load_style_catalog())
 
 STYLE_BY_ID = {style["id"]: style for style in STYLE_CATALOG}
-GENERATION_PROVIDER_ALIASES = {
-    "replicate": "stable_diffusion",
-    "runway": "stable_diffusion",
-}
+GENERATION_PROVIDER_ALIASES: dict[str, str] = {}
 DEFAULT_STYLE_MODEL_ID = "nb2-1k"
 
 _VALID_ASPECT_RATIOS = frozenset({"1:1", "16:9", "9:16", "3:4", "4:3", "21:9", "5:4", "2:3"})
@@ -553,7 +550,50 @@ class VerticalSliceService:
             upload_bytes(source_key, content, content_type="image/jpeg")
         except Exception:
             pass  # R2 not configured; source_key still usable for generate
+        self._record_media_asset(
+            user_id=user_id,
+            order_id=None,
+            kind="source",
+            storage_key=source_key,
+            ttl_hours=settings.source_retention_hours,
+        )
         return source_key
+
+    def _record_media_asset(
+        self,
+        *,
+        user_id: str,
+        order_id: str | None,
+        kind: str,
+        storage_key: str,
+        ttl_hours: int,
+    ) -> None:
+        """Insert a media_assets row with an expiry timestamp.
+
+        Idempotent: duplicate inserts for the same storage_key (e.g. from
+        webhook retries) are silently skipped via the unique constraint on
+        storage_key.
+        """
+        from sqlalchemy.exc import IntegrityError
+
+        try:
+            expires_at = now_utc() + timedelta(hours=ttl_hours)
+            with get_session() as db:
+                db.add(MediaAssetRow(
+                    id=str(uuid4()),
+                    user_id=user_id,
+                    order_id=order_id,
+                    kind=kind,
+                    storage_bucket=settings.r2_bucket,
+                    storage_key=storage_key,
+                    expires_at=expires_at,
+                    created_at=now_utc(),
+                ))
+        except IntegrityError:
+            # Already recorded (e.g. webhook retry) — no-op
+            logger.debug("_record_media_asset: duplicate skipped for %s", storage_key)
+        except Exception:
+            logger.warning("_record_media_asset: failed to record asset %s", storage_key)
 
     def register_upload(self, user_id: str, filename: str) -> dict[str, str]:
         self.get_or_create_user(user_id)
@@ -664,6 +704,22 @@ class VerticalSliceService:
             )
             if not user:
                 raise ValueError("user_not_found")
+            set_rls_context(db, user.id)
+
+            # Content policy check — must pass before any credit deduction
+            from app.services.policy_engine import check_policy
+            policy = check_policy(prompt=order.prompt, source_image_url=order.source_key)
+            if not policy.passed:
+                order.status = "failed"
+                order.fail_reason_code = policy.reason_code or "policy_blocked"
+                order.updated_at = now_iso()
+                db.commit()
+                return {
+                    "result": "policy_blocked",
+                    "reason_code": policy.reason_code,
+                    "order": self._serialize_order(order),
+                    "wallet": self._serialize_wallet(user),
+                }
 
             # Debit credits
             if user.paid_credits >= order.credit_cost:
@@ -757,6 +813,8 @@ class VerticalSliceService:
 
     def history(self, user_id: str) -> list[dict[str, Any]]:
         with get_session() as db:
+            user = db.get(UserRow, user_id)
+            set_rls_context(db, user.id if user else None)
             orders = (
                 db.query(OrderRow)
                 .filter(OrderRow.user_id == user_id)
@@ -767,6 +825,8 @@ class VerticalSliceService:
 
     def photos(self, user_id: str) -> list[dict[str, Any]]:
         with get_session() as db:
+            user = db.get(UserRow, user_id)
+            set_rls_context(db, user.id if user else None)
             orders = (
                 db.query(OrderRow)
                 .filter(OrderRow.user_id == user_id)
@@ -790,6 +850,8 @@ class VerticalSliceService:
 
     def toggle_favorite(self, user_id: str, order_id: str) -> dict[str, Any]:
         with get_session() as db:
+            user = db.get(UserRow, user_id)
+            set_rls_context(db, user.id if user else None)
             order = db.get(OrderRow, order_id)
             if not order:
                 raise ValueError("order_not_found")
@@ -802,6 +864,8 @@ class VerticalSliceService:
 
     def delete_photo(self, user_id: str, order_id: str) -> dict[str, Any]:
         with get_session() as db:
+            user = db.get(UserRow, user_id)
+            set_rls_context(db, user.id if user else None)
             order = db.get(OrderRow, order_id)
             if not order:
                 raise ValueError("order_not_found")
@@ -882,6 +946,9 @@ class VerticalSliceService:
                     user = db.get(UserRow, order.user_id)
                     if user and order.result_url:
                         mark_generation_succeeded(db, user, order_id=order.order_id)
+                    # NOTE: result_url points to the provider's CDN (NanoBanana/BFL/etc.),
+                    # not to our R2 bucket. We only track assets we own in R2.
+                    # Record result in media_assets once we proxy/store results ourselves.
                 elif event_type == "processing":
                     order.status = "processing"
                     if job:

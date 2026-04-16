@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ClientError
 
 from app.core.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _client():
@@ -45,3 +50,17 @@ def upload_bytes(key: str, data: bytes, content_type: str = "image/jpeg") -> str
 def public_url(key: str) -> str:
     base = settings.r2_public_base_url.strip().rstrip("/")
     return f"{base}/{key.lstrip('/')}"
+
+
+def delete_object(key: str) -> bool:
+    """Delete an object from R2. Returns True on success, False on error.
+
+    R2/S3 returns HTTP 204 for non-existent keys (idempotent by spec),
+    so a missing key is always a success — no special handling needed.
+    """
+    try:
+        _client().delete_object(Bucket=settings.r2_bucket, Key=key)
+        return True
+    except ClientError as e:
+        logger.error("r2_client.delete_object: error deleting %s: %s", key, e)
+        return False
