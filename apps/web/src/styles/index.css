@@ -1,4 +1,4 @@
-@import "./tokens.css";
+@import "../../../../shared/styles/tokens.css";
 
 /* ═══════════════════════════════════════════
    Persona — ported from prototype v59
@@ -288,6 +288,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  overflow: hidden; /* prevent off-screen panels' content from adding to page scroll height */
   transform: translateX(0);
   transition: transform var(--cmp-motion-swipe) var(--cmp-ease-standard);
   will-change: transform, opacity;
@@ -335,6 +336,12 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .home-styles-panels.is-dragging .home-styles-panel.is-adjacent-prev {
   transform: translateX(calc((-1 + var(--home-swipe-ratio)) * 100%));
+}
+/* Panels that are neither entering nor leaving must not animate during a
+   tab-click transition — otherwise a panel changing sides (adjacent-next →
+   adjacent-prev) would visibly slide across the screen. */
+.home-styles-panels.is-transitioning .home-styles-panel:not(.is-active):not(.is-outgoing) {
+  transition: none;
 }
 .home-styles-panels.is-transitioning .home-styles-panel.is-outgoing-next {
   animation: homePanelLeaveToLeft var(--cmp-motion-swipe) var(--cmp-ease-standard) both;

@@ -3,6 +3,7 @@ import { api, type OverviewData, type TimeseriesData } from "../api";
 import { StatCard, Card } from "../components/Card";
 import { LineChart } from "../components/Chart";
 import PeriodPicker from "../components/PeriodPicker";
+import { CHART_COLORS } from "../utils/chartTokens";
 
 export default function Dashboard() {
   const [days, setDays] = useState(7);
@@ -51,14 +52,14 @@ export default function Dashboard() {
             <div className="card-title">НОВЫЕ ПОЛЬЗОВАТЕЛИ</div>
             <LineChart
               data={ts.users}
-              series={[{ key: "new_users", color: "#7c6af7", label: "Новые" }]}
+              series={[{ key: "new_users", color: CHART_COLORS.accent, label: "Новые" }]}
             />
           </Card>
           <Card>
             <div className="card-title">ВЫРУЧКА (STARS)</div>
             <LineChart
               data={ts.revenue}
-              series={[{ key: "stars", color: "#fbbf24", label: "Stars" }]}
+              series={[{ key: "stars", color: CHART_COLORS.warning, label: "Stars" }]}
             />
           </Card>
         </div>
@@ -70,9 +71,9 @@ export default function Dashboard() {
           <LineChart
             data={ts.orders}
             series={[
-              { key: "done", color: "#34d399", label: "Готово" },
-              { key: "failed", color: "#f87171", label: "Ошибка" },
-              { key: "total", color: "#8b8fa8", label: "Всего" },
+              { key: "done",   color: CHART_COLORS.success, label: "Готово" },
+              { key: "failed", color: CHART_COLORS.danger,  label: "Ошибка" },
+              { key: "total",  color: CHART_COLORS.muted,   label: "Всего" },
             ]}
             height={180}
           />

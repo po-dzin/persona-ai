@@ -7,6 +7,7 @@
  * - BarChart: SVG bars + HTML category labels row below.
  */
 import { formatDayMonth } from "../utils/format";
+import { CHART_COLORS } from "../utils/chartTokens";
 
 interface LineChartProps {
   data: Array<{ day: string; [key: string]: number | string }>;
@@ -75,10 +76,10 @@ export function LineChart({ data, series, height = 160 }: LineChartProps) {
             preserveAspectRatio="none"
             aria-hidden="true"
           >
-            {/* horizontal grid lines */}
+            {/* horizontal grid lines — CSS var via style prop (SVG attributes can't read CSS vars) */}
             {yLabels.map(({ pct }, i) => {
               const yy = padT + pct * chartH;
-              return <line key={i} x1={0} x2={W - padR} y1={yy} y2={yy} stroke="#2e3348" strokeWidth={1} />;
+              return <line key={i} x1={0} x2={W - padR} y1={yy} y2={yy} style={{ stroke: "var(--border)" }} strokeWidth={1} />;
             })}
 
             {/* series */}
@@ -113,7 +114,7 @@ interface BarChartProps {
   height?: number;
 }
 
-export function BarChart({ data, color = "#7c6af7", height = 130 }: BarChartProps) {
+export function BarChart({ data, color = CHART_COLORS.accent, height = 130 }: BarChartProps) {
   if (!data.length) return <Empty height={height} />;
 
   const W = 600;
@@ -144,7 +145,7 @@ export function BarChart({ data, color = "#7c6af7", height = 130 }: BarChartProp
               <g key={i}>
                 <rect x={bx} y={by} width={barW} height={bh} fill={color} rx={3} fillOpacity={0.85} />
                 {d.value > 0 && (
-                  <text x={labelX} y={Math.max(padT - 4, by - 4)} fill="#c8cad8" fontSize={13} textAnchor="middle" fontWeight={500}>
+                  <text x={labelX} y={Math.max(padT - 4, by - 4)} style={{ fill: "var(--muted)" }} fontSize={13} textAnchor="middle" fontWeight={500}>
                     {fmt(d.value)}
                   </text>
                 )}
