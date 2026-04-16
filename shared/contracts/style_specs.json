@@ -71,74 +71,75 @@
     "promptTemplate": "Atmospheric haze portrait, soft diffused light, dreamy fog effect, ethereal studio mood"
   },
   {
-    "id": "business",
-    "name": "Бизнес-портрет",
-    "category": "Бизнес и карьера",
-    "gradient": "var(--sem-gradient-style-indigo)",
-    "promptTemplate": "Professional business headshot, neutral background, sharp focus, confident expression"
-  },
-  {
-    "id": "linkedin",
-    "name": "LinkedIn",
-    "category": "Бизнес и карьера",
-    "gradient": "var(--sem-gradient-style-cyan)",
-    "promptTemplate": "LinkedIn profile portrait, business casual, clean studio setup, approachable smile"
-  },
-  {
-    "id": "ceo-style",
-    "name": "CEO-стиль",
-    "category": "Бизнес и карьера",
-    "gradient": "var(--sem-gradient-style-gold)",
-    "promptTemplate": "Executive CEO portrait, premium editorial look, confident power pose, luxury office setting"
-  },
-  {
-    "id": "speaker",
-    "name": "Спикер",
-    "category": "Бизнес и карьера",
-    "gradient": "var(--sem-gradient-style-violet)",
-    "promptTemplate": "Public speaker portrait, stage presence, dynamic lighting, charismatic expression"
-  },
-  {
-    "id": "media-persona",
-    "name": "Медиа-персона",
-    "category": "Бизнес и карьера",
-    "gradient": "var(--sem-gradient-style-magenta)",
-    "promptTemplate": "Media personality portrait, broadcast-ready look, polished grooming, camera-ready style"
-  },
-  {
-    "id": "creative-director",
-    "name": "Творческий директор",
-    "category": "Бизнес и карьера",
+    "id": "love-story",
+    "name": "Лав стори",
+    "category": "Романтика и отношения",
     "gradient": "var(--sem-gradient-style-rose)",
-    "promptTemplate": "Creative director portrait, artistic studio setting, contemporary fashion, expressive style"
+    "promptTemplate": "Romantic love story couple portrait, soft cinematic light, tender intimate moment, film feel",
+    "isTrending": true
   },
   {
-    "id": "startup",
-    "name": "Стартапер",
-    "category": "Бизнес и карьера",
-    "gradient": "var(--sem-gradient-style-cyan)",
-    "promptTemplate": "Tech startup portrait, casual confident style, modern office background, energetic vibe"
+    "id": "sunset-couple",
+    "name": "Закатная пара",
+    "category": "Романтика и отношения",
+    "gradient": "var(--sem-gradient-style-amber)",
+    "promptTemplate": "Sunset couple portrait, warm golden backlight, silhouette embrace, romantic outdoor mood"
   },
   {
-    "id": "consultant",
-    "name": "Консультант",
-    "category": "Бизнес и карьера",
+    "id": "rainy-city",
+    "name": "Дождливый город",
+    "category": "Романтика и отношения",
     "gradient": "var(--sem-gradient-style-indigo)",
-    "promptTemplate": "Business consultant portrait, trustworthy expression, professional attire, clean environment"
+    "promptTemplate": "Rainy city romantic portrait, reflective wet streets, umbrella, moody urban atmosphere"
   },
   {
-    "id": "business-meeting",
-    "name": "Деловая встреча",
-    "category": "Бизнес и карьера",
-    "gradient": "var(--sem-gradient-style-gold)",
-    "promptTemplate": "Business meeting portrait, boardroom setting, formal attire, composed professional look"
+    "id": "kdrama",
+    "name": "K-Drama",
+    "category": "Романтика и отношения",
+    "gradient": "var(--sem-gradient-style-magenta)",
+    "promptTemplate": "K-drama cinematic couple portrait, soft pastel tones, dreamy look, Korean drama aesthetic"
   },
   {
-    "id": "networking",
-    "name": "Нетворкинг",
-    "category": "Бизнес и карьера",
+    "id": "paris-romance",
+    "name": "Парижский романс",
+    "category": "Романтика и отношения",
+    "gradient": "var(--sem-gradient-style-violet)",
+    "promptTemplate": "Paris romance portrait, Eiffel Tower backdrop, elegant fashion, soft European golden light"
+  },
+  {
+    "id": "cinematic-romance",
+    "name": "Кино-роман",
+    "category": "Романтика и отношения",
+    "gradient": "var(--sem-gradient-style-cyan)",
+    "promptTemplate": "Cinematic romance portrait, movie-quality lighting, dramatic color grade, emotional storytelling"
+  },
+  {
+    "id": "honeymoon",
+    "name": "Медовый месяц",
+    "category": "Романтика и отношения",
+    "gradient": "var(--sem-gradient-style-rose)",
+    "promptTemplate": "Honeymoon portrait, tropical or European location, joyful newlywed energy, warm dreamy light"
+  },
+  {
+    "id": "first-date",
+    "name": "Первое свидание",
+    "category": "Романтика и отношения",
     "gradient": "var(--sem-gradient-style-green)",
-    "promptTemplate": "Networking event portrait, social confident smile, business casual, event venue background"
+    "promptTemplate": "First date portrait, nervous excited smile, cozy cafe or park setting, warm natural light"
+  },
+  {
+    "id": "picnic-for-two",
+    "name": "Пикник",
+    "category": "Романтика и отношения",
+    "gradient": "var(--sem-gradient-style-green)",
+    "promptTemplate": "Romantic picnic couple portrait, meadow setting, soft afternoon sunlight, relaxed loving mood"
+  },
+  {
+    "id": "secret-meeting",
+    "name": "Тайная встреча",
+    "category": "Романтика и отношения",
+    "gradient": "var(--sem-gradient-style-indigo)",
+    "promptTemplate": "Secret rendezvous portrait, dramatic shadow play, mysterious intimate atmosphere, noir romance"
   },
   {
     "id": "nature",
@@ -227,7 +228,7 @@
   },
   {
     "id": "graduation",
-    "name": "Выпускной",
+    "name": "Выпускной альбом",
     "category": "Праздники",
     "gradient": "var(--sem-gradient-style-violet)",
     "promptTemplate": "Graduation portrait, academic robe, celebratory smile, campus or stage background"
@@ -280,79 +281,6 @@
     "category": "Праздники",
     "gradient": "var(--sem-gradient-style-amber)",
     "promptTemplate": "Children's birthday portrait, colorful balloons, playful decorations, bright joyful mood"
-  },
-  {
-    "id": "glamour-90s",
-    "name": "Гламур 90-х",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-rose)",
-    "promptTemplate": "90s glamour portrait, glossy magazine style, bold makeup, dramatic studio lighting",
-    "isTrending": true
-  },
-  {
-    "id": "k-pop",
-    "name": "K-pop",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-gold)",
-    "promptTemplate": "K-pop idol concept portrait, pastel palette, flawless skin, polished studio lighting",
-    "isTrending": true
-  },
-  {
-    "id": "y2k-cyber",
-    "name": "Y2K Кибер",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-cyan)",
-    "promptTemplate": "Y2K cyber fashion portrait, holographic accents, early 2000s aesthetic, futuristic glam",
-    "isTrending": true
-  },
-  {
-    "id": "disco-70s",
-    "name": "Диско 70-х",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-gold)",
-    "promptTemplate": "70s disco fashion portrait, shimmering jumpsuit, platform shoes, warm retro lighting"
-  },
-  {
-    "id": "power-shoulders-80s",
-    "name": "Власть плеч 80-х",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-magenta)",
-    "promptTemplate": "80s power dressing portrait, bold shoulder pads, brocade jacket, strong editorial lighting"
-  },
-  {
-    "id": "grunge-90s",
-    "name": "Гранж 90-х",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-rose)",
-    "promptTemplate": "90s grunge fashion portrait, flannel and denim, dark moody tones, raw editorial feel"
-  },
-  {
-    "id": "mod-60s",
-    "name": "Мод 60-х",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-violet)",
-    "promptTemplate": "Mod 60s fashion portrait, geometric patterns, mini dress, bold graphic makeup, pop colors"
-  },
-  {
-    "id": "vaporwave",
-    "name": "Вапорвейв",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-magenta)",
-    "promptTemplate": "Vaporwave fashion portrait, neon pink and purple palette, retro-futuristic aesthetic, dreamy glow"
-  },
-  {
-    "id": "boho-chic",
-    "name": "Бохо Шик",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-amber)",
-    "promptTemplate": "Boho chic fashion portrait, flowing fabrics, earthy tones, natural outdoor lighting"
-  },
-  {
-    "id": "cottagecore",
-    "name": "Котидж-кор",
-    "category": "Фешн",
-    "gradient": "var(--sem-gradient-style-green)",
-    "promptTemplate": "Cottagecore fashion portrait, prairie dress, wildflowers, soft dappled sunlight, rural charm"
   },
   {
     "id": "family-portrait",
@@ -426,75 +354,77 @@
     "promptTemplate": "Old photograph restoration style portrait, sepia or faded color, vintage grain, timeless charm"
   },
   {
-    "id": "love-story",
-    "name": "Лав стори",
-    "category": "Романтика и отношения",
+    "id": "glamour-90s",
+    "name": "Гламур 90-х",
+    "category": "Фешн",
     "gradient": "var(--sem-gradient-style-rose)",
-    "promptTemplate": "Romantic love story couple portrait, soft cinematic light, tender intimate moment, film feel",
+    "promptTemplate": "90s glamour portrait, glossy magazine style, bold makeup, dramatic studio lighting",
     "isTrending": true
   },
   {
-    "id": "sunset-couple",
-    "name": "Закатная пара",
-    "category": "Романтика и отношения",
-    "gradient": "var(--sem-gradient-style-amber)",
-    "promptTemplate": "Sunset couple portrait, warm golden backlight, silhouette embrace, romantic outdoor mood"
+    "id": "k-pop",
+    "name": "K-pop",
+    "category": "Фешн",
+    "gradient": "var(--sem-gradient-style-gold)",
+    "promptTemplate": "K-pop idol concept portrait, pastel palette, flawless skin, polished studio lighting",
+    "isTrending": true
   },
   {
-    "id": "rainy-city",
-    "name": "Дождливый город",
-    "category": "Романтика и отношения",
-    "gradient": "var(--sem-gradient-style-indigo)",
-    "promptTemplate": "Rainy city romantic portrait, reflective wet streets, umbrella, moody urban atmosphere"
-  },
-  {
-    "id": "kdrama",
-    "name": "K-Drama",
-    "category": "Романтика и отношения",
-    "gradient": "var(--sem-gradient-style-magenta)",
-    "promptTemplate": "K-drama cinematic couple portrait, soft pastel tones, dreamy look, Korean drama aesthetic"
-  },
-  {
-    "id": "paris-romance",
-    "name": "Парижский романс",
-    "category": "Романтика и отношения",
-    "gradient": "var(--sem-gradient-style-violet)",
-    "promptTemplate": "Paris romance portrait, Eiffel Tower backdrop, elegant fashion, soft European golden light"
-  },
-  {
-    "id": "cinematic-romance",
-    "name": "Кинематографичный роман",
-    "category": "Романтика и отношения",
+    "id": "y2k-cyber",
+    "name": "Y2K Кибер",
+    "category": "Фешн",
     "gradient": "var(--sem-gradient-style-cyan)",
-    "promptTemplate": "Cinematic romance portrait, movie-quality lighting, dramatic color grade, emotional storytelling"
+    "promptTemplate": "Y2K cyber fashion portrait, holographic accents, early 2000s aesthetic, futuristic glam",
+    "isTrending": true
   },
   {
-    "id": "honeymoon",
-    "name": "Медовый месяц",
-    "category": "Романтика и отношения",
+    "id": "disco-70s",
+    "name": "Диско 70-х",
+    "category": "Фешн",
+    "gradient": "var(--sem-gradient-style-gold)",
+    "promptTemplate": "70s disco fashion portrait, shimmering jumpsuit, platform shoes, warm retro lighting"
+  },
+  {
+    "id": "power-shoulders-80s",
+    "name": "Плечи 80-х",
+    "category": "Фешн",
+    "gradient": "var(--sem-gradient-style-magenta)",
+    "promptTemplate": "80s power dressing portrait, bold shoulder pads, brocade jacket, strong editorial lighting"
+  },
+  {
+    "id": "grunge-90s",
+    "name": "Гранж 90-х",
+    "category": "Фешн",
     "gradient": "var(--sem-gradient-style-rose)",
-    "promptTemplate": "Honeymoon portrait, tropical or European location, joyful newlywed energy, warm dreamy light"
+    "promptTemplate": "90s grunge fashion portrait, flannel and denim, dark moody tones, raw editorial feel"
   },
   {
-    "id": "first-date",
-    "name": "Первое свидание",
-    "category": "Романтика и отношения",
+    "id": "mod-60s",
+    "name": "Мод 60-х",
+    "category": "Фешн",
+    "gradient": "var(--sem-gradient-style-violet)",
+    "promptTemplate": "Mod 60s fashion portrait, geometric patterns, mini dress, bold graphic makeup, pop colors"
+  },
+  {
+    "id": "vaporwave",
+    "name": "Вапорвейв",
+    "category": "Фешн",
+    "gradient": "var(--sem-gradient-style-magenta)",
+    "promptTemplate": "Vaporwave fashion portrait, neon pink and purple palette, retro-futuristic aesthetic, dreamy glow"
+  },
+  {
+    "id": "boho-chic",
+    "name": "Бохо Шик",
+    "category": "Фешн",
+    "gradient": "var(--sem-gradient-style-amber)",
+    "promptTemplate": "Boho chic fashion portrait, flowing fabrics, earthy tones, natural outdoor lighting"
+  },
+  {
+    "id": "cottagecore",
+    "name": "Котидж-кор",
+    "category": "Фешн",
     "gradient": "var(--sem-gradient-style-green)",
-    "promptTemplate": "First date portrait, nervous excited smile, cozy cafe or park setting, warm natural light"
-  },
-  {
-    "id": "picnic-for-two",
-    "name": "Пикник на двоих",
-    "category": "Романтика и отношения",
-    "gradient": "var(--sem-gradient-style-green)",
-    "promptTemplate": "Romantic picnic couple portrait, meadow setting, soft afternoon sunlight, relaxed loving mood"
-  },
-  {
-    "id": "secret-meeting",
-    "name": "Тайная встреча",
-    "category": "Романтика и отношения",
-    "gradient": "var(--sem-gradient-style-indigo)",
-    "promptTemplate": "Secret rendezvous portrait, dramatic shadow play, mysterious intimate atmosphere, noir romance"
+    "promptTemplate": "Cottagecore fashion portrait, prairie dress, wildflowers, soft dappled sunlight, rural charm"
   },
   {
     "id": "ghibli",
@@ -550,7 +480,7 @@
   },
   {
     "id": "expressionism",
-    "name": "Экспрессионизм",
+    "name": "Экспрессия",
     "category": "Арт и креатив",
     "gradient": "var(--sem-gradient-style-rose)",
     "promptTemplate": "Expressionist portrait, emotional distortion, vivid intense colors, raw psychological energy"
@@ -568,6 +498,76 @@
     "category": "Арт и креатив",
     "gradient": "var(--sem-gradient-style-violet)",
     "promptTemplate": "Psychedelic art portrait, swirling kaleidoscopic patterns, vivid neon palette, trippy visual flow"
+  },
+  {
+    "id": "business",
+    "name": "Бизнес-портрет",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-indigo)",
+    "promptTemplate": "Professional business headshot, neutral background, sharp focus, confident expression"
+  },
+  {
+    "id": "linkedin",
+    "name": "LinkedIn",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-cyan)",
+    "promptTemplate": "LinkedIn profile portrait, business casual, clean studio setup, approachable smile"
+  },
+  {
+    "id": "ceo-style",
+    "name": "CEO-стиль",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-gold)",
+    "promptTemplate": "Executive CEO portrait, premium editorial look, confident power pose, luxury office setting"
+  },
+  {
+    "id": "speaker",
+    "name": "Спикер",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-violet)",
+    "promptTemplate": "Public speaker portrait, stage presence, dynamic lighting, charismatic expression"
+  },
+  {
+    "id": "media-persona",
+    "name": "Медиа-персона",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-magenta)",
+    "promptTemplate": "Media personality portrait, broadcast-ready look, polished grooming, camera-ready style"
+  },
+  {
+    "id": "creative-director",
+    "name": "Арт-директор",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-rose)",
+    "promptTemplate": "Creative director portrait, artistic studio setting, contemporary fashion, expressive style"
+  },
+  {
+    "id": "startup",
+    "name": "Стартапер",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-cyan)",
+    "promptTemplate": "Tech startup portrait, casual confident style, modern office background, energetic vibe"
+  },
+  {
+    "id": "consultant",
+    "name": "Консультант",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-indigo)",
+    "promptTemplate": "Business consultant portrait, trustworthy expression, professional attire, clean environment"
+  },
+  {
+    "id": "business-meeting",
+    "name": "Деловая встреча",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-gold)",
+    "promptTemplate": "Business meeting portrait, boardroom setting, formal attire, composed professional look"
+  },
+  {
+    "id": "networking",
+    "name": "Нетворкинг",
+    "category": "Бизнес и карьера",
+    "gradient": "var(--sem-gradient-style-green)",
+    "promptTemplate": "Networking event portrait, social confident smile, business casual, event venue background"
   },
   {
     "id": "renaissance",
@@ -640,176 +640,6 @@
     "category": "Эпохи и ретро",
     "gradient": "var(--sem-gradient-style-amber)",
     "promptTemplate": "Wild West portrait, cowboy hat and duster coat, dusty frontier setting, sepia tintype photo style"
-  },
-  {
-    "id": "tokyo-night",
-    "name": "Токийская ночь",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-cyan)",
-    "promptTemplate": "Tokyo night portrait, neon kanji signs, Shibuya crossing, urban Japanese aesthetic, electric atmosphere"
-  },
-  {
-    "id": "paris-chic",
-    "name": "Парижский шик",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-rose)",
-    "promptTemplate": "Parisian chic portrait, Eiffel Tower, cobblestone boulevard, French elegance, soft golden light"
-  },
-  {
-    "id": "eternal-rome",
-    "name": "Вечный Рим",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-amber)",
-    "promptTemplate": "Rome portrait, Colosseum or Trevi Fountain backdrop, warm Mediterranean sunlight, classical grandeur"
-  },
-  {
-    "id": "london",
-    "name": "Лондон",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-indigo)",
-    "promptTemplate": "London portrait, Big Ben or red phone box, grey overcast British sky, sophisticated royal style"
-  },
-  {
-    "id": "dubai",
-    "name": "Дубай",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-gold)",
-    "promptTemplate": "Dubai luxury portrait, Burj Khalifa skyline, desert glamour, opulent fashion, golden desert light"
-  },
-  {
-    "id": "venice",
-    "name": "Венеция",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-cyan)",
-    "promptTemplate": "Venice portrait, gondola canal, ornate Venetian architecture, romantic European soft light"
-  },
-  {
-    "id": "santorini",
-    "name": "Санторини",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-cyan)",
-    "promptTemplate": "Santorini portrait, white-washed buildings, blue-domed church, bright Aegean sunlight, Greek island charm"
-  },
-  {
-    "id": "eastern-bazaar",
-    "name": "Восточный базар",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-amber)",
-    "promptTemplate": "Eastern bazaar portrait, spice market colors, ornate tiles, warm lantern glow, Istanbul or Marrakech"
-  },
-  {
-    "id": "new-york",
-    "name": "Нью-Йорк",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-indigo)",
-    "promptTemplate": "New York portrait, Manhattan skyline, yellow taxi, street edge, urban American energy"
-  },
-  {
-    "id": "moroccan-court",
-    "name": "Марокканский двор",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-amber)",
-    "promptTemplate": "Moroccan riad portrait, geometric tilework, arched doorways, warm terracotta palette, exotic elegance"
-  },
-  {
-    "id": "scandinavian-minimal",
-    "name": "Скандинавский минимализм",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-indigo)",
-    "promptTemplate": "Scandinavian minimalist portrait, clean white interiors, natural wood tones, soft Nordic daylight"
-  },
-  {
-    "id": "alpine-chalet",
-    "name": "Альпийское шале",
-    "category": "Культуры и страны",
-    "gradient": "var(--sem-gradient-style-green)",
-    "promptTemplate": "Alpine chalet portrait, snowy mountain backdrop, cozy wooden interior, crisp winter daylight"
-  },
-  {
-    "id": "cyberpunk",
-    "name": "Киберпанк",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-cyan)",
-    "promptTemplate": "Cyberpunk character portrait, neon-lit dystopian city, tech augmentations, electric glowing accents",
-    "isTrending": true
-  },
-  {
-    "id": "anime-hero",
-    "name": "Аниме-герой",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-magenta)",
-    "promptTemplate": "Anime hero character portrait, cel shading, expressive large eyes, dynamic action pose, vibrant colors",
-    "isTrending": true
-  },
-  {
-    "id": "iron-knight",
-    "name": "Железный рыцарь",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-gold)",
-    "promptTemplate": "Iron armored hero portrait, sleek metallic suit, repulsor glow, high-tech superhero aesthetic"
-  },
-  {
-    "id": "spider-hero",
-    "name": "Паучий герой",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-rose)",
-    "promptTemplate": "Spider-themed superhero portrait, web pattern suit, urban rooftop, dynamic acrobatic pose"
-  },
-  {
-    "id": "thunder-god",
-    "name": "Бог грома",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-cyan)",
-    "promptTemplate": "Thunder god warrior portrait, lightning crackling around armor, divine Norse mythology aesthetic"
-  },
-  {
-    "id": "dark-guardian",
-    "name": "Тёмный страж",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-indigo)",
-    "promptTemplate": "Dark guardian hero portrait, brooding shadows, sleek black armor, Gothic city rooftop, noir atmosphere"
-  },
-  {
-    "id": "elven-witch",
-    "name": "Эльфийская волшебница",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-green)",
-    "promptTemplate": "Elven sorceress portrait, pointed ears, flowing mystical robes, glowing forest runes, ethereal magic"
-  },
-  {
-    "id": "wizard",
-    "name": "Маг",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-violet)",
-    "promptTemplate": "Wizard portrait, ancient robes and staff, swirling arcane energy, mystical library backdrop"
-  },
-  {
-    "id": "monster-hunter",
-    "name": "Охотник на монстров",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-rose)",
-    "promptTemplate": "Monster hunter portrait, weathered leather armor, silver sword, dark forest, Witcher-style grit"
-  },
-  {
-    "id": "olympian-god",
-    "name": "Олимпийский бог",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-gold)",
-    "promptTemplate": "Olympian deity portrait, marble temple backdrop, divine golden light, Greek mythology grandeur"
-  },
-  {
-    "id": "force-knight",
-    "name": "Рыцарь Силы",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-indigo)",
-    "promptTemplate": "Force-wielding space knight portrait, lightsaber glow, flowing robes, cosmic starfield background"
-  },
-  {
-    "id": "avatar",
-    "name": "Аватар",
-    "category": "Персонажи и герои",
-    "gradient": "var(--sem-gradient-style-green)",
-    "promptTemplate": "Avatar world portrait, bioluminescent Na'vi inspired, Pandora jungle, glowing flora, alien beauty"
   },
   {
     "id": "sakura",
@@ -894,5 +724,175 @@
     "category": "Сезоны и атмосфера",
     "gradient": "var(--sem-gradient-style-rose)",
     "promptTemplate": "Snowstorm night portrait, heavy snowfall, warm lantern glow against white darkness, winter magic"
+  },
+  {
+    "id": "cyberpunk",
+    "name": "Киберпанк",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-cyan)",
+    "promptTemplate": "Cyberpunk character portrait, neon-lit dystopian city, tech augmentations, electric glowing accents",
+    "isTrending": true
+  },
+  {
+    "id": "anime-hero",
+    "name": "Аниме-герой",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-magenta)",
+    "promptTemplate": "Anime hero character portrait, cel shading, expressive large eyes, dynamic action pose, vibrant colors",
+    "isTrending": true
+  },
+  {
+    "id": "iron-knight",
+    "name": "Железный рыцарь",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-gold)",
+    "promptTemplate": "Iron armored hero portrait, sleek metallic suit, repulsor glow, high-tech superhero aesthetic"
+  },
+  {
+    "id": "spider-hero",
+    "name": "Паучий герой",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-rose)",
+    "promptTemplate": "Spider-themed superhero portrait, web pattern suit, urban rooftop, dynamic acrobatic pose"
+  },
+  {
+    "id": "thunder-god",
+    "name": "Бог грома",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-cyan)",
+    "promptTemplate": "Thunder god warrior portrait, lightning crackling around armor, divine Norse mythology aesthetic"
+  },
+  {
+    "id": "dark-guardian",
+    "name": "Тёмный страж",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-indigo)",
+    "promptTemplate": "Dark guardian hero portrait, brooding shadows, sleek black armor, Gothic city rooftop, noir atmosphere"
+  },
+  {
+    "id": "elven-witch",
+    "name": "Эльфийская волшебница",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-green)",
+    "promptTemplate": "Elven sorceress portrait, pointed ears, flowing mystical robes, glowing forest runes, ethereal magic"
+  },
+  {
+    "id": "wizard",
+    "name": "Маг",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-violet)",
+    "promptTemplate": "Wizard portrait, ancient robes and staff, swirling arcane energy, mystical library backdrop"
+  },
+  {
+    "id": "monster-hunter",
+    "name": "Охотник",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-rose)",
+    "promptTemplate": "Monster hunter portrait, weathered leather armor, silver sword, dark forest, Witcher-style grit"
+  },
+  {
+    "id": "olympian-god",
+    "name": "Олимпийский бог",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-gold)",
+    "promptTemplate": "Olympian deity portrait, marble temple backdrop, divine golden light, Greek mythology grandeur"
+  },
+  {
+    "id": "force-knight",
+    "name": "Рыцарь Силы",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-indigo)",
+    "promptTemplate": "Force-wielding space knight portrait, lightsaber glow, flowing robes, cosmic starfield background"
+  },
+  {
+    "id": "avatar",
+    "name": "Аватар",
+    "category": "Персонажи и герои",
+    "gradient": "var(--sem-gradient-style-green)",
+    "promptTemplate": "Avatar world portrait, bioluminescent Na'vi inspired, Pandora jungle, glowing flora, alien beauty"
+  },
+  {
+    "id": "tokyo-night",
+    "name": "Токийская ночь",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-cyan)",
+    "promptTemplate": "Tokyo night portrait, neon kanji signs, Shibuya crossing, urban Japanese aesthetic, electric atmosphere"
+  },
+  {
+    "id": "paris-chic",
+    "name": "Парижский шик",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-rose)",
+    "promptTemplate": "Parisian chic portrait, Eiffel Tower, cobblestone boulevard, French elegance, soft golden light"
+  },
+  {
+    "id": "eternal-rome",
+    "name": "Вечный Рим",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-amber)",
+    "promptTemplate": "Rome portrait, Colosseum or Trevi Fountain backdrop, warm Mediterranean sunlight, classical grandeur"
+  },
+  {
+    "id": "london",
+    "name": "Лондон",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-indigo)",
+    "promptTemplate": "London portrait, Big Ben or red phone box, grey overcast British sky, sophisticated royal style"
+  },
+  {
+    "id": "dubai",
+    "name": "Дубай",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-gold)",
+    "promptTemplate": "Dubai luxury portrait, Burj Khalifa skyline, desert glamour, opulent fashion, golden desert light"
+  },
+  {
+    "id": "venice",
+    "name": "Венеция",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-cyan)",
+    "promptTemplate": "Venice portrait, gondola canal, ornate Venetian architecture, romantic European soft light"
+  },
+  {
+    "id": "santorini",
+    "name": "Санторини",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-cyan)",
+    "promptTemplate": "Santorini portrait, white-washed buildings, blue-domed church, bright Aegean sunlight, Greek island charm"
+  },
+  {
+    "id": "eastern-bazaar",
+    "name": "Восточный базар",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-amber)",
+    "promptTemplate": "Eastern bazaar portrait, spice market colors, ornate tiles, warm lantern glow, Istanbul or Marrakech"
+  },
+  {
+    "id": "new-york",
+    "name": "Нью-Йорк",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-indigo)",
+    "promptTemplate": "New York portrait, Manhattan skyline, yellow taxi, street edge, urban American energy"
+  },
+  {
+    "id": "moroccan-court",
+    "name": "Марокканский двор",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-amber)",
+    "promptTemplate": "Moroccan riad portrait, geometric tilework, arched doorways, warm terracotta palette, exotic elegance"
+  },
+  {
+    "id": "scandinavian-minimal",
+    "name": "Скандинавский минимализм",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-indigo)",
+    "promptTemplate": "Scandinavian minimalist portrait, clean white interiors, natural wood tones, soft Nordic daylight"
+  },
+  {
+    "id": "alpine-chalet",
+    "name": "Альпийское шале",
+    "category": "Культуры и страны",
+    "gradient": "var(--sem-gradient-style-green)",
+    "promptTemplate": "Alpine chalet portrait, snowy mountain backdrop, cozy wooden interior, crisp winter daylight"
   }
 ]

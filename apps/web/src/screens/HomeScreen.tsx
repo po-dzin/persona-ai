@@ -15,18 +15,18 @@ interface HomeScreenProps {
 
 const CATEGORY_ORDER = [
   "Тренды",
-  "Бизнес и карьера",
-  "Лайфстайл",
   "Студийный портрет",
-  "Фешн",
   "Романтика и отношения",
-  "Семья и память",
+  "Лайфстайл",
   "Праздники",
+  "Семья и память",
+  "Фешн",
   "Арт и креатив",
+  "Бизнес и карьера",
+  "Эпохи и ретро",
   "Сезоны и атмосфера",
   "Персонажи и герои",
   "Культуры и страны",
-  "Эпохи и ретро",
 ];
 function CameraIcon() {
   return (
@@ -228,6 +228,8 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
 
   const setCategory = (nextCategory: string) => {
     if (nextCategory === activeCategory || isCategoryTransitioning) return;
+    // Scroll the screen container to top so the new category always starts at the beginning
+    panelsRef.current?.closest(".screen")?.scrollTo?.({ top: 0, behavior: "instant" });
     // Always reset keyframe offsets so tab-click never inherits a stale swipe position
     panelsRef.current?.style.removeProperty("--panel-enter-from");
     panelsRef.current?.style.removeProperty("--panel-leave-from");
