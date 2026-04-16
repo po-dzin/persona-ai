@@ -23,7 +23,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.adapters.provider_base import ProviderSubmitResult
-from app.core.db import UserRow, get_session
+from app.core.db import MediaAssetRow, UserRow, get_session
 from app.main import create_app
 
 
@@ -612,3 +612,98 @@ def test_new_user_welcome_coins_deducted_on_generation() -> None:
 
     assert result["result"] == "enqueued"
     assert result["wallet"]["paid_credits"] == 10  # 20 − 10
+
+
+# ──────────────────── content policy pre-check ───────────────────
+
+def test_policy_block_does_not_deduct_credits() -> None:
+    """Policy block before submission must NOT deduct any credits."""
+    client = _client()
+    uid = "u-policy-preblock"
+    _ensure_user(client, uid)
+    _seed_user(uid, paid_credits=50)
+
+    sk = _source_key(client, uid)
+    res = client.post(
+        "/v1/generate",
+        json={
+            "source_key": sk,
+            "model_id": "nb2-1k",
+            "style_code": "hollywood",
+            "aspect_ratio": "1:1",
+            "prompt": "nude portrait",   # triggers keyword block
+            "enhance_prompt": False,
+        },
+        headers=_headers(uid),
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["result"] == "policy_blocked"
+    assert body["reason_code"] == "blocked_keyword"
+    # Credits must be untouched
+    assert body["wallet"]["paid_credits"] == 50
+
+
+# ──────────────────── media_assets TTL tracking ──────────────────
+
+def test_source_asset_recorded_with_48h_ttl(monkeypatch) -> None:
+    """After uploading a source file, a media_assets row is created with kind=source and 48h TTL."""
+    import app.adapters.r2_client as r2_mod
+    monkeypatch.setattr(r2_mod, "upload_bytes", lambda key, data, content_type: f"https://cdn/{key}")
+
+    client = _client()
+    uid = "u-asset-source-ttl"
+    _ensure_user(client, uid)
+
+    res = client.post(
+        "/v1/uploads/file",
+        files={"file": ("photo.jpg", b"fake-image-data", "image/jpeg")},
+        data={"filename": "photo.jpg"},
+        headers=_headers(uid),
+    )
+    assert res.status_code == 200
+    source_key = res.json()["source_key"]
+
+    with get_session() as db:
+        asset = db.query(MediaAssetRow).filter(
+            MediaAssetRow.storage_key == source_key,
+            MediaAssetRow.kind == "source",
+        ).first()
+
+    assert asset is not None, "Expected a media_assets row for the uploaded source"
+    assert asset.user_id == uid
+    assert asset.expires_at is not None
+    # TTL should be ~48h from now (check it's in the future, within 49h)
+    from datetime import datetime, timezone, timedelta
+    now = datetime.now(timezone.utc)
+    expires = asset.expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    assert expires > now
+    assert expires < now + timedelta(hours=49)
+
+
+def test_result_asset_not_recorded_for_external_cdn(monkeypatch) -> None:
+    """Result URLs from providers point to their CDN, not our R2.
+    No media_assets row should be created — we only track assets we own in R2."""
+    import app.adapters.r2_client as r2_mod
+    monkeypatch.setattr(r2_mod, "upload_bytes", lambda key, data, content_type: f"https://cdn/{key}")
+
+    client = _client()
+    uid = "u-asset-result-ttl"
+    _ensure_user(client, uid)
+    _seed_user(uid, paid_credits=50)
+
+    gen = _generate(client, uid, model_id="nb2-1k")
+    order_id = gen["order"]["order_id"]
+    result_url = "https://cdn.nanobanna.com/results/output.jpg"
+
+    _webhook_done(client, order_id, event_id="evt-result-ttl", result_url=result_url)
+
+    with get_session() as db:
+        asset = db.query(MediaAssetRow).filter(
+            MediaAssetRow.order_id == order_id,
+            MediaAssetRow.kind == "result",
+        ).first()
+
+    assert asset is None, "Result from external CDN must not be recorded in media_assets"

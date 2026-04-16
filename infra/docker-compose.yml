@@ -39,13 +39,19 @@ services:
     working_dir: /app
     volumes:
       - ../:/app
-    command: bash -lc "pip install -r workers/celery/requirements.txt && celery -A workers.celery.tasks worker --loglevel=INFO"
+    # tasks.py imports from app.core.db, app.adapters.r2_client → нужен полный apps/api/requirements.txt
+    command: bash -lc "pip install -r apps/api/requirements.txt && celery -A workers.celery.tasks worker --loglevel=INFO --concurrency=2"
     env_file:
       - ../.env
     environment:
+      PYTHONPATH: /app/apps/api
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/live_photo
       REDIS_URL: redis://redis:6379/0
       APP_ENV: docker
+      SOURCE_RETENTION_HOURS: "48"
+      RESULT_RETENTION_DAYS: "30"
     depends_on:
+      - postgres
       - redis
 
   beat:
@@ -53,11 +59,16 @@ services:
     working_dir: /app
     volumes:
       - ../:/app
-    command: bash -lc "pip install -r workers/celery/requirements.txt && celery -A workers.celery.tasks beat --loglevel=INFO"
+    # Beat только планировщик — не нужен DB доступ, но нужен Celery
+    # ВАЖНО: запускать только один инстанс Beat (иначе дублирование задач)
+    command: bash -lc "pip install -r apps/api/requirements.txt && celery -A workers.celery.tasks beat --loglevel=INFO --scheduler celery.beat:PersistentScheduler"
     env_file:
       - ../.env
     environment:
+      PYTHONPATH: /app/apps/api
       REDIS_URL: redis://redis:6379/0
       APP_ENV: docker
+      SOURCE_RETENTION_HOURS: "48"
+      RESULT_RETENTION_DAYS: "30"
     depends_on:
       - redis

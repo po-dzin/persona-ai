@@ -28,10 +28,6 @@ services:
         sync: false
       - key: NANO_BANANA_API_KEY
         sync: false
-      - key: STABILITY_API_KEY
-        sync: false
-      - key: STABILITY_API_URL
-        value: https://api.stability.ai/v2beta/stable-image/generate/sd3
       - key: BFL_API_KEY
         sync: false
       - key: BFL_API_BASE_URL
@@ -45,3 +41,94 @@ services:
       - key: PROVIDER_REQUEST_TIMEOUT_SECONDS
         value: "90"
     healthCheckPath: /healthz
+    # Run SQL migrations before each deploy (idempotent — safe to re-run).
+    preDeployCommand: python infra/db/migrate.py
+
+  # ── Cleanup Cron Job ──────────────────────────────────────────────────────
+  # Удаляет протухшие media_assets из R2 и БД каждые 6 часов.
+  # Запускается Render-ом напрямую — без Celery broker / Redis.
+  # Free tier: cron jobs доступны на всех планах Render.com.
+  - type: cron
+    name: persona-ai-cleanup
+    schedule: "0 */6 * * *"
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    dockerCommand: >-
+      python -c "
+      from app.core.db import init_db;
+      init_db();
+      from workers.runner import cleanup_expired_assets;
+      import json, sys;
+      result = cleanup_expired_assets();
+      print(json.dumps(result));
+      sys.exit(0 if result.get('status') in ('ok', 'partial') else 1)
+      "
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_PUBLIC_BASE_URL
+        sync: false
+      - key: SOURCE_RETENTION_HOURS
+        value: "48"
+      - key: RESULT_RETENTION_DAYS
+        value: "14"
+
+  # ── Reconciliation Cron Job ───────────────────────────────────────────────
+  # Находит зависшие джобы без webhook и делает refund.
+  # Запускается каждый час — без Celery broker / Redis.
+  - type: cron
+    name: persona-ai-reconcile
+    schedule: "0 * * * *"
+    runtime: docker
+    dockerfilePath: ./Dockerfile.worker
+    dockerCommand: >-
+      python -c "
+      from app.core.db import init_db;
+      init_db();
+      from workers.runner import reconciliation_stale_jobs;
+      import json, sys;
+      result = reconciliation_stale_jobs();
+      print(json.dumps(result));
+      sys.exit(0 if result.get('status') in ('ok', 'partial') else 1)
+      "
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: DATABASE_URL
+        sync: false
+      - key: JOB_TIMEOUT_SECONDS
+        value: "600"
+
+  # ── Celery Worker + Beat (Phase 1.1+) ─────────────────────────────────────
+  # Подключить когда появится реальная async-обработка генерации.
+  # До этого момента: генерация идёт синхронно через provider webhook.
+  #
+  # - type: worker
+  #   name: persona-ai-celery-worker
+  #   runtime: docker
+  #   dockerfilePath: ./Dockerfile.worker
+  #   dockerCommand: celery -A workers.celery.tasks worker --loglevel=INFO --concurrency=2
+  #   envVars:
+  #     - key: DATABASE_URL
+  #       sync: false
+  #     - key: REDIS_URL
+  #       sync: false
+  #     - key: R2_ENDPOINT
+  #       sync: false
+  #     ... (остальные env vars)
+  #
+  # - type: worker
+  #   name: persona-ai-celery-beat
+  #   runtime: docker
+  #   dockerfilePath: ./Dockerfile.worker
+  #   dockerCommand: celery -A workers.celery.tasks beat --loglevel=INFO --scheduler celery.beat:PersistentScheduler

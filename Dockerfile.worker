@@ -1,0 +1,18 @@
+FROM python:3.12-slim
+
+# Workers need app/ code (imports from app.core.db, app.adapters.r2_client, etc.)
+# but do NOT need Node.js or frontend builds.
+
+WORKDIR /app
+COPY . .
+
+# Install API deps (SQLAlchemy, boto3, etc.) + Celery worker deps
+RUN pip install --no-cache-dir -r apps/api/requirements.txt
+
+# tasks.py imports from app.core.db, app.adapters.r2_client → нужен путь к apps/api/
+ENV PYTHONPATH=/app/apps/api
+ENV CELERY_APP=workers.celery.tasks
+
+# Default: worker — override to "beat" for the Beat scheduler service
+# Render.com: set startCommand per service (see render.yaml)
+CMD ["celery", "-A", "workers.celery.tasks", "worker", "--loglevel=INFO", "--concurrency=2"]

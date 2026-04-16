@@ -18,4 +18,17 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    beat_schedule={
+        # Удаление протухших медиа-ассетов из R2 и БД
+        # Source TTL: 48h, Result TTL: 30d (settings.source_retention_hours / result_retention_days)
+        "cleanup-expired-assets-every-6h": {
+            "task": "cleanup.expired_assets",
+            "schedule": 6 * 60 * 60,  # каждые 6 часов
+        },
+        # Сверка зависших джобов (submitted → no webhook after SLA timeout)
+        "reconcile-stale-jobs-every-1h": {
+            "task": "reconciliation.stale_jobs",
+            "schedule": 60 * 60,  # каждый час
+        },
+    },
 )
