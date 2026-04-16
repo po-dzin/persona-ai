@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FALLBACK_STYLES } from "../../data/styles";
 import type { PhotoRecord } from "../../utils/api";
@@ -22,9 +22,9 @@ describe("HomeScreen", () => {
     expect(categoryNames.slice(0, 5)).toEqual([
       "ВСЕ",
       "Тренды",
-      "Бизнес и карьера",
-      "Лайфстайл",
       "Студийный портрет",
+      "Романтика и отношения",
+      "Лайфстайл",
     ]);
     expect(categoryNames).not.toContain("Бизнес");
     expect(within(categoryRail).getByRole("button", { name: "ВСЕ" })).toHaveAttribute(
@@ -121,9 +121,9 @@ describe("HomeScreen", () => {
     expect(tabNames.slice(0, 5)).toEqual([
       "ВСЕ",
       "Тренды",
-      "Бизнес и карьера",
-      "Лайфстайл",
       "Студийный портрет",
+      "Романтика и отношения",
+      "Лайфстайл",
     ]);
     expect(tabNames).not.toContain("Бизнес");
     expect(within(tabsRow).getByRole("button", { name: "ВСЕ" })).toHaveAttribute(
@@ -152,6 +152,7 @@ describe("HomeScreen", () => {
   });
 
   it("enters and exits dragging mode on a valid horizontal swipe gesture", () => {
+
     const { container } = render(
       <HomeScreen styles={FALLBACK_STYLES} photos={[]} onPreviewStyle={vi.fn()} />,
     );
@@ -172,5 +173,147 @@ describe("HomeScreen", () => {
     });
 
     expect(panels).not.toHaveClass("is-dragging");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Animation state — category transition classes
+// ---------------------------------------------------------------------------
+// The swipe-lock fallback is 320 ms (readMotionTokenMs returns the fallback
+// value in jsdom because CSS custom properties are not evaluated there).
+const SWIPE_LOCK_MS = 320;
+
+describe("HomeScreen – category transition animation state", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function renderHome() {
+    const { container } = render(
+      <HomeScreen styles={FALLBACK_STYLES} photos={[]} onPreviewStyle={vi.fn()} />,
+    );
+    const panels = container.querySelector(".home-styles-panels") as HTMLElement;
+    const rail = screen.getByLabelText("Категории стилей");
+    return { container, panels, rail };
+  }
+
+  it("applies is-transitioning and dir-next when clicking a forward category", () => {
+    vi.useFakeTimers();
+    const { panels, rail } = renderHome();
+
+    expect(panels).not.toHaveClass("is-transitioning");
+
+    fireEvent.click(within(rail).getByRole("button", { name: "Тренды" }));
+
+    expect(panels).toHaveClass("is-transitioning");
+    expect(panels).toHaveClass("dir-next");
+  });
+
+  it("applies dir-prev when navigating to an earlier category", () => {
+    vi.useFakeTimers();
+    const { panels, rail } = renderHome();
+
+    // Move forward first so there is a previous category to go back to.
+    fireEvent.click(within(rail).getByRole("button", { name: "Тренды" }));
+    act(() => { vi.advanceTimersByTime(SWIPE_LOCK_MS); });
+
+    fireEvent.click(within(rail).getByRole("button", { name: "ВСЕ" }));
+
+    expect(panels).toHaveClass("dir-prev");
+    expect(panels).toHaveClass("is-transitioning");
+  });
+
+  it("marks the leaving panel with is-outgoing and the entering panel with is-entering-next", () => {
+    vi.useFakeTimers();
+    const { container, rail } = renderHome();
+
+    fireEvent.click(within(rail).getByRole("button", { name: "Тренды" }));
+
+    const outgoing = container.querySelector(".home-styles-panel.is-outgoing");
+    const entering = container.querySelector(".home-styles-panel.is-entering-next");
+
+    expect(outgoing).not.toBeNull();
+    expect(entering).not.toBeNull();
+  });
+
+  it("entering panel is the accessible (aria-hidden=false) panel during transition", () => {
+    vi.useFakeTimers();
+    const { container, rail } = renderHome();
+
+    fireEvent.click(within(rail).getByRole("button", { name: "Тренды" }));
+
+    const visible = container.querySelector('.home-styles-panel[aria-hidden="false"]');
+    expect(visible).toHaveClass("is-entering-next");
+  });
+
+  it("keeps adjacent panels visible during transition (adjacent classes not removed)", () => {
+    vi.useFakeTimers();
+    const { container, rail } = renderHome();
+
+    // Navigate to Студийный портрет (idx 2); Тренды (idx 1) becomes adjacent-prev.
+    fireEvent.click(within(rail).getByRole("button", { name: "Студийный портрет" }));
+
+    const adjPrev = container.querySelector(".home-styles-panel.is-adjacent-prev");
+    expect(adjPrev).not.toBeNull();
+  });
+
+  it("clears is-transitioning and is-outgoing after the swipe-lock timer", () => {
+    vi.useFakeTimers();
+    const { container, panels, rail } = renderHome();
+
+    fireEvent.click(within(rail).getByRole("button", { name: "Тренды" }));
+    expect(panels).toHaveClass("is-transitioning");
+    expect(container.querySelector(".home-styles-panel.is-outgoing")).not.toBeNull();
+
+    act(() => { vi.advanceTimersByTime(SWIPE_LOCK_MS); });
+
+    expect(panels).not.toHaveClass("is-transitioning");
+    expect(container.querySelector(".home-styles-panel.is-outgoing")).toBeNull();
+  });
+
+  it("active tab button reflects the new category immediately after click", () => {
+    vi.useFakeTimers();
+    const { rail } = renderHome();
+
+    fireEvent.click(within(rail).getByRole("button", { name: "Тренды" }));
+
+    expect(within(rail).getByRole("button", { name: "Тренды" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(rail).getByRole("button", { name: "ВСЕ" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("blocks a second transition while one is already in progress", () => {
+    vi.useFakeTimers();
+    const { container, rail } = renderHome();
+
+    // Start transition to Тренды
+    fireEvent.click(within(rail).getByRole("button", { name: "Тренды" }));
+    const outgoingAfterFirst = container.querySelector(".home-styles-panel.is-outgoing");
+
+    // Try to start another transition before the lock expires
+    fireEvent.click(within(rail).getByRole("button", { name: "Студийный портрет" }));
+
+    // Outgoing panel must still be the original one (ВСЕ), not Тренды
+    expect(container.querySelector(".home-styles-panel.is-outgoing")).toBe(outgoingAfterFirst);
+    // Active category should remain Тренды, not jump to Студийный портрет
+    expect(within(rail).getByRole("button", { name: "Тренды" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(rail).getByRole("button", { name: "Студийный портрет" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("active panel carries only is-active class after transition completes", () => {
+    vi.useFakeTimers();
+    const { container, rail } = renderHome();
+
+    fireEvent.click(within(rail).getByRole("button", { name: "Студийный портрет" }));
+    act(() => { vi.advanceTimersByTime(SWIPE_LOCK_MS); });
+
+    const activePanel = container.querySelector('.home-styles-panel[aria-hidden="false"]') as HTMLElement;
+    expect(activePanel).not.toBeNull();
+    expect(activePanel).toHaveClass("is-active");
+    // Transition artefact classes must all be gone after the lock timer fires
+    expect(activePanel).not.toHaveClass("is-outgoing");
+    expect(activePanel).not.toHaveClass("is-entering-next");
+    expect(activePanel).not.toHaveClass("is-entering-prev");
+    expect(activePanel).not.toHaveClass("is-outgoing-next");
+    expect(activePanel).not.toHaveClass("is-outgoing-prev");
   });
 });

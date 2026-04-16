@@ -1,4 +1,4 @@
-export type ProviderIdDto = "nano_banana" | "stable_diffusion" | "flux" | "openai_image" | "recraft";
+export type ProviderIdDto = "nano_banana" | "flux" | "openai_image" | "recraft";
 
 export interface AIModelDto {
   id: string;

@@ -1,4 +1,4 @@
-export type ProviderId = "nano_banana" | "stable_diffusion" | "flux" | "openai_image" | "recraft";
+export type ProviderId = "nano_banana" | "flux" | "openai_image" | "recraft";
 
 export interface StylePromptSpec {
   subject: string;
