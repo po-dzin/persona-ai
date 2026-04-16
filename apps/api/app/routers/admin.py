@@ -404,17 +404,70 @@ def generations(days: int = Query(default=7, ge=1, le=90)):
             """,
         ))
 
-        # Avg generation time (from job updated_at - order created_at for done orders)
-        avg_time_row = session.execute(text(f"""
-            SELECT AVG(
-                EXTRACT(EPOCH FROM (j.updated_at - o.created_at))
-            ) as avg_seconds
-            FROM orders o
-            JOIN jobs j ON j.order_id = o.order_id
-            WHERE o.status = 'done' AND j.status = 'done' AND {_interval(days)}
-        """)).fetchone() if not _is_sqlite else None
+        # Generation timing: avg + p95 (PostgreSQL only)
+        timing = {"avg_seconds": None, "p95_seconds": None}
+        if not _is_sqlite:
+            timing_row = session.execute(text(f"""
+                SELECT
+                    ROUND(AVG(
+                        EXTRACT(EPOCH FROM (j.updated_at - o.created_at))
+                    )::numeric, 1) as avg_seconds,
+                    ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (
+                        ORDER BY EXTRACT(EPOCH FROM (j.updated_at - o.created_at))
+                    )::numeric, 1) as p95_seconds
+                FROM orders o
+                JOIN jobs j ON j.order_id = o.order_id
+                WHERE o.status = 'done' AND j.status = 'done' AND {_interval(days)}
+            """)).fetchone()
+            if timing_row:
+                timing = {
+                    "avg_seconds": float(timing_row[0]) if timing_row[0] else None,
+                    "p95_seconds": float(timing_row[1]) if timing_row[1] else None,
+                }
 
-        avg_gen_seconds = round(avg_time_row[0], 1) if avg_time_row and avg_time_row[0] else None
+        # Technical failure rate: timeouts + provider errors (no refund for policy_failed)
+        failure_rate: dict = {"technical_failed": None, "policy_failed": None, "total": None}
+        total_orders = by_status.get("done", 0) + by_status.get("failed", 0)
+        if total_orders > 0:
+            tech_fail_count = _scalar(
+                session,
+                f"SELECT COUNT(*) FROM orders WHERE fail_reason_code='technical_failed' AND {_interval(days)}",
+            ) or 0
+            policy_fail_count = _scalar(
+                session,
+                f"SELECT COUNT(*) FROM orders WHERE fail_reason_code='policy_failed' AND {_interval(days)}",
+            ) or 0
+            failure_rate = {
+                "technical_failed": round(tech_fail_count / total_orders * 100, 1),
+                "policy_failed": round(policy_fail_count / total_orders * 100, 1),
+                "total": round((tech_fail_count + policy_fail_count) / total_orders * 100, 1),
+            }
+
+        # Reconciliation signal: jobs timed out in the period (stale without webhook)
+        # jobs has no created_at — use updated_at (set when status changes to timeout)
+        timeout_jobs = _scalar(
+            session,
+            f"SELECT COUNT(*) FROM jobs WHERE status='timeout' AND {_interval(days).replace('created_at', 'updated_at')}",
+        ) or 0
+
+        # Worker activation indicators — thresholds documented in specs/backlog.md
+        worker_signals = {
+            "p95_seconds": timing["p95_seconds"],
+            "technical_failed_rate_pct": failure_rate.get("technical_failed"),
+            "timeout_jobs_count": timeout_jobs,
+            # Thresholds (any one → consider activating Celery workers):
+            # p95_seconds > 45  → provider is slow, API threads at risk
+            # technical_failed_rate_pct > 5  → provider unstable, retry needed
+            # timeout_jobs_count > 10 per day → webhook delivery unreliable
+            "alerts": [
+                alert for alert in [
+                    "p95_latency_high" if timing["p95_seconds"] and timing["p95_seconds"] > 45 else None,
+                    "tech_failure_rate_high" if failure_rate.get("technical_failed") and failure_rate["technical_failed"] > 5 else None,
+                    "timeout_spike" if timeout_jobs > 10 else None,
+                ]
+                if alert
+            ],
+        }
 
     return {
         "period_days": days,
@@ -422,7 +475,10 @@ def generations(days: int = Query(default=7, ge=1, le=90)):
         "top_styles": top_styles,
         "by_model": by_model,
         "recent_failed": recent_failed,
-        "avg_gen_seconds": avg_gen_seconds,
+        "avg_gen_seconds": timing["avg_seconds"],   # kept for backward compat
+        "timing": timing,
+        "failure_rate": failure_rate,
+        "worker_signals": worker_signals,
     }
 
 
