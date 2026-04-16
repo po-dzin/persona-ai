@@ -8,6 +8,7 @@ import {
 import { Card, StatCard } from "../components/Card";
 import { LineChart } from "../components/Chart";
 import PeriodPicker from "../components/PeriodPicker";
+import { CHART_COLORS } from "../utils/chartTokens";
 import { formatDateTimeShort } from "../utils/format";
 
 const STATES = ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "INACTIVE_30D"] as const;
@@ -137,7 +138,7 @@ export default function Lifecycle() {
         <div className="stack-gap">
           <Card>
             <div className="card-title card-title--mini-gap">ПЕРЕХОДЫ / ДЕНЬ</div>
-            <LineChart data={chartData} series={[{ key: "transitions", color: "#7c6af7", label: "Переходы" }]} />
+            <LineChart data={chartData} series={[{ key: "transitions", color: CHART_COLORS.accent, label: "Переходы" }]} />
           </Card>
 
           <Card>
