@@ -386,19 +386,19 @@ def test_webhook_hmac_rejects_wrong_secret(monkeypatch) -> None:
 
     # Wrong secret → 403
     res = client.post(
-        "/v1/webhooks/stable_diffusion",
+        "/v1/webhooks/flux",
         json=event,
         headers={"X-Webhook-Secret": "wrong-secret"},
     )
     assert res.status_code == 403
 
     # No secret → also 403
-    res2 = client.post("/v1/webhooks/stable_diffusion", json=event)
+    res2 = client.post("/v1/webhooks/flux", json=event)
     assert res2.status_code == 403
 
     # Correct secret → accepted (no matching order, so ignored — but not 403)
     res3 = client.post(
-        "/v1/webhooks/stable_diffusion",
+        "/v1/webhooks/flux",
         json=event,
         headers={"X-Webhook-Secret": "correct-secret"},
     )

@@ -31,7 +31,6 @@ class Settings:
     r2_public_base_url: str = os.getenv("R2_PUBLIC_BASE_URL", "")
 
     nano_banana_api_key: str = os.getenv("NANO_BANANA_API_KEY", "")
-    stability_api_key: str = os.getenv("STABILITY_API_KEY", "")
     bfl_api_key: str = os.getenv("BFL_API_KEY", "")
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     recraft_api_key: str = os.getenv("RECRAFT_API_KEY", "")
@@ -42,7 +41,6 @@ class Settings:
     provider_request_timeout_seconds: int = int(os.getenv("PROVIDER_REQUEST_TIMEOUT_SECONDS", "45"))
 
     nano_banana_api_url: str = os.getenv("NANO_BANANA_API_URL", "")
-    stability_api_url: str = os.getenv("STABILITY_API_URL", "")
     bfl_api_base_url: str = os.getenv("BFL_API_BASE_URL", "https://api.bfl.ai/v1")
 
     telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -59,9 +57,12 @@ class Settings:
 
     sla_seconds_min: int = int(os.getenv("SLA_SECONDS_MIN", "30"))
     sla_seconds_max: int = int(os.getenv("SLA_SECONDS_MAX", "120"))
+    # Jobs still in submitted/processing after this window are considered stale.
+    # Default: 10 min — generous enough for slow providers, tight enough to refund quickly.
+    job_timeout_seconds: int = int(os.getenv("JOB_TIMEOUT_SECONDS", "600"))
 
     source_retention_hours: int = int(os.getenv("SOURCE_RETENTION_HOURS", "48"))
-    result_retention_days: int = int(os.getenv("RESULT_RETENTION_DAYS", "30"))
+    result_retention_days: int = int(os.getenv("RESULT_RETENTION_DAYS", "14"))
 
     base_gen_usd: float = float(os.getenv("BASE_GEN_USD", "0.25"))
 
@@ -94,13 +95,11 @@ def required_env_for_mode(mode: str) -> dict[str, list[str]]:
         common.append("REDIS_URL")
     provider_keys = [
         "NANO_BANANA_API_KEY",
-        "STABILITY_API_KEY",
         "BFL_API_KEY",
         "OPENAI_API_KEY",
         "RECRAFT_API_KEY",
         "PROVIDER_WEBHOOK_SECRET",
         "NANO_BANANA_API_URL",
-        "STABILITY_API_URL",
     ]
     payment_keys = [
         "TELEGRAM_BOT_TOKEN",
