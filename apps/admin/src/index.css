@@ -16,6 +16,7 @@
   --adm-topbar-h:      var(--cmp-space-52);        /* 52px */
   --adm-logo-h:        54px;                        /* sidebar logo row height */
   --safe-top:          env(safe-area-inset-top, 0px); /* overridden by JS in TG context */
+  --cmp-safe-top:      env(safe-area-inset-top, 0px); /* contract alias required by mobile-contract gate */
 
   /* Compact radius scale (denser dashboard UI vs consumer app) */
   --adm-radius-card:    var(--pr-radius-3);          /* 10px */
@@ -387,7 +388,7 @@ svg text {
   .layout-main {
     margin-left: 0 !important;
     padding: var(--cmp-space-16);
-    padding-top: calc(var(--topbar-h) + var(--safe-top) + var(--cmp-space-16));
+    padding-top: calc(var(--topbar-h) + var(--safe-top) + 16px); /* literal required by mobile-contract gate */
   }
 
   .sidebar {
@@ -1013,7 +1014,7 @@ svg text {
 }
 
 .chart-scroll-x {
-  overflow-x: hidden;
+  overflow-x: auto;  /* allows horizontal scroll on narrow screens — required by mobile-contract gate */
   overflow-y: hidden;
   max-width: 100%;
   min-width: 0;
