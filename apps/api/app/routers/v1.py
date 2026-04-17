@@ -25,13 +25,19 @@ from app.models.api_models import (
     UploadRequest,
     WebhookRequest,
 )
-from app.services.lifecycle import mark_bot_started, mark_miniapp_opened
 from app.services.vertical_slice import VerticalSliceService
 
 router = APIRouter(prefix="/v1", tags=["v1"])
 
 # Thread pool for running blocking provider calls without blocking event loop
 _executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="gen-worker")
+
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+def _require_order_ownership(order: dict[str, Any], user_id: str) -> None:
+    if order["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="forbidden")
 
 
 def get_service(request: Request) -> VerticalSliceService:
@@ -106,12 +112,7 @@ def get_profile(
         username=tg_user.get("username") if tg_user else None,
     )
     if tg_user:
-        from app.core.db import get_session, UserRow
-
-        with get_session() as db:
-            user = db.get(UserRow, user_id)
-            if user:
-                mark_miniapp_opened(db, user)
+        get_service(request).on_miniapp_opened(user_id)
     return {"profile": profile}
 
 
@@ -140,9 +141,8 @@ async def upload_file_direct(
 ):
     """Accept a file upload directly (avoids browser CORS with R2 presigned URLs)."""
     upload_limiter.check(request, use_user_id=True)
-    allowed = {".jpg", ".jpeg", ".png", ".webp"}
     suffix = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    if suffix not in allowed:
+    if suffix not in ALLOWED_IMAGE_EXTENSIONS:
         raise HTTPException(status_code=400, detail="invalid_file_type")
     content = await file.read()
     source_key = get_service(request).upload_source_file(user_id, filename, content)
@@ -152,10 +152,8 @@ async def upload_file_direct(
 @router.post("/uploads")
 def create_upload(data: UploadRequest, request: Request, user_id: str = Depends(require_user)):
     upload_limiter.check(request, use_user_id=True)
-    # Validate file extension
-    allowed = {".jpg", ".jpeg", ".png", ".webp"}
     suffix = "." + data.filename.rsplit(".", 1)[-1].lower() if "." in data.filename else ""
-    if suffix not in allowed:
+    if suffix not in ALLOWED_IMAGE_EXTENSIONS:
         raise HTTPException(status_code=400, detail="invalid_file_type")
     return get_service(request).register_upload(user_id=user_id, filename=data.filename)
 
@@ -198,9 +196,7 @@ def get_order(order_id: str, request: Request, user_id: str = Depends(require_us
         result = svc.order_status(order_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    # Ensure user can only see their own orders
-    if result["order"]["user_id"] != user_id:
-        raise HTTPException(status_code=403, detail="forbidden")
+    _require_order_ownership(result["order"], user_id)
     return result
 
 
@@ -264,10 +260,15 @@ def purchase(data: PurchaseRequest, request: Request, user_id: str = Depends(req
 
 # ──────────────────────────── webhooks ───────────────────────────
 
+_KNOWN_WEBHOOK_PROVIDERS = {"telegram", "stripe", "nano_banana", "flux"}
+
+
 @router.post("/webhooks/{provider}")
 def webhook_provider(provider: str, data: WebhookRequest, request: Request):
     """Generic provider/payment webhook — no user auth, protected by PROVIDER_WEBHOOK_SECRET."""
     _verify_webhook_secret(request)
+    if provider not in _KNOWN_WEBHOOK_PROVIDERS:
+        raise HTTPException(status_code=400, detail="unknown_provider")
     return get_service(request).ingest_webhook(provider, data.event_id, data.payload)
 
 
@@ -316,8 +317,7 @@ def send_photo_to_telegram(order_id: str, request: Request, user_id: str = Depen
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     order = status["order"]
-    if order["user_id"] != user_id:
-        raise HTTPException(status_code=403, detail="forbidden")
+    _require_order_ownership(order, user_id)
     if not order.get("result_url"):
         raise HTTPException(status_code=409, detail="photo_not_ready")
     from app.services.tg_bot import send_photo_to_user
@@ -334,8 +334,7 @@ def get_photo_share_link(order_id: str, request: Request, user_id: str = Depends
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     order = status["order"]
-    if order["user_id"] != user_id:
-        raise HTTPException(status_code=403, detail="forbidden")
+    _require_order_ownership(order, user_id)
     return {
         "app_link": _build_photo_share_link(order, request),
         "result_url": order.get("result_url"),
@@ -351,8 +350,7 @@ def get_photo_share_file(order_id: str, request: Request, user_id: str = Depends
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     order = status["order"]
-    if order["user_id"] != user_id:
-        raise HTTPException(status_code=403, detail="forbidden")
+    _require_order_ownership(order, user_id)
     result_url = str(order.get("result_url") or "").strip()
     if not result_url:
         raise HTTPException(status_code=409, detail="photo_not_ready")
@@ -477,12 +475,7 @@ async def _handle_tg_update(update: dict[str, Any], svc: VerticalSliceService) -
     if text.startswith("/start") and chat_id:
         if user_id:
             svc.get_or_create_user(user_id, first_name=user.get("first_name"), username=user.get("username"))
-            from app.core.db import get_session, UserRow
-
-            with get_session() as db:
-                db_user = db.get(UserRow, user_id)
-                if db_user:
-                    mark_bot_started(db, db_user)
+            svc.on_bot_started(user_id)
         await send_start_message(chat_id)
         return
 

@@ -13,6 +13,7 @@ const POLL_IDLE_MS = 15000;
 export function useWalletAndPhotos(userId: string) {
   const [wallet, setWallet] = useState<Wallet>(FALLBACK_WALLET);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
+  const [photosLoading, setPhotosLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refresh = useCallback(async () => {
@@ -27,6 +28,8 @@ export function useWalletAndPhotos(userId: string) {
     } catch {
       // Keep last known state if backend is unavailable
       return null;
+    } finally {
+      setPhotosLoading(false);
     }
   }, [userId]);
 
@@ -51,5 +54,5 @@ export function useWalletAndPhotos(userId: string) {
     };
   }, [userId, refresh, scheduleNext]);
 
-  return { wallet, photos, refresh, setWallet, setPhotos };
+  return { wallet, photos, photosLoading, refresh, setWallet, setPhotos };
 }

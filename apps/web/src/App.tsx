@@ -432,9 +432,9 @@ export function App() {
     };
   }, [refreshProfile]);
 
-  const { styles, models, packages } = useCatalog();
+  const { styles, models, packages, isLoading: catalogLoading } = useCatalog();
   const walletAndPhotos = useWalletAndPhotos(userId);
-  const { wallet, photos, setPhotos, refresh } = walletAndPhotos;
+  const { wallet, photos, photosLoading, setPhotos, refresh } = walletAndPhotos;
   const setWallet = walletAndPhotos.setWallet ?? (() => undefined);
 
   useEffect(() => {
@@ -908,6 +908,13 @@ export function App() {
             setPaywallModalOpen(true);
             return;
           }
+          if (response.result === "policy_blocked") {
+            removeOptimisticGeneration(optimisticId);
+            settleOptimisticCharge(optimisticId, null);
+            setQueuedModalOpen(false);
+            setAsyncFailError("Контент не прошёл проверку безопасности. Монеты не списаны — попробуйте другое фото или стиль.");
+            return;
+          }
           generationAccepted = true;
           replaceOptimisticGeneration(optimisticId, response);
           settleOptimisticCharge(optimisticId, response.order.creditCost);
@@ -984,6 +991,13 @@ export function App() {
           settleOptimisticCharge(optimisticId, null);
           setQueuedModalOpen(false);
           setPaywallModalOpen(true);
+          return;
+        }
+        if (response.result === "policy_blocked") {
+          removeOptimisticGeneration(optimisticId);
+          settleOptimisticCharge(optimisticId, null);
+          setQueuedModalOpen(false);
+          setAsyncFailError("Контент не прошёл проверку безопасности. Монеты не списаны — попробуйте другое фото или стиль.");
           return;
         }
         generationAccepted = true;
@@ -1177,6 +1191,7 @@ export function App() {
           generatingOrderIds={uiGeneratingOrderIds}
           onOpenPhoto={handleOpenPhoto}
           favorites={favoriteOrderIds}
+          isLoading={photosLoading}
         />
       ) : null}
       {activeScreen === "balance" ? (
@@ -1185,6 +1200,7 @@ export function App() {
           packages={packages}
           onSelectPackage={handleSelectPackage}
           onOpenPricing={() => setModelsOpen(true)}
+          isLoading={catalogLoading}
         />
       ) : null}
       {activeScreen === "profile" ? (
@@ -1218,6 +1234,7 @@ export function App() {
         isOpen={flowStyleOpen}
         styles={styles}
         models={models}
+        catalogLoading={catalogLoading}
         selectedStyle={selectedStyle}
         initialTab={flowInitialTab}
         initialCustomPrompt={flowInitialCustomPrompt}

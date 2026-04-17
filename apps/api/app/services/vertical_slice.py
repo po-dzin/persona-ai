@@ -708,7 +708,10 @@ class VerticalSliceService:
 
             # Content policy check — must pass before any credit deduction
             from app.services.policy_engine import check_policy
-            policy = check_policy(prompt=order.prompt, source_image_url=order.source_key)
+            policy = check_policy(
+                prompt=order.prompt,
+                source_image_url=self._build_source_image_url(order.source_key),
+            )
             if not policy.passed:
                 order.status = "failed"
                 order.fail_reason_code = policy.reason_code or "policy_blocked"
@@ -908,6 +911,9 @@ class VerticalSliceService:
 
     def ingest_webhook(self, provider: str, event_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         provider = GENERATION_PROVIDER_ALIASES.get(provider, provider)
+        logger.info("webhook_received provider=%s event_id=%s", provider, event_id)
+
+        _tg_notify: tuple[str, str, str] | None = None  # (user_id, result_url, order_id)
 
         with get_session() as db:
             # Idempotency: check if this event was already processed
@@ -917,6 +923,7 @@ class VerticalSliceService:
                 .first()
             )
             if existing:
+                logger.info("webhook_deduplicated provider=%s event_id=%s", provider, event_id)
                 return {"deduplicated": True}
 
             # Provider generation webhook (result/failure callback)
@@ -924,10 +931,12 @@ class VerticalSliceService:
                 order_id = str(payload.get("order_id", ""))
                 event_type = str(payload.get("event_type", "done"))
                 if not order_id:
+                    logger.warning("webhook_ignored_no_order_id provider=%s event_id=%s", provider, event_id)
                     return {"deduplicated": False, "ignored": True}
 
                 order = db.get(OrderRow, order_id)
                 if not order:
+                    logger.warning("webhook_ignored_order_not_found provider=%s event_id=%s order_id=%s", provider, event_id, order_id)
                     return {"deduplicated": False, "ignored": True}
 
                 job = (
@@ -946,6 +955,8 @@ class VerticalSliceService:
                     user = db.get(UserRow, order.user_id)
                     if user and order.result_url:
                         mark_generation_succeeded(db, user, order_id=order.order_id)
+                        _tg_notify = (order.user_id, order.result_url, order.order_id)
+                    logger.info("webhook_generation_done provider=%s order_id=%s user_id=%s", provider, order_id, order.user_id)
                     # NOTE: result_url points to the provider's CDN (NanoBanana/BFL/etc.),
                     # not to our R2 bucket. We only track assets we own in R2.
                     # Record result in media_assets once we proxy/store results ourselves.
@@ -954,6 +965,7 @@ class VerticalSliceService:
                     if job:
                         job.status = "processing"
                         job.updated_at = now_iso()
+                    logger.info("webhook_generation_processing provider=%s order_id=%s", provider, order_id)
                 elif event_type == "technical_failed":
                     order.status = "failed"
                     order.fail_reason_code = "technical_failed"
@@ -963,12 +975,21 @@ class VerticalSliceService:
                     user = db.get(UserRow, order.user_id)
                     if user:
                         user.paid_credits += order.credit_cost
+                        logger.info(
+                            "webhook_generation_failed_refund provider=%s order_id=%s user_id=%s credits_refunded=%d",
+                            provider, order_id, order.user_id, order.credit_cost,
+                        )
+                    else:
+                        logger.error("webhook_generation_failed_no_user provider=%s order_id=%s user_id=%s", provider, order_id, order.user_id)
                 elif event_type == "policy_failed":
                     order.status = "failed"
                     order.fail_reason_code = "policy_failed"
                     if job:
                         job.status = "failed"
                         job.updated_at = now_iso()
+                    logger.info("webhook_generation_policy_failed provider=%s order_id=%s user_id=%s", provider, order_id, order.user_id)
+                else:
+                    logger.warning("webhook_unknown_event_type provider=%s event_type=%s order_id=%s", provider, event_type, order_id)
 
                 order.updated_at = now_iso()
                 db.commit()
@@ -1042,7 +1063,37 @@ class VerticalSliceService:
 
                 db.commit()
 
+        if _tg_notify:
+            self._notify_tg_generation_done(*_tg_notify)
+
         return {"deduplicated": False, "accepted": True}
+
+    def _notify_tg_generation_done(self, user_id: str, result_url: str, order_id: str) -> None:
+        if not settings.telegram_bot_token:
+            return
+        try:
+            from app.services.tg_bot import send_photo_to_user
+            app_link = self._build_share_link(order_id)
+            send_photo_to_user(user_id, result_url, app_link=app_link)
+            logger.info("tg_notification_sent user_id=%s order_id=%s", user_id, order_id)
+        except Exception:
+            logger.warning("tg_notification_failed user_id=%s order_id=%s", user_id, order_id, exc_info=True)
+
+    def _build_share_link(self, order_id: str) -> str | None:
+        import hashlib
+        import hmac as _hmac
+        from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+
+        base = settings.telegram_miniapp_url.strip().rstrip("/")
+        if not base:
+            return None
+        secret = (settings.telegram_bot_token or settings.provider_webhook_secret or "").encode()
+        token = _hmac.new(secret, order_id.encode(), hashlib.sha256).hexdigest()[:16]
+        parsed = urlparse(base)
+        query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+        query["share_order"] = order_id
+        query["share_token"] = token
+        return urlunparse(parsed._replace(query=urlencode(query)))
 
     # ------------------------------------------------------------ helpers
 
@@ -1091,6 +1142,22 @@ class VerticalSliceService:
             if not order:
                 raise ValueError("order_not_found")
             return order
+
+    def on_miniapp_opened(self, user_id: str) -> None:
+        from app.services.lifecycle import mark_miniapp_opened
+
+        with get_session() as db:
+            user = db.get(UserRow, user_id)
+            if user:
+                mark_miniapp_opened(db, user)
+
+    def on_bot_started(self, user_id: str) -> None:
+        from app.services.lifecycle import mark_bot_started
+
+        with get_session() as db:
+            user = db.get(UserRow, user_id)
+            if user:
+                mark_bot_started(db, user)
 
     @staticmethod
     def _serialize_wallet(user: UserRow) -> dict[str, Any]:
