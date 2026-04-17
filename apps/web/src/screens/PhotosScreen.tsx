@@ -10,6 +10,7 @@ interface PhotosScreenProps {
   generatingOrderIds?: Set<string>;
   onOpenPhoto: (photo: PhotoRecord) => void;
   favorites: Set<string>;
+  isLoading?: boolean;
 }
 
 function dateLabel(iso: string): string {
@@ -17,7 +18,7 @@ function dateLabel(iso: string): string {
   return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "long" });
 }
 
-export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, favorites }: PhotosScreenProps) {
+export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, favorites, isLoading }: PhotosScreenProps) {
   const [filter, setFilter] = useState("Все");
   const [imageErrorIds, setImageErrorIds] = useState<Set<string>>(new Set());
   const isUiGenerating = (photo: PhotoRecord) =>
@@ -109,7 +110,13 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {isLoading && photos.length === 0 ? (
+        <div className="photos-grid">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="photo-item skeleton skeleton-photo" aria-hidden="true" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="placeholder-screen">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
             <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -121,7 +128,7 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
         <div className="photos-grid">
           {datedItems.map(({ photo, showDivider, dividerLabel }) => {
             const style = styleByCode[photo.styleCode];
-            const isLoading = isUiGenerating(photo);
+            const isGenerating = isUiGenerating(photo);
             const isBackendGenerating = isPhotoGenerating(photo);
             const isFailed = photo.status === "failed";
             const bg = style?.gradient || "var(--sem-gradient-photo-fallback)";
@@ -135,7 +142,7 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
                   disabled={isBackendGenerating}
                   aria-label={isBackendGenerating ? "Генерация" : (style?.name || photo.styleCode)}
                 >
-                  {photo.resultUrl && !isLoading && !isFailed && !isImageBroken ? (
+                  {photo.resultUrl && !isGenerating && !isFailed && !isImageBroken ? (
                     <img
                       className="photo-bg fill-image-cover"
                       src={photo.resultUrl}
@@ -151,7 +158,7 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
                   ) : (
                     <div className="photo-bg" style={{ background: bg }} />
                   )}
-                  {isLoading ? (
+                  {isGenerating ? (
                     <div className="photo-loading-overlay">
                       <div className="queue-dots queue-dots-running queue-dots-large"><span /><span /><span /></div>
                     </div>

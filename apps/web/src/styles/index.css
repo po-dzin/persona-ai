@@ -2107,3 +2107,48 @@ button, a, [role="button"] { touch-action: manipulation; }
     transition-duration: var(--cmp-motion-reduced) !important;
   }
 }
+
+/* ─────────────────────── Skeleton loaders ──────────────────────── */
+@keyframes skeletonShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  border-radius: var(--cmp-radius-card);
+  background: linear-gradient(
+    90deg,
+    var(--sem-color-bg-surface) 25%,
+    var(--sem-color-overlay-01) 50%,
+    var(--sem-color-bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer var(--cmp-motion-loader-shimmer) ease-in-out infinite;
+}
+
+/* Style card skeleton — matches .style-card dimensions */
+.skeleton-style-card {
+  min-width: var(--cmp-size-style-card-min-width);
+  aspect-ratio: 3 / 4;
+  flex-shrink: 0;
+}
+
+/* Photo grid skeleton — matches .photo-thumb */
+.skeleton-photo {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+}
+
+/* Package row skeleton — matches .package-card */
+.skeleton-package {
+  height: var(--cmp-touch-min-size);
+  border-radius: var(--cmp-space-14);
+}
+
+/* Balance hero number skeleton */
+.skeleton-balance-number {
+  width: 96px;
+  height: 48px;
+  border-radius: var(--cmp-radius-pill);
+  margin: 0 auto var(--cmp-space-8);
+}

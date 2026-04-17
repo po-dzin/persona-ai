@@ -89,7 +89,7 @@ export interface GenerateOrder {
 }
 
 export interface GenerateResult {
-  result: "enqueued" | "paywall_required";
+  result: "enqueued" | "paywall_required" | "policy_blocked";
   order: GenerateOrder;
   wallet?: Wallet;
 }

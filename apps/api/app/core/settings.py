@@ -32,15 +32,12 @@ class Settings:
 
     nano_banana_api_key: str = os.getenv("NANO_BANANA_API_KEY", "")
     bfl_api_key: str = os.getenv("BFL_API_KEY", "")
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
-    recraft_api_key: str = os.getenv("RECRAFT_API_KEY", "")
 
     provider_webhook_secret: str = os.getenv("PROVIDER_WEBHOOK_SECRET", "")
     provider_real_calls_enabled: bool = _bool_env("PROVIDER_REAL_CALLS_ENABLED", False)
     free_demo_mode: bool = _bool_env("FREE_DEMO_MODE", False)
     provider_request_timeout_seconds: int = int(os.getenv("PROVIDER_REQUEST_TIMEOUT_SECONDS", "45"))
 
-    nano_banana_api_url: str = os.getenv("NANO_BANANA_API_URL", "")
     bfl_api_base_url: str = os.getenv("BFL_API_BASE_URL", "https://api.bfl.ai/v1")
 
     telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -96,10 +93,7 @@ def required_env_for_mode(mode: str) -> dict[str, list[str]]:
     provider_keys = [
         "NANO_BANANA_API_KEY",
         "BFL_API_KEY",
-        "OPENAI_API_KEY",
-        "RECRAFT_API_KEY",
         "PROVIDER_WEBHOOK_SECRET",
-        "NANO_BANANA_API_URL",
     ]
     payment_keys = [
         "TELEGRAM_BOT_TOKEN",

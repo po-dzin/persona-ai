@@ -16,6 +16,7 @@ interface FlowStyleScreenProps {
   initialCustomPrompt?: string;
   initialCustomModelId?: string;
   isCreating?: boolean;
+  catalogLoading?: boolean;
   onSelectStyle: (style: StyleItem) => void;
   onContinue: (payload: {
     modelId: string;
@@ -79,6 +80,7 @@ export function FlowStyleScreen({
   initialCustomPrompt = "",
   initialCustomModelId,
   isCreating = false,
+  catalogLoading = false,
   onSelectStyle,
   onContinue,
   onClose,
@@ -266,30 +268,39 @@ export function FlowStyleScreen({
 
       {tab === "styles" ? (
         <>
-          {stylesByCategory.map((block) => (
-            <div key={block.category}>
-              <div className="section-header"><div className="section-title">{block.category}</div></div>
-              <div className="styles-scroll">
-                {block.items.map((style) => (
-                  <button
-                    key={style.id}
-                    className={"style-card" + (selectedStyle?.id === style.id ? " selected" : "")}
-                    onClick={() => onSelectStyle(style)}
-                    aria-label={style.name}
-                    aria-pressed={selectedStyle?.id === style.id}
-                  >
-                    <div className="style-preview" style={{ background: style.gradient }}>
-                      {style.isTrending ? <span className="style-tag fire">Хит</span> : null}
-                      {style.isNew ? <span className="style-tag new">Новое</span> : null}
-                      <div className="style-overlay">
-                        <div className="style-name">{style.name}</div>
-                      </div>
-                    </div>
-                  </button>
+          {catalogLoading && stylesByCategory.length === 0
+            ? (
+              <div className="styles-scroll" style={{ paddingLeft: "var(--cmp-space-grid-edge)", paddingRight: "var(--cmp-space-grid-edge)" }}>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="skeleton skeleton-style-card" aria-hidden="true" />
                 ))}
               </div>
-            </div>
-          ))}
+            )
+            : stylesByCategory.map((block) => (
+              <div key={block.category}>
+                <div className="section-header"><div className="section-title">{block.category}</div></div>
+                <div className="styles-scroll">
+                  {block.items.map((style) => (
+                    <button
+                      key={style.id}
+                      className={"style-card" + (selectedStyle?.id === style.id ? " selected" : "")}
+                      onClick={() => onSelectStyle(style)}
+                      aria-label={style.name}
+                      aria-pressed={selectedStyle?.id === style.id}
+                    >
+                      <div className="style-preview" style={{ background: style.gradient }}>
+                        {style.isTrending ? <span className="style-tag fire">Хит</span> : null}
+                        {style.isNew ? <span className="style-tag new">Новое</span> : null}
+                        <div className="style-overlay">
+                          <div className="style-name">{style.name}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))
+          }
           <div className="screen-section-gap-sm" />
         </>
       ) : (

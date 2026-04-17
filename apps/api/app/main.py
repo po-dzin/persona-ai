@@ -8,18 +8,19 @@ from app.core.logging_config import configure_logging
 
 configure_logging()  # must be first, before any logger is created
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 # Ensure repo-level packages (e.g. shared.contracts) are importable in managed runtimes.
 REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from app.core.db import init_db
+from app.core.db import get_session, init_db
 from app.core.settings import settings
-from app.routers.v1 import router as v1_router
+from app.routers.v1 import router as v1_router, _executor
 from app.routers.admin import router as admin_router
 from app.services.vertical_slice import VerticalSliceService
 from app.services.lifecycle import run_backfill_once
@@ -61,8 +62,6 @@ def _register_tg_webhook() -> None:
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_db()
     try:
-        from app.core.db import get_session
-
         with get_session() as session:
             ran, users_count = run_backfill_once(session)
             if ran:
@@ -72,6 +71,9 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _warn_missing_secrets()
     _register_tg_webhook()
     yield
+    _logger.info("shutdown_start waiting for thread executor")
+    _executor.shutdown(wait=True)
+    _logger.info("shutdown_complete")
 
 
 def create_app() -> FastAPI:
@@ -82,8 +84,14 @@ def create_app() -> FastAPI:
     app.include_router(admin_router)
 
     @app.get("/healthz", tags=["infra"])
-    def healthz() -> dict[str, str]:
-        return {"status": "ok"}
+    def healthz() -> Response:
+        try:
+            with get_session() as db:
+                db.execute(text("SELECT 1"))
+            return Response(content='{"status":"ok"}', media_type="application/json")
+        except Exception:
+            _logger.exception("healthz_db_check_failed")
+            return Response(content='{"status":"degraded"}', media_type="application/json", status_code=503)
 
     # Serve built admin app (present after Docker build or manual build)
     admin_dist = REPO_ROOT / "apps" / "admin" / "dist"

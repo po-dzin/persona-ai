@@ -89,7 +89,7 @@ export interface GenerateOrderDto {
 }
 
 export interface GenerateResultDto {
-  result: "enqueued" | "paywall_required";
+  result: "enqueued" | "paywall_required" | "policy_blocked";
   order: GenerateOrderDto;
   wallet?: WalletDto;
 }
