@@ -29,7 +29,7 @@ def run() -> None:
         return
 
     try:
-        from sqlalchemy import create_engine, text
+        from sqlalchemy import create_engine
     except ImportError:
         print("ERROR: sqlalchemy not installed", file=sys.stderr)
         sys.exit(1)
@@ -48,13 +48,23 @@ def run() -> None:
     for path in sql_files:
         print(f"  applying {path.name} ...", end=" ", flush=True)
         sql = path.read_text()
+        # SQLAlchemy text() only supports a single statement per execute() call.
+        # Migration files contain many DDL statements + DO $$ blocks, so we use
+        # engine.raw_connection() to get the underlying psycopg2 connection which
+        # passes the full SQL string to PostgreSQL's simple-query protocol directly.
+        raw_conn = engine.raw_connection()
         try:
-            with engine.begin() as conn:
-                conn.execute(text(sql))
+            cursor = raw_conn.cursor()
+            cursor.execute(sql)
+            raw_conn.commit()
+            cursor.close()
             print("OK")
         except Exception as exc:
+            raw_conn.rollback()
             print(f"FAILED\nERROR in {path.name}: {exc}", file=sys.stderr)
             sys.exit(1)
+        finally:
+            raw_conn.close()  # returns connection to pool
 
     print(f"migrations done ({len(sql_files)} files)")
 
