@@ -270,7 +270,7 @@ export function FlowStyleScreen({
         <>
           {catalogLoading && stylesByCategory.length === 0
             ? (
-              <div className="styles-scroll" style={{ paddingLeft: "var(--cmp-space-grid-edge)", paddingRight: "var(--cmp-space-grid-edge)" }}>
+              <div className="styles-scroll">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="skeleton skeleton-style-card" aria-hidden="true" />
                 ))}

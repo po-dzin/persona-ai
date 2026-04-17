@@ -2123,7 +2123,7 @@ button, a, [role="button"] { touch-action: manipulation; }
     var(--sem-color-bg-surface) 75%
   );
   background-size: 200% 100%;
-  animation: skeletonShimmer var(--cmp-motion-loader-shimmer) ease-in-out infinite;
+  animation: skeletonShimmer var(--cmp-motion-loader-shimmer) var(--cmp-ease-pulse) infinite;
 }
 
 /* Style card skeleton — matches .style-card dimensions */
