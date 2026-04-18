@@ -142,30 +142,56 @@ export default function Lifecycle() {
           </Card>
 
           <Card>
-            <div className="timeline-header">
+            {selectedUser ? (() => {
+              const u = users?.users.find((x) => x.user_id === selectedUser);
+              return (
+                <div className="tl-user-header">
+                  <div className="tl-user-name">
+                    {u?.username ? `@${u.username}` : selectedUser}
+                  </div>
+                  <div className="tl-user-badges">
+                    {u?.lifecycle_state && <span className="tl-badge tl-badge--state">{u.lifecycle_state}</span>}
+                    {u?.lifecycle_locked && <span className="tl-badge tl-badge--locked">Заблокирован</span>}
+                  </div>
+                </div>
+              );
+            })() : (
               <div className="card-title card-title--tight">ТАЙМЛАЙН ПОЛЬЗОВАТЕЛЯ</div>
-              {selectedUser && <div className="timeline-user-id">{selectedUser}</div>}
-            </div>
-            <div className="timeline-actions">
-              <button className="secondary-btn" onClick={() => doAction("force")}>Сменить статус</button>
-              <button className="secondary-btn" onClick={() => doAction("lock")}>Заблокировать</button>
-              <button className="secondary-btn" onClick={() => doAction("unlock")}>Разблокировать</button>
-              <button className="secondary-btn" onClick={() => doAction("recompute")}>Пересчитать</button>
-            </div>
-            <div className="timeline-box">
-              {!timeline
-                ? <div className="muted-body">Выберите пользователя</div>
-                : timeline.transitions.length === 0
-                  ? <div className="muted-body">Переходов пока нет</div>
-                  : timeline.transitions.map((t) => (
-                    <div key={t.transition_id} className="timeline-item">
-                      <div className="timeline-item-main">
-                        {t.from_state ?? "—"} → {t.to_state} <span className="timeline-item-source">({t.source})</span>
+            )}
+
+            {selectedUser && (
+              <div className="tl-actions">
+                <button className="tl-btn tl-btn--neutral" onClick={() => doAction("recompute")}>Пересчитать</button>
+                <button className="tl-btn tl-btn--accent"  onClick={() => doAction("force")}>Сменить статус</button>
+                <button className="tl-btn tl-btn--success" onClick={() => doAction("unlock")}>Разблокировать</button>
+                <button className="tl-btn tl-btn--danger"  onClick={() => doAction("lock")}>Заблокировать</button>
+              </div>
+            )}
+
+            <div className="tl-feed">
+              {!selectedUser ? (
+                <div className="tl-empty">Выберите пользователя из таблицы</div>
+              ) : !timeline ? (
+                <div className="tl-empty">Загрузка...</div>
+              ) : timeline.transitions.length === 0 ? (
+                <div className="tl-empty">Переходов пока нет</div>
+              ) : (
+                timeline.transitions.map((t) => (
+                  <div key={t.transition_id} className="tl-event">
+                    <div className="tl-dot" />
+                    <div className="tl-content">
+                      <div className="tl-states">
+                        <span className="tl-state tl-state--from">{t.from_state ?? "—"}</span>
+                        <span className="tl-arrow">→</span>
+                        <span className="tl-state tl-state--to">{t.to_state}</span>
+                        <span className="tl-source-chip">{t.source}</span>
                       </div>
-                      <div className="timeline-item-meta">{t.reason} · {formatDateTimeShort(t.created_at)}</div>
+                      {t.reason && <div className="tl-reason">{t.reason}</div>}
+                      <div className="tl-time">{formatDateTimeShort(t.created_at)}</div>
                     </div>
-                  ))
-              }
+                  </div>
+                ))
+              )}
             </div>
           </Card>
         </div>

@@ -16,12 +16,12 @@ describe("useScreen", () => {
     expect(localStorage.getItem("persona_last_screen")).toBe("balance");
   });
 
-  it("restores valid screen from localStorage", () => {
+  it("always opens on home regardless of persisted screen", () => {
     localStorage.setItem("persona_last_screen", "profile");
 
     const { result } = renderHook(() => useScreen());
 
-    expect(result.current.activeScreen).toBe("profile");
+    expect(result.current.activeScreen).toBe("home");
   });
 
   it("ignores invalid screen value in localStorage", () => {

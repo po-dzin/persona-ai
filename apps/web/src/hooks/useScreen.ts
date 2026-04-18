@@ -7,10 +7,6 @@ const LAST_SCREEN_KEY = "persona_last_screen";
 const VALID_SCREENS: BaseScreen[] = Object.values(UI_SCREENS);
 
 function readInitialScreen(): BaseScreen {
-  const raw = localStorage.getItem(LAST_SCREEN_KEY);
-  if (raw && VALID_SCREENS.includes(raw as BaseScreen)) {
-    return raw as BaseScreen;
-  }
   return "home";
 }
 

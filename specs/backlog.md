@@ -13,6 +13,22 @@
   - Candidate UX: search input above filter chips (sticky), debounced local filtering by style name + prompt, ×-clear button, empty state «Ничего не найдено».
   - Implementation ready (2026-04-13): proof-of-concept done in `PhotosScreen.tsx` + CSS, reverted to backlog by product decision. Pick up from git history or re-implement from scratch.
 
+## Admin Panel
+
+- [ ] **Worker signals UI** — бэкенд уже возвращает `worker_signals.alerts` (`p95_latency_high`, `tech_failure_rate_high`, `timeout_spike`) в `GET /admin/api/generations`, но фронтенд их игнорирует.
+  - Pickup: добавить warning-баннер в `Generations.tsx` когда `alerts` не пустой.
+  - Релевантно после настройки Celery в проде под нагрузкой.
+
+- [ ] **Функциональные E2E тесты фронтенда** — сейчас покрыт только мобильный layout-контракт (`mobile-dashboard.spec.ts`). Нет тестов на загрузку данных, фильтры, модалки, обработку ошибок.
+  - Приоритет: Lifecycle (admin actions) и Users (search, pagination, user detail modal).
+  - Инструмент: Playwright (уже используется).
+
+- [ ] **Спеки для UI админки** — Dashboard, Revenue, Users, Generations реализованы без контрактной спецификации. Актуально перед передачей поддержки или расширением команды.
+
+- [ ] **Авто-рефреш Dashboard** — сейчас данные не обновляются без перезагрузки страницы. Добавить polling ~30с для overview и queue depth.
+
+- [ ] **CSV-экспорт** — Revenue и Users. Phase 1.1+.
+
 ## Profile
 - [ ] Partner program block: restore behind feature flag once referral backend and UX are production-ready.
   - Current temporary state (2026-04-02): hidden from Profile screen.
