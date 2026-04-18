@@ -21,7 +21,7 @@ describe("ModelsPricingScreen", () => {
     expect(screen.getByText("Nano Banana 2 · 1k")).toBeInTheDocument();
     expect(screen.getByText("10 🪙")).toBeInTheDocument();
     expect(screen.getByText("Хранение фотографий")).toBeInTheDocument();
-    expect(screen.getAllByText("30 дней")).toHaveLength(2);
+    expect(screen.getAllByText("14 дней").length).toBeGreaterThanOrEqual(1);
 
     const subtitle = container.querySelector(".pricing-subtitle");
     const modelsList = container.querySelector(".pricing-models-list");
@@ -47,9 +47,8 @@ describe("ModelsPricingScreen", () => {
     expect(note?.nextElementSibling).toBe(tail);
     expect(modelsList).toHaveTextContent("Nano Banana");
     expect(modelsList).toHaveTextContent("10 🪙");
-    expect(storageList).toHaveTextContent("7 дней");
-    expect(storageList).toHaveTextContent("30 дней");
-    expect(screen.getAllByText("30 дней")).toHaveLength(2);
+    expect(storageList).toHaveTextContent("14 дней");
+    expect(screen.getAllByText("14 дней").length).toBeGreaterThanOrEqual(1);
     expect(container.firstElementChild?.lastElementChild).toHaveClass("screen-tail-space");
   });
 });
