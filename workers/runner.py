@@ -172,7 +172,7 @@ def cleanup_expired_assets() -> dict:
     Delete expired media assets from R2 and the database.
 
     Source assets: 48h TTL (SOURCE_RETENTION_HOURS)
-    Result assets: 30d TTL (RESULT_RETENTION_DAYS)
+    Result assets: 14d TTL (RESULT_RETENTION_DAYS)
 
     R2 delete failures keep the DB row for retry on next run.
     """

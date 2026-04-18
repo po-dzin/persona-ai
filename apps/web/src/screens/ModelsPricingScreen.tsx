@@ -8,8 +8,8 @@ interface ModelsPricingScreenProps {
   onClose: () => void;
 }
 
-function retentionDays(code: string): string {
-  return code === "PRO" || code === "ULTRA" ? "30 дней" : "7 дней";
+function retentionDays(_code: string): string {
+  return "14 дней";
 }
 
 export function ModelsPricingScreen({ isOpen, models, packages, onClose }: ModelsPricingScreenProps) {
@@ -45,7 +45,7 @@ export function ModelsPricingScreen({ isOpen, models, packages, onClose }: Model
       <div className="models-list pricing-storage-list">
         {packages.filter((p) => p.code !== "TEST").map((pkg) => {
           const days = retentionDays(pkg.code);
-          const isLong = days.startsWith("30");
+          const isLong = true;
           return (
             <div key={pkg.code} className="model-row">
               <span className="model-name">{pkg.title}</span>

@@ -483,6 +483,8 @@ export function App() {
   const [seenDoneOrderIds, setSeenDoneOrderIds] = useState<Set<string>>(new Set());
   const [renderReadyOrderIds, setRenderReadyOrderIds] = useState<Set<string>>(new Set());
   const renderPreloadInFlightRef = useRef<Set<string>>(new Set());
+  // Only photos that passed through a generating state this session need preload-wait.
+  const wasGeneratingInSessionRef = useRef<Set<string>>(new Set());
   const photosSeedRef = useRef(false);
   const doneOrderIds = useMemo(
     () =>
@@ -511,6 +513,15 @@ export function App() {
       return next;
     });
   }, [activeScreen, doneOrderIds]);
+
+  // Track orders that passed through a generating state this session.
+  useEffect(() => {
+    photos.forEach((photo) => {
+      if (isPhotoGenerating(photo)) {
+        wasGeneratingInSessionRef.current.add(photo.orderId);
+      }
+    });
+  }, [photos]);
 
   // Keep "generating" UI state until image bytes are actually reachable/renderable.
   useEffect(() => {
@@ -553,7 +564,7 @@ export function App() {
         return;
       }
       const isDone = String(photo.status || "").toLowerCase() === "done";
-      if (isDone && photo.resultUrl && !renderReadyOrderIds.has(photo.orderId)) {
+      if (isDone && photo.resultUrl && !renderReadyOrderIds.has(photo.orderId) && wasGeneratingInSessionRef.current.has(photo.orderId)) {
         ids.add(photo.orderId);
       }
     });
