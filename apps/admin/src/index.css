@@ -912,7 +912,7 @@ svg text {
 .tl-badge {
   font-size: var(--cmp-type-label-sm-size);
   font-weight: 600;
-  padding: 2px var(--cmp-space-8);
+  padding: var(--cmp-space-2) var(--cmp-space-8);
   border-radius: var(--adm-radius-sm);
 }
 
@@ -1033,7 +1033,7 @@ svg text {
 .tl-state {
   font-size: var(--cmp-type-label-sm-size);
   font-weight: 600;
-  padding: 1px var(--cmp-space-6);
+  padding: var(--cmp-space-2) var(--cmp-space-6);
   border-radius: var(--adm-radius-sm);
 }
 
@@ -1047,13 +1047,13 @@ svg text {
   color: var(--accent);
 }
 
-.tl-arrow { color: var(--muted); font-size: 11px; }
+.tl-arrow { color: var(--muted); font-size: var(--cmp-type-label-sm-size); }
 
 .tl-source-chip {
-  font-size: 11px;
+  font-size: var(--cmp-type-label-sm-size);
   color: var(--muted);
   background: var(--surface2);
-  padding: 1px var(--cmp-space-5);
+  padding: var(--cmp-space-2) var(--cmp-space-5);
   border-radius: var(--adm-radius-sm);
 }
 
@@ -1064,7 +1064,7 @@ svg text {
 }
 
 .tl-time {
-  font-size: 11px;
+  font-size: var(--cmp-type-label-sm-size);
   color: var(--muted);
 }
 

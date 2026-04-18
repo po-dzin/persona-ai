@@ -93,13 +93,12 @@ describe("App flows", () => {
     vi.mocked(toggleFavorite).mockResolvedValue({ orderId: 'ord-1', isFavorite: true });
     vi.mocked(getPhotoShareLink).mockResolvedValue({ appLink: "https://persona.example/app?ref_style=hollywood" });
   });
-  it("restores last screen from localStorage", async () => {
+  it("always opens on home screen regardless of persisted last screen", async () => {
     localStorage.setItem("persona_last_screen", "balance");
 
     render(<App />);
 
-    expect(await screen.findByText("Пополнить баланс")).toBeInTheDocument();
-    expect(screen.getByText("47")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Голливуд/ })).toBeInTheDocument();
   });
 
   it("opens style preview from create flow and moves to upload screen", async () => {
