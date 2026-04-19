@@ -680,6 +680,7 @@ export function App() {
   }, [cancelPendingScreenTransition]);
 
   useEffect(() => {
+    if (photosLoading) return;
     const failedOrderIds = photos.filter((p) => p.status === "failed").map((p) => p.orderId);
     if (!failedSeededRef.current) {
       notifiedFailedOrdersRef.current = new Set(failedOrderIds);
@@ -690,7 +691,7 @@ export function App() {
     if (!unseenFailed) return;
     notifiedFailedOrdersRef.current.add(unseenFailed);
     setAsyncFailError("Генерация завершилась с технической ошибкой. Монеты возвращены автоматически.");
-  }, [photos]);
+  }, [photos, photosLoading]);
 
   useEffect(() => {
     let cancelled = false;

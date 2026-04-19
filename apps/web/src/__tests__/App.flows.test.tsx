@@ -270,4 +270,24 @@ describe("App flows", () => {
     expect(createTab?.classList.contains("active")).toBe(true);
     expect(photosTab?.classList.contains("active")).toBe(false);
   });
+
+  it("does not show historical failed-generation modal on initial load", async () => {
+    photosState = [{
+      orderId: "ord-failed-old",
+      styleCode: "hollywood",
+      modelId: "nb2-1k",
+      status: "failed",
+      prompt: "legacy fail",
+      resultUrl: null,
+      isFavorite: false,
+      createdAt: new Date("2026-04-01T10:00:00.000Z").toISOString(),
+      updatedAt: new Date("2026-04-01T10:00:00.000Z").toISOString(),
+    }];
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.queryByText("Генерация завершилась с технической ошибкой. Монеты возвращены автоматически.")).not.toBeInTheDocument();
+    });
+  });
 });
