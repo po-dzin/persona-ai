@@ -142,4 +142,47 @@ describe("PhotosScreen", () => {
 
     expect(screen.getByRole("button", { name: "Голливуд" })).not.toBeDisabled();
   });
+
+  it("does not render failed items and removes broken previews from the grid", () => {
+    const visibleDone: PhotoRecord = {
+      orderId: "ok-1",
+      styleCode: "hollywood",
+      modelId: "nb2-1k",
+      status: "done",
+      prompt: "ok",
+      resultUrl: "https://cdn.example.com/ok-1.jpg",
+      isFavorite: false,
+      createdAt: "2026-04-10T12:10:00Z",
+      updatedAt: "2026-04-10T12:10:00Z",
+    };
+    const failed: PhotoRecord = {
+      orderId: "failed-1",
+      styleCode: "business",
+      modelId: "nb2-1k",
+      status: "failed",
+      prompt: "failed",
+      resultUrl: null,
+      isFavorite: false,
+      createdAt: "2026-04-10T12:09:00Z",
+      updatedAt: "2026-04-10T12:09:00Z",
+    };
+
+    const { container } = render(
+      <PhotosScreen
+        photos={[visibleDone, failed]}
+        styles={styles}
+        favorites={new Set()}
+        onOpenPhoto={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelectorAll(".photo-item")).toHaveLength(1);
+    expect(screen.queryByText("Пока нет фото")).not.toBeInTheDocument();
+
+    const preview = screen.getByAltText("Голливуд");
+    fireEvent.error(preview);
+
+    expect(container.querySelectorAll(".photo-item")).toHaveLength(0);
+    expect(screen.getByText("Пока нет фото")).toBeInTheDocument();
+  });
 });

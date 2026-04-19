@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { StyleItem } from "../../data/styles";
 import { StylePreviewScreen } from "../StylePreviewScreen";
@@ -29,7 +29,12 @@ const styles: StyleItem[] = [
 ];
 
 describe("StylePreviewScreen gestures", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("closes on pull-down gesture", () => {
+    vi.useFakeTimers();
     const onClose = vi.fn();
     const onSelectStyle = vi.fn();
     render(
@@ -47,11 +52,15 @@ describe("StylePreviewScreen gestures", () => {
     fireEvent.touchStart(hero, { touches: [{ clientX: 120, clientY: 100 }] });
     fireEvent.touchEnd(hero, { changedTouches: [{ clientX: 118, clientY: 190 }] });
 
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onSelectStyle).not.toHaveBeenCalled();
   });
 
   it("swipes left to next style", () => {
+    vi.useFakeTimers();
     const onSelectStyle = vi.fn();
     render(
       <StylePreviewScreen
@@ -68,10 +77,14 @@ describe("StylePreviewScreen gestures", () => {
     fireEvent.touchStart(hero, { touches: [{ clientX: 220, clientY: 120 }] });
     fireEvent.touchEnd(hero, { changedTouches: [{ clientX: 120, clientY: 124 }] });
 
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
     expect(onSelectStyle).toHaveBeenCalledWith(styles[2]);
   });
 
   it("swipes right to previous style", () => {
+    vi.useFakeTimers();
     const onSelectStyle = vi.fn();
     render(
       <StylePreviewScreen
@@ -88,6 +101,9 @@ describe("StylePreviewScreen gestures", () => {
     fireEvent.touchStart(hero, { touches: [{ clientX: 120, clientY: 120 }] });
     fireEvent.touchEnd(hero, { changedTouches: [{ clientX: 220, clientY: 124 }] });
 
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
     expect(onSelectStyle).toHaveBeenCalledWith(styles[0]);
     expect(screen.getByText("Стиль 2")).toBeInTheDocument();
   });

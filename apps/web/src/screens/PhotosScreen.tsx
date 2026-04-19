@@ -52,6 +52,8 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
   );
 
   const filtered = withinRetention.filter((p) => {
+    if (p.status === "failed") return false;
+    if (imageErrorIds.has(p.orderId)) return false;
     if (filter === "Все") return true;
     if (filter === "Избранные") return favorites.has(p.orderId);
     return styleByCode[p.styleCode]?.category === filter;
@@ -169,7 +171,7 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
                 <button
                   className="photo-item"
                   onClick={() => onOpenPhoto(photo)}
-                  disabled={isGenerating}
+                  disabled={isGenerating || isFailed || isImageBroken}
                   aria-label={isGenerating ? "Генерация" : (style?.name || photo.styleCode)}
                 >
                   {photo.resultUrl && !isFailed && !isImageBroken ? (

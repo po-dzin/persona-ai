@@ -37,8 +37,7 @@ export function PhotoViewerScreen({
   onDeletePhoto,
 }: PhotoViewerScreenProps) {
   const SHARE_BRAND_TEXT = "Создано в PersonAI ✨";
-  const [shareOpen, setShareOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSheet, setActiveSheet] = useState<"share" | "actions" | null>(null);
 
   const [promptCopied, setPromptCopied] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
@@ -54,8 +53,7 @@ export function PhotoViewerScreen({
   const shareCaption = `${SHARE_BRAND_TEXT}\n${homeAppLink}`.trim();
 
   const closeAll = () => {
-    setShareOpen(false);
-    setMenuOpen(false);
+    setActiveSheet(null);
   };
 
   const getShareFile = async (): Promise<File | null> => {
@@ -159,7 +157,7 @@ export function PhotoViewerScreen({
   };
 
   return (
-    <div className="overlay-screen photo-viewer-screen" onClick={shareOpen || menuOpen ? closeAll : undefined}>
+    <div className="overlay-screen photo-viewer-screen" onClick={activeSheet ? closeAll : undefined}>
       <div className="flow-top">
         <button className="flow-back" onClick={onClose} aria-label="Назад">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -200,144 +198,39 @@ export function PhotoViewerScreen({
             )}
           </button>
 
-          {/* Share button with submenu */}
-          <div className="viewer-menu-wrap">
-            <button
-              className={`viewer-icon-btn${shareOpen ? " active" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen(false);
-                setShareOpen((v) => !v);
-              }}
-              aria-label="Поделиться"
-              title="Поделиться"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="18" cy="5" r="3" stroke="currentColor" strokeWidth="1.8"/>
-                <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
-                <circle cx="18" cy="19" r="3" stroke="currentColor" strokeWidth="1.8"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-              </svg>
-            </button>
-            {shareOpen ? (
-              <div className="viewer-menu viewer-share-menu" onClick={(e) => e.stopPropagation()}>
-                <button className="viewer-menu-item" onClick={handleTelegramShare}>
-                  <span className="vmi-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                  Telegram
-                </button>
-                <button className="viewer-menu-item" onClick={handleTgStories}>
-                  <span className="vmi-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" stroke="currentColor" strokeWidth="1.8"/>
-                      <path d="M12 8v4l3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                  TG Stories
-                </button>
-                <button className="viewer-menu-item" onClick={handleInstagram}>
-                  <span className="vmi-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.8"/>
-                      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8"/>
-                      <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/>
-                    </svg>
-                  </span>
-                  Instagram
-                </button>
-                <button className="viewer-menu-item" onClick={handleThreads}>
-                  <span className="vmi-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
-                      <path d="M9.2 9.4c.5-.8 1.5-1.4 2.8-1.4 2 0 3.6 1.3 3.9 3.2.2 1.2 0 2.5-.8 3.5-.7.9-1.8 1.5-3.1 1.5-1.8 0-3.2-1.1-3.7-2.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M12 8v8.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-                      <path d="M14.2 11.6c-.6-.4-1.3-.6-2.1-.6-1.4 0-2.5.7-3.2 1.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-                    </svg>
-                  </span>
-                  Threads
-                </button>
-                <button className="viewer-menu-item" onClick={handleCopyLink}>
-                  <span className="vmi-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                  Копировать ссылку
-                </button>
-                <button className="viewer-menu-item" onClick={handleUploadToBot}>
-                  <span className="vmi-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                  Выгрузить в бот
-                </button>
-                <button className="viewer-menu-item" onClick={handleSystemShare}>
-                  <span className="vmi-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 3v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                      <path d="M8 11l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M5 20h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                  </span>
-                  Другое
-                </button>
-              </div>
-            ) : null}
-          </div>
+          <button
+            className={`viewer-icon-btn${activeSheet === "share" ? " active" : ""}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveSheet((prev) => (prev === "share" ? null : "share"));
+            }}
+            aria-label="Поделиться"
+            title="Поделиться"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle cx="18" cy="5" r="3" stroke="currentColor" strokeWidth="1.8"/>
+              <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
+              <circle cx="18" cy="19" r="3" stroke="currentColor" strokeWidth="1.8"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+          </button>
 
-          {/* 3-dot actions menu */}
-          <div className="viewer-menu-wrap">
-            <button
-              className={`viewer-icon-btn${menuOpen ? " active" : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setShareOpen(false);
-                setMenuOpen((v) => !v);
-              }}
-              aria-label="Действия"
-              title="Действия"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
-                <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-                <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
-              </svg>
-            </button>
-            {menuOpen ? (
-              <div className="viewer-menu" onClick={(e) => e.stopPropagation()}>
-                <button className="viewer-menu-item" onClick={() => { onUseAsReference(); closeAll(); }}>
-                  <span className="vmi-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M14 4h6v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M10 14L20 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M20 14v6h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M4 20l10-10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </span>
-                  Использовать как референс
-                </button>
-                <button className="viewer-menu-item viewer-menu-item-danger" onClick={() => { onDeletePhoto(); closeAll(); }}>
-                  <span className="vmi-icon vmi-icon-danger">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M3 6h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                      <path d="M8 6V4h8v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                      <path d="M7 6l1 14h8l1-14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                      <path d="M10 10v6M14 10v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                  </span>
-                  Удалить фото
-                </button>
-              </div>
-            ) : null}
-          </div>
+          <button
+            className={`viewer-icon-btn${activeSheet === "actions" ? " active" : ""}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setActiveSheet((prev) => (prev === "actions" ? null : "actions"));
+            }}
+            aria-label="Действия"
+            title="Действия"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+              <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
 
           <button className="viewer-btn primary viewer-download-btn" onClick={onDownload}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -378,6 +271,118 @@ export function PhotoViewerScreen({
           <div className="viewer-prompt-text">{prompt}</div>
         </div>
       </div>
+
+      {activeSheet ? (
+        <div className="viewer-sheet-backdrop" onClick={closeAll}>
+          <div
+            className="viewer-sheet"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={activeSheet === "share" ? "Поделиться" : "Действия"}
+          >
+            <div className="viewer-sheet-handle" aria-hidden="true" />
+            <div className="viewer-sheet-items">
+              {activeSheet === "share" ? (
+                <>
+                  <button className="viewer-menu-item" onClick={handleTelegramShare}>
+                    <span className="vmi-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                    Telegram
+                  </button>
+                  <button className="viewer-menu-item" onClick={handleTgStories}>
+                    <span className="vmi-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" stroke="currentColor" strokeWidth="1.8"/>
+                        <path d="M12 8v4l3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                    TG Stories
+                  </button>
+                  <button className="viewer-menu-item" onClick={handleInstagram}>
+                    <span className="vmi-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.8"/>
+                        <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8"/>
+                        <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/>
+                      </svg>
+                    </span>
+                    Instagram
+                  </button>
+                  <button className="viewer-menu-item" onClick={handleThreads}>
+                    <span className="vmi-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
+                        <path d="M9.2 9.4c.5-.8 1.5-1.4 2.8-1.4 2 0 3.6 1.3 3.9 3.2.2 1.2 0 2.5-.8 3.5-.7.9-1.8 1.5-3.1 1.5-1.8 0-3.2-1.1-3.7-2.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M12 8v8.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+                        <path d="M14.2 11.6c-.6-.4-1.3-.6-2.1-.6-1.4 0-2.5.7-3.2 1.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+                      </svg>
+                    </span>
+                    Threads
+                  </button>
+                  <button className="viewer-menu-item" onClick={handleCopyLink}>
+                    <span className="vmi-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                    Копировать ссылку
+                  </button>
+                  <button className="viewer-menu-item" onClick={handleUploadToBot}>
+                    <span className="vmi-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M22 2L11 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                    Выгрузить в бот
+                  </button>
+                  <button className="viewer-menu-item" onClick={handleSystemShare}>
+                    <span className="vmi-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                        <path d="M8 11l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M5 20h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                    </span>
+                    Другое
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="viewer-menu-item" onClick={() => { onUseAsReference(); closeAll(); }}>
+                    <span className="vmi-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M14 4h6v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M10 14L20 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M20 14v6h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M4 20l10-10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                    Использовать как референс
+                  </button>
+                  <button className="viewer-menu-item viewer-menu-item-danger" onClick={() => { onDeletePhoto(); closeAll(); }}>
+                    <span className="vmi-icon vmi-icon-danger">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 6h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                        <path d="M8 6V4h8v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                        <path d="M7 6l1 14h8l1-14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M10 10v6M14 10v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                    </span>
+                    Удалить фото
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
