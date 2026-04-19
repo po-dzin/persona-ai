@@ -1676,6 +1676,9 @@ button, a, [role="button"] { touch-action: manipulation; }
   width: 100%;
   height: 100%;
   overflow: hidden;
+  --style-preview-swipe-ratio: 0;
+  --style-preview-enter-from: 100%;
+  --style-preview-leave-from: 0%;
 }
 .style-preview-gradient-violet { background: var(--sem-gradient-style-violet); }
 .style-preview-gradient-amber { background: var(--sem-gradient-style-amber); }
@@ -1708,6 +1711,20 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .style-preview-panel.is-incoming {
   z-index: var(--cmp-z-base);
+  pointer-events: none;
+}
+.style-preview-stage.is-dragging .style-preview-panel {
+  transition: none;
+  animation: none;
+}
+.style-preview-stage.is-dragging .style-preview-panel.is-active {
+  transform: translateX(calc(var(--style-preview-swipe-ratio) * 100%));
+}
+.style-preview-stage.is-dragging .style-preview-panel.is-adjacent-next {
+  transform: translateX(calc((1 + var(--style-preview-swipe-ratio)) * 100%));
+}
+.style-preview-stage.is-dragging .style-preview-panel.is-adjacent-prev {
+  transform: translateX(calc((-1 + var(--style-preview-swipe-ratio)) * 100%));
 }
 .style-preview-panel.is-active.is-outgoing-next {
   animation: stylePreviewLeaveToLeft var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
@@ -1822,19 +1839,19 @@ button, a, [role="button"] { touch-action: manipulation; }
   }
 }
 @keyframes stylePreviewEnterFromRight {
-  from { transform: translateX(100%); }
+  from { transform: translateX(var(--style-preview-enter-from, 100%)); }
   to { transform: translateX(0); }
 }
 @keyframes stylePreviewEnterFromLeft {
-  from { transform: translateX(-100%); }
+  from { transform: translateX(var(--style-preview-enter-from, -100%)); }
   to { transform: translateX(0); }
 }
 @keyframes stylePreviewLeaveToLeft {
-  from { transform: translateX(0); }
+  from { transform: translateX(var(--style-preview-leave-from, 0%)); }
   to { transform: translateX(-100%); }
 }
 @keyframes stylePreviewLeaveToRight {
-  from { transform: translateX(0); }
+  from { transform: translateX(var(--style-preview-leave-from, 0%)); }
   to { transform: translateX(100%); }
 }
 

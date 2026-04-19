@@ -5,6 +5,11 @@ import type { PhotoRecord } from "../utils/api";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { readMotionTokenMs } from "../utils/motionTokens";
 import { isPhotoGenerating } from "../utils/photoStatus";
+import {
+  getHorizontalSwipeKeyframeOffsets,
+  shouldActivateHorizontalSwipe,
+  shouldCommitHorizontalSwipe,
+} from "../utils/swipeGesture";
 
 interface HomeScreenProps {
   styles: StyleItem[];
@@ -287,8 +292,7 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     const atLeftEdge = idx <= 0 && dx > 0;
     const atRightEdge = idx >= allCategories.length - 1 && dx < 0;
     if (!isSwipeGestureRef.current) {
-      if (absDx < 10) return;
-      if (absDy > absDx * 0.8) return;
+      if (!shouldActivateHorizontalSwipe({ absDx, absDy, verticalToleranceRatio: 0.8 })) return;
       if (atLeftEdge || atRightEdge) return;
       isSwipeGestureRef.current = true;
       setIsDragging(true);
@@ -317,13 +321,14 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     const dx = isSwipeGestureRef.current ? dragOffsetRef.current : e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     const dt = Math.max(1, performance.now() - touchStartTs.current);
-    const absDx = Math.abs(dx);
-    const velocityX = absDx / dt;
-    const isDominantHorizontal = Math.abs(dy) <= absDx * 0.6;
-    const passesDistance = absDx >= 40;
-    const passesFlick = absDx >= 24 && velocityX >= 0.35;
-
-    if (!isDominantHorizontal || (!passesDistance && !passesFlick)) {
+    const shouldCommit = shouldCommitHorizontalSwipe({
+      dx,
+      dy,
+      durationMs: dt,
+      commitDistancePx: 40,
+      dominantHorizontalRatio: 0.6,
+    });
+    if (!shouldCommit) {
       clearTouchTracking();
       return;
     }
@@ -335,11 +340,9 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     if (panelsRef.current && isSwipeGestureRef.current) {
       const width = panelsRef.current.clientWidth || 1;
       const ratio = dragOffsetRef.current / width;
-      const enterFrom = dir === "next"
-        ? `${((1 + ratio) * 100).toFixed(2)}%`
-        : `${((-1 + ratio) * 100).toFixed(2)}%`;
+      const { enterFrom, leaveFrom } = getHorizontalSwipeKeyframeOffsets({ ratio, direction: dir });
       panelsRef.current.style.setProperty("--panel-enter-from", enterFrom);
-      panelsRef.current.style.setProperty("--panel-leave-from", `${(ratio * 100).toFixed(2)}%`);
+      panelsRef.current.style.setProperty("--panel-leave-from", leaveFrom);
     }
 
     clearTouchTracking();

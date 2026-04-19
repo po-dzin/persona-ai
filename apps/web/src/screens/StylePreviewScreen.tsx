@@ -2,6 +2,12 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import type { StyleItem } from "../data/styles";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { readMotionTokenMs } from "../utils/motionTokens";
+import {
+  getHorizontalSwipeKeyframeOffsets,
+  shouldActivateHorizontalSwipe,
+  shouldCommitHorizontalSwipe,
+  SWIPE_ACTIVATION_PX,
+} from "../utils/swipeGesture";
 
 interface StylePreviewScreenProps {
   isOpen: boolean;
@@ -19,6 +25,8 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
   const [pendingStyle, setPendingStyle] = useState<StyleItem | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<"next" | "prev" | null>(null);
   const [isSwipeAnimating, setIsSwipeAnimating] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffsetPx, setDragOffsetPx] = useState(0);
   const [isClosing, setIsClosing] = useState(false);
   const [closeReason, setCloseReason] = useState<"button" | "pull">("button");
   const [isClosingToCard, setIsClosingToCard] = useState(false);
@@ -27,8 +35,14 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
   const [isPulling, setIsPulling] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  const touchStartTs = useRef<number | null>(null);
   const swipeTimerRef = useRef<number | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const heroRef = useRef<HTMLDivElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const dragOffsetRef = useRef(0);
+  const isHorizontalGestureRef = useRef(false);
+  const isPullGestureRef = useRef(false);
   const openedAtRef = useRef(0);
   const [isOpeningFromCard, setIsOpeningFromCard] = useState(false);
   const [openingVars, setOpeningVars] = useState<CSSProperties | null>(null);
@@ -76,10 +90,18 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       setPendingStyle(null);
       setSwipeDirection(null);
       setIsSwipeAnimating(false);
+      setIsDragging(false);
+      setDragOffsetPx(0);
       setIsClosing(false);
       setCloseReason("button");
       touchStartX.current = null;
       touchStartY.current = null;
+      touchStartTs.current = null;
+      dragOffsetRef.current = 0;
+      isHorizontalGestureRef.current = false;
+      isPullGestureRef.current = false;
+      stageRef.current?.style.removeProperty("--style-preview-enter-from");
+      stageRef.current?.style.removeProperty("--style-preview-leave-from");
       setIsOpeningFromCard(false);
       setOpeningVars(null);
       setIsClosingToCard(false);
@@ -102,9 +124,9 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       setActiveStyle(style);
       return;
     }
-    if (isSwipeAnimating || isClosing) return;
+    if (isSwipeAnimating || isClosing || isDragging) return;
     if (style && activeStyle && style.id !== activeStyle.id) setActiveStyle(style);
-  }, [isOpen, style, activeStyle, isSwipeAnimating, isClosing]);
+  }, [isOpen, style, activeStyle, isSwipeAnimating, isClosing, isDragging]);
 
   useEffect(() => {
     if (!isOpen || !originRect || prefersReducedMotion) {
@@ -177,6 +199,27 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     };
   }, []);
 
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const handler = (e: TouchEvent) => {
+      if (isHorizontalGestureRef.current || isPullGestureRef.current) e.preventDefault();
+    };
+    el.addEventListener("touchmove", handler, { passive: false });
+    return () => el.removeEventListener("touchmove", handler);
+  }, []);
+
+  const clearTouchTracking = () => {
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchStartTs.current = null;
+    dragOffsetRef.current = 0;
+    isHorizontalGestureRef.current = false;
+    isPullGestureRef.current = false;
+    setIsDragging(false);
+    setDragOffsetPx(0);
+  };
+
   const requestClose = (reason: "button" | "pull") => {
     if (isClosing) return;
     if (closeTimerRef.current) {
@@ -202,8 +245,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       setIsClosingToCard(false);
     }
     setCloseReason(reason);
-    touchStartX.current = null;
-    touchStartY.current = null;
+    clearTouchTracking();
     setIsClosing(true);
     if (closeDurationMs <= 0) {
       onClose();
@@ -222,10 +264,16 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (isSwipeAnimating || isClosing) return;
+    clearTouchTracking();
+    stageRef.current?.style.removeProperty("--style-preview-enter-from");
+    stageRef.current?.style.removeProperty("--style-preview-leave-from");
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
+    touchStartTs.current = performance.now();
     setIsPulling(false);
     setPullOffsetY(0);
+    setPendingStyle(null);
+    setSwipeDirection(null);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -235,18 +283,62 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     const dy = e.touches[0].clientY - touchStartY.current;
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
-    if (dy > 0 && absDy > absDx * 1.05) {
+    const canSwipeNext = currentIndex >= 0 && currentIndex < styles.length - 1;
+    const canSwipePrev = currentIndex > 0;
+
+    if (!isHorizontalGestureRef.current && !isPullGestureRef.current) {
+      if (!shouldActivateHorizontalSwipe({ absDx, absDy, activationPx: SWIPE_ACTIVATION_PX, verticalToleranceRatio: 0.95 })) {
+        if (!(dy > 0 && absDy > absDx * 1.05)) return;
+      }
+      if (absDx > absDy * 1.05) {
+        const direction = dx < 0 ? "next" : "prev";
+        if ((direction === "next" && !canSwipeNext) || (direction === "prev" && !canSwipePrev)) return;
+        const neighbor = styles[currentIndex + (direction === "next" ? 1 : -1)] ?? null;
+        if (!neighbor) return;
+        isHorizontalGestureRef.current = true;
+        setIsDragging(true);
+        setSwipeDirection(direction);
+        setPendingStyle(neighbor);
+        setIsPulling(false);
+        setPullOffsetY(0);
+      } else if (dy > 0 && absDy > absDx * 1.05) {
+        isPullGestureRef.current = true;
+        setIsPulling(true);
+      } else {
+        return;
+      }
+    }
+
+    if (isHorizontalGestureRef.current) {
+      e.preventDefault();
+      const width = Math.max(1, stageRef.current?.clientWidth ?? heroRef.current?.clientWidth ?? 1);
+      const clamped = Math.max(-width, Math.min(width, dx));
+      dragOffsetRef.current = clamped;
+      setDragOffsetPx(clamped);
+      const direction = clamped < 0 ? "next" : "prev";
+      const nextIndex = currentIndex + (direction === "next" ? 1 : -1);
+      const neighbor = styles[nextIndex] ?? null;
+      if (neighbor) {
+        setSwipeDirection(direction);
+        setPendingStyle(neighbor);
+      }
+      return;
+    }
+
+    if (isPullGestureRef.current && dy > 0 && absDy > absDx * 1.05) {
       e.preventDefault();
       const capped = Math.min(dy, Math.max(140, window.innerHeight * 0.72));
+      isPullGestureRef.current = true;
       setIsPulling(true);
       setPullOffsetY(capped);
     }
   };
 
   const handleTouchCancel = () => {
-    touchStartX.current = null;
-    touchStartY.current = null;
+    clearTouchTracking();
     if (isClosing) return;
+    setPendingStyle(null);
+    setSwipeDirection(null);
     setIsPulling(false);
     setPullOffsetY(0);
   };
@@ -259,37 +351,55 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     const absDx = Math.abs(dx);
     const absDy = Math.abs(dy);
 
-    if (isPulling) {
+    if (isPullGestureRef.current || isPulling) {
       if (pullOffsetY >= PULL_CLOSE_THRESHOLD) {
         requestClose("pull");
       } else {
+        isPullGestureRef.current = false;
         setIsPulling(false);
         setPullOffsetY(0);
       }
-      touchStartX.current = null;
-      touchStartY.current = null;
+      clearTouchTracking();
       return;
     }
 
-    if (dy > SWIPE_Y_THRESHOLD && absDy > absDx * 1.15) {
+    if (!isHorizontalGestureRef.current && dy > SWIPE_Y_THRESHOLD && absDy > absDx * 1.15) {
       requestClose("pull");
-      touchStartX.current = null;
-      touchStartY.current = null;
+      clearTouchTracking();
       return;
     }
 
-    if (absDx >= SWIPE_X_THRESHOLD && absDx > absDy * 1.1 && currentIndex >= 0) {
-      const nextIndex = dx < 0 ? currentIndex + 1 : currentIndex - 1;
-      const nextStyle = styles[nextIndex];
+    const swipeDx = isHorizontalGestureRef.current ? dragOffsetRef.current : dx;
+    const durationMs = Math.max(1, performance.now() - (touchStartTs.current ?? performance.now()));
+    const shouldCommitSwipe = currentIndex >= 0 && shouldCommitHorizontalSwipe({
+      dx: swipeDx,
+      dy,
+      durationMs,
+      commitDistancePx: SWIPE_X_THRESHOLD,
+      dominantHorizontalRatio: 1 / 1.1,
+    }) && (isHorizontalGestureRef.current || Math.abs(swipeDx) > absDy * 1.1);
+
+    if (shouldCommitSwipe) {
+      const direction = swipeDx < 0 ? "next" : "prev";
+      const nextIndex = currentIndex + (direction === "next" ? 1 : -1);
+      const nextStyle = styles[nextIndex] ?? null;
       if (nextStyle) {
+        const width = Math.max(1, stageRef.current?.clientWidth ?? heroRef.current?.clientWidth ?? 1);
+        const ratio = dragOffsetRef.current / width;
+        const { enterFrom, leaveFrom } = getHorizontalSwipeKeyframeOffsets({ ratio, direction });
+        stageRef.current?.style.setProperty("--style-preview-enter-from", enterFrom);
+        stageRef.current?.style.setProperty("--style-preview-leave-from", leaveFrom);
+
         setPendingStyle(nextStyle);
-        setSwipeDirection(dx < 0 ? "next" : "prev");
+        setSwipeDirection(direction);
         setIsSwipeAnimating(true);
         if (swipeDurationMs <= 0) {
           setActiveStyle(nextStyle);
           setPendingStyle(null);
           setSwipeDirection(null);
           setIsSwipeAnimating(false);
+          stageRef.current?.style.removeProperty("--style-preview-enter-from");
+          stageRef.current?.style.removeProperty("--style-preview-leave-from");
           onSelectStyle(nextStyle);
         } else {
           swipeTimerRef.current = window.setTimeout(() => {
@@ -297,23 +407,29 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
             setPendingStyle(null);
             setSwipeDirection(null);
             setIsSwipeAnimating(false);
+            stageRef.current?.style.removeProperty("--style-preview-enter-from");
+            stageRef.current?.style.removeProperty("--style-preview-leave-from");
             onSelectStyle(nextStyle);
           }, swipeDurationMs);
         }
       }
+    } else {
+      setPendingStyle(null);
+      setSwipeDirection(null);
     }
 
-    touchStartX.current = null;
-    touchStartY.current = null;
+    clearTouchTracking();
   };
 
   const panelClass = isSwipeAnimating
     ? `style-preview-panel is-active ${swipeDirection === "next" ? "is-outgoing-next" : "is-outgoing-prev"}`
     : `style-preview-panel is-active${isOpeningFromCard ? " is-opening-from-card" : ""}${isClosingToCard ? " is-closing-to-card" : ""}${isPulling && !isClosing ? " is-pulling" : ""}`;
 
-  const incomingClass = swipeDirection === "next"
-    ? "style-preview-panel is-incoming is-incoming-right"
-    : "style-preview-panel is-incoming is-incoming-left";
+  const incomingClass = isDragging
+    ? `style-preview-panel is-incoming ${swipeDirection === "next" ? "is-adjacent-next" : "is-adjacent-prev"}`
+    : swipeDirection === "next"
+      ? "style-preview-panel is-incoming is-incoming-right"
+      : "style-preview-panel is-incoming is-incoming-left";
 
   const screenClass = [
     "overlay-screen style-preview-screen",
@@ -325,6 +441,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
 
   if (!isOpen || !style || !activeStyle) return null;
 
+  const stageClass = `style-preview-stage${isDragging ? " is-dragging" : ""}`;
   const activePanelStyle: CSSProperties = {
     ...(openingVars ?? {}),
     ...(closingVars ?? {}),
@@ -338,12 +455,21 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     <div className={screenClass}>
       <div
         className="style-preview-hero"
+        ref={heroRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchCancel}
       >
-        <div className="style-preview-stage">
+        <div
+          className={stageClass}
+          ref={stageRef}
+          style={
+            {
+              "--style-preview-swipe-ratio": `${(dragOffsetPx / Math.max(1, stageRef.current?.clientWidth || heroRef.current?.clientWidth || 1)).toFixed(4)}`,
+            } as CSSProperties
+          }
+        >
           <div className={`${panelClass} ${resolveGradientClass(activeStyle)}`} style={activePanelStyle}>
             <div className="style-preview-top">
               <button className="flow-back" onClick={() => requestClose("button")} aria-label="Назад">

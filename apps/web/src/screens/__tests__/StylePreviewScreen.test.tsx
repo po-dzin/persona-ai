@@ -108,6 +108,31 @@ describe("StylePreviewScreen gestures", () => {
     expect(screen.getByText("Стиль 2")).toBeInTheDocument();
   });
 
+  it("sticks to finger during horizontal drag and reveals adjacent style panel", () => {
+    render(
+      <StylePreviewScreen
+        isOpen
+        styles={styles}
+        style={styles[1]}
+        onClose={vi.fn()}
+        onSelectStyle={vi.fn()}
+        onCreate={vi.fn()}
+      />,
+    );
+
+    const hero = document.querySelector(".style-preview-hero") as HTMLElement;
+    const stage = document.querySelector(".style-preview-stage") as HTMLElement;
+    expect(stage.classList.contains("is-dragging")).toBe(false);
+
+    fireEvent.touchStart(hero, { touches: [{ clientX: 240, clientY: 140 }] });
+    fireEvent.touchMove(hero, { touches: [{ clientX: 150, clientY: 143 }] });
+
+    expect(stage.classList.contains("is-dragging")).toBe(true);
+    expect(document.querySelector(".style-preview-panel.is-adjacent-next")).toBeTruthy();
+
+    fireEvent.touchEnd(hero, { changedTouches: [{ clientX: 150, clientY: 143 }] });
+  });
+
   it("resets closing state between open sessions", () => {
     vi.useFakeTimers();
     const onClose = vi.fn();
