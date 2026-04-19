@@ -4,23 +4,24 @@ interface TabBarProps {
   activeScreen: BaseScreen;
   isCreateActive: boolean;
   photosBadge: number;
+  isLocked?: boolean;
   onChange: (screen: BaseScreen) => void;
   onOpenCreate: () => void;
 }
 
-export function TabBar({ activeScreen, isCreateActive, photosBadge, onChange, onOpenCreate }: TabBarProps) {
+export function TabBar({ activeScreen, isCreateActive, photosBadge, isLocked = false, onChange, onOpenCreate }: TabBarProps) {
   const screen = (s: BaseScreen) => (isCreateActive ? "" : activeScreen === s ? "active" : "");
 
   return (
-    <div className="tab-bar">
-      <button className={`tab-item ${screen("home")}`} onClick={() => onChange("home")} aria-label="Главная">
+    <div className={`tab-bar${isLocked ? " is-locked" : ""}`} aria-hidden={isLocked}>
+      <button className={`tab-item ${screen("home")}`} onClick={() => onChange("home")} aria-label="Главная" disabled={isLocked}>
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           <path d="M9 21V12h6v9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
 
-      <button className={`tab-item tab-photos ${screen("photos")}`} onClick={() => onChange("photos")} aria-label="Мои фото">
+      <button className={`tab-item tab-photos ${screen("photos")}`} onClick={() => onChange("photos")} aria-label="Мои фото" disabled={isLocked}>
         <div className="tab-icon-wrap">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/>
@@ -31,7 +32,7 @@ export function TabBar({ activeScreen, isCreateActive, photosBadge, onChange, on
         </div>
       </button>
 
-      <button className={`tab-ai${isCreateActive ? " active" : ""}`} onClick={onOpenCreate} aria-label="Создать">
+      <button className={`tab-ai${isCreateActive ? " active" : ""}`} onClick={onOpenCreate} aria-label="Создать" disabled={isLocked}>
         <svg className="tab-ai-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M11.5 20h-6.5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h1a2 2 0 0 0 2-2 1 1 0 0 1 1-1h6a1 1 0 0 1 1 1 2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v3"/>
           <path d="M9 13a3 3 0 1 0 6 0 3 3 0 0 0-6 0"/>
@@ -39,7 +40,7 @@ export function TabBar({ activeScreen, isCreateActive, photosBadge, onChange, on
         </svg>
       </button>
 
-      <button className={`tab-item ${screen("balance")}`} onClick={() => onChange("balance")} aria-label="Баланс">
+      <button className={`tab-item ${screen("balance")}`} onClick={() => onChange("balance")} aria-label="Баланс" disabled={isLocked}>
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M3 12a9 9 0 1 0 18 0 9 9 0 1 0-18 0" stroke="currentColor" strokeWidth="1.8"/>
           <path d="M14.8 9a2 2 0 0 0-1.8-1h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1-1.8-1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -47,7 +48,7 @@ export function TabBar({ activeScreen, isCreateActive, photosBadge, onChange, on
         </svg>
       </button>
 
-      <button className={`tab-item ${screen("profile")}`} onClick={() => onChange("profile")} aria-label="Профиль">
+      <button className={`tab-item ${screen("profile")}`} onClick={() => onChange("profile")} aria-label="Профиль" disabled={isLocked}>
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8"/>
           <path d="M20 21a8 8 0 0 0-16 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>

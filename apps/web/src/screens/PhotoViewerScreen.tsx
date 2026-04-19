@@ -20,6 +20,7 @@ interface PhotoViewerScreenProps {
   onCopyLink: () => void | Promise<void>;
   onUseAsReference: () => void;
   onDeletePhoto: () => void;
+  onMenuOpenChange?: (isOpen: boolean) => void;
 }
 
 export function PhotoViewerScreen({
@@ -35,6 +36,7 @@ export function PhotoViewerScreen({
   onCopyLink,
   onUseAsReference,
   onDeletePhoto,
+  onMenuOpenChange,
 }: PhotoViewerScreenProps) {
   const SHARE_BRAND_TEXT = "Создано в PersonAI ✨";
   const [activeSheet, setActiveSheet] = useState<"share" | "actions" | null>(null);
@@ -80,6 +82,14 @@ export function PhotoViewerScreen({
     setPromptCopied(false);
     setImageFailed(false);
   }, [photo?.orderId]);
+
+  useEffect(() => {
+    onMenuOpenChange?.(Boolean(activeSheet));
+  }, [activeSheet, onMenuOpenChange]);
+
+  useEffect(() => {
+    if (!isOpen) onMenuOpenChange?.(false);
+  }, [isOpen, onMenuOpenChange]);
 
   if (!isOpen || !photo) return null;
 
@@ -157,7 +167,7 @@ export function PhotoViewerScreen({
   };
 
   return (
-    <div className="overlay-screen photo-viewer-screen" onClick={activeSheet ? closeAll : undefined}>
+    <div className={`overlay-screen photo-viewer-screen${activeSheet ? " is-sheet-open" : ""}`} onClick={activeSheet ? closeAll : undefined}>
       <div className="flow-top">
         <button className="flow-back" onClick={onClose} aria-label="Назад">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -273,7 +283,12 @@ export function PhotoViewerScreen({
       </div>
 
       {activeSheet ? (
-        <div className="viewer-sheet-backdrop" onClick={closeAll}>
+        <div
+          className="viewer-sheet-backdrop"
+          onClick={closeAll}
+          onTouchMove={(event) => event.preventDefault()}
+          onWheel={(event) => event.preventDefault()}
+        >
           <div
             className="viewer-sheet"
             onClick={(event) => event.stopPropagation()}

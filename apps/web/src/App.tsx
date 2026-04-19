@@ -583,6 +583,7 @@ export function App() {
   const [stylePreviewOpen, setStylePreviewOpen] = useState(false);
   const [stylePreviewBackToFlow, setStylePreviewBackToFlow] = useState(false);
   const [createTabPinned, setCreateTabPinned] = useState(false);
+  const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const appliedSharePresetRef = useRef(false);
@@ -638,6 +639,7 @@ export function App() {
     setCategoryOpen(false);
     setPurchaseOpen(false);
     setViewerOpen(false);
+    setViewerMenuOpen(false);
     setModelsOpen(false);
     createActionLockedRef.current = false;
     setCreateActionLocked(false);
@@ -864,7 +866,8 @@ export function App() {
     applyStyleSelection(style);
     setSelectedSourceTab("styles");
     setStylePreviewBackToFlow(true);
-    setFlowStyleOpen(false);
+    // Keep create-flow layer mounted under preview to avoid showing previous base tab during transition.
+    setFlowStyleOpen(true);
     setStylePreviewOpen(true);
   };
 
@@ -1297,6 +1300,7 @@ export function App() {
         onCopyLink={handleCopyPhotoLink}
         onUseAsReference={handleUseAsReference}
         onDeletePhoto={() => { void handleDeletePhoto(); }}
+        onMenuOpenChange={setViewerMenuOpen}
       />
       <ModelsPricingScreen isOpen={modelsOpen} models={models} packages={packages} onClose={() => setModelsOpen(false)} />
       <StylePreviewScreen
@@ -1334,6 +1338,7 @@ export function App() {
       <TabBar
         activeScreen={activeScreen}
         isCreateActive={createTabPinned || flowStyleOpen || flowUploadOpen || stylePreviewBackToFlow}
+        isLocked={viewerMenuOpen}
         photosBadge={activeScreen === "photos" ? 0 : newPhotosCount}
         onChange={(screen) => {
           setCreateTabPinned(false);
