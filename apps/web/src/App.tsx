@@ -1195,7 +1195,7 @@ export function App() {
           onPreviewStyle={handlePickStyleFromHome}
         />
       ) : null}
-      {activeScreen === "photos" ? (
+      {activeScreen === "photos" && !flowStyleOpen && !flowUploadOpen ? (
         <PhotosScreen
           photos={photos}
           styles={styles}

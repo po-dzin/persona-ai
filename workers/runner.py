@@ -169,20 +169,26 @@ def refund_technical_failure(order_id: str) -> dict:
 
 def cleanup_expired_assets() -> dict:
     """
-    Delete expired media assets from R2 and the database.
+    Delete expired media assets from R2 and the database, and null out
+    stale result_url values on old done orders.
 
     Source assets: 48h TTL (SOURCE_RETENTION_HOURS)
     Result assets: 14d TTL (RESULT_RETENTION_DAYS)
 
     R2 delete failures keep the DB row for retry on next run.
+    Result URLs point to provider CDNs (not our R2), so we only clear the
+    DB reference — no R2 delete needed for them.
     """
-    from app.core.db import MediaAssetRow, SessionLocal
+    from app.core.db import MediaAssetRow, OrderRow, SessionLocal
     from app.adapters.r2_client import delete_object
+    from app.core.settings import settings
 
     started_at = _now()
     deleted_count = 0
+    cleared_result_urls = 0
     error_count = 0
 
+    # ── Step 1: delete expired R2 source assets ──────────────────────────────
     db = SessionLocal()
     try:
         expired = (
@@ -214,7 +220,41 @@ def cleanup_expired_assets() -> dict:
         db.commit()
     except Exception as exc:
         db.rollback()
-        logger.error("cleanup_expired_assets: DB error: %s", exc)
+        logger.error("cleanup_expired_assets: DB error (R2 phase): %s", exc)
+        raise
+    finally:
+        db.close()
+
+    # ── Step 2: null out result_url on done orders past retention window ──────
+    # Provider CDN links (NanoBanana/BFL) expire after ~14 days. Clear the
+    # stale reference so the API never returns a broken URL.
+    result_cutoff = started_at - timedelta(days=settings.result_retention_days)
+    db = SessionLocal()
+    try:
+        stale_orders = (
+            db.query(OrderRow)
+            .filter(
+                OrderRow.status == "done",
+                OrderRow.result_url.isnot(None),
+                OrderRow.created_at <= result_cutoff,
+            )
+            .all()
+        )
+
+        for order in stale_orders:
+            order.result_url = None
+            order.updated_at = started_at
+            cleared_result_urls += 1
+
+        db.commit()
+        if cleared_result_urls:
+            logger.info(
+                "cleanup_expired_assets: cleared result_url on %d expired orders",
+                cleared_result_urls,
+            )
+    except Exception as exc:
+        db.rollback()
+        logger.error("cleanup_expired_assets: DB error (result_url phase): %s", exc)
         raise
     finally:
         db.close()
@@ -222,6 +262,7 @@ def cleanup_expired_assets() -> dict:
     result = {
         "started_at": started_at.isoformat(),
         "deleted": deleted_count,
+        "cleared_result_urls": cleared_result_urls,
         "errors": error_count,
         "status": "ok" if error_count == 0 else "partial",
     }

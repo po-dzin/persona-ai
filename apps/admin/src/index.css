@@ -167,12 +167,11 @@ tr:hover td { background: var(--surface2); }
   left: 0;
   right: 0;
   height: calc(var(--topbar-h) + var(--safe-top));
-  padding-top: var(--safe-top);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   align-items: center;
   gap: var(--cmp-space-12);
-  padding: 0 var(--cmp-space-16);
+  padding: var(--safe-top) var(--cmp-space-16) 0;
   z-index: var(--cmp-z-tab);
 }
 

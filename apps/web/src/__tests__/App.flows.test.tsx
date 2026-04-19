@@ -202,6 +202,7 @@ describe("App flows", () => {
 
   it("opens create flow from tab bar even when photo viewer is open", async () => {
     const user = userEvent.setup();
+    const recentDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
     photosState = [{
       orderId: "ord-done-1",
       styleCode: "hollywood",
@@ -210,8 +211,8 @@ describe("App flows", () => {
       prompt: "cinematic portrait",
       resultUrl: "https://example.com/result.jpg",
       isFavorite: false,
-      createdAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
-      updatedAt: new Date("2026-04-02T10:00:00.000Z").toISOString(),
+      createdAt: recentDate,
+      updatedAt: recentDate,
     }];
 
     render(<App />);

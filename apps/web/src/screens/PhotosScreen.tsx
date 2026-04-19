@@ -38,7 +38,13 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
   }, [styles]);
   const filterItems = useMemo(() => ["Все", "Избранные", ...categories], [categories]);
 
-  const filtered = photos.filter((p) => {
+  const RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - RETENTION_MS;
+  const withinRetention = photos.filter(
+    (p) => p.status !== "done" || new Date(p.createdAt).getTime() > cutoff,
+  );
+
+  const filtered = withinRetention.filter((p) => {
     if (filter === "Все") return true;
     if (filter === "Избранные") return favorites.has(p.orderId);
     return styleByCode[p.styleCode]?.category === filter;
