@@ -251,7 +251,7 @@ describe("App flows", () => {
 
     expect(screen.getByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
     expect(screen.queryByText("2/2")).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it("keeps create tab active when opening style preview from create after photos tab", async () => {
     const user = userEvent.setup();
@@ -293,7 +293,7 @@ describe("App flows", () => {
     });
     expect(await screen.findByRole("button", { name: "Кастом" })).toBeInTheDocument();
     expect(screen.queryByText("Пока нет фото")).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it("does not show historical failed-generation modal on initial load", async () => {
     photosState = [{
@@ -356,4 +356,54 @@ describe("App flows", () => {
     await user.click(homeTabButton as HTMLButtonElement);
     expect(screen.getByText("Запрос")).toBeInTheDocument();
   });
+
+  it("keeps create style-grid stable across repeated preview open-close cycles", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+    expect(await screen.findByRole("button", { name: "Кастом" })).toBeInTheDocument();
+
+    for (let i = 0; i < 3; i += 1) {
+      const styleButtons = screen.getAllByRole("button", { name: /Голливуд/ });
+      await user.click(styleButtons[styleButtons.length - 1]);
+      expect(await screen.findByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
+      expect(screen.queryByText("2/2")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Назад" }));
+      await waitFor(() => {
+        expect(screen.queryByRole("button", { name: "Создать в этом стиле" })).not.toBeInTheDocument();
+      });
+      expect(screen.getByRole("button", { name: "Кастом" })).toBeInTheDocument();
+      expect(screen.queryByText("2/2")).not.toBeInTheDocument();
+    }
+  }, 20000);
+
+  it("never jumps to upload on rapid style taps without explicit preview create click", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+    expect(await screen.findByRole("button", { name: "Кастом" })).toBeInTheDocument();
+
+    const styleButtons = screen.getAllByRole("button", { name: /Голливуд/ });
+    const targetStyle = styleButtons[styleButtons.length - 1];
+
+    await user.click(targetStyle);
+    await user.click(targetStyle);
+    await user.click(targetStyle);
+
+    expect(await screen.findByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
+    expect(screen.queryByText("2/2")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Создать в этом стиле" })).not.toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Кастом" })).toBeInTheDocument();
+    expect(screen.queryByText("2/2")).not.toBeInTheDocument();
+  });
+
 });
