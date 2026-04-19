@@ -582,6 +582,7 @@ export function App() {
   // purchaseSuccessOpen removed — Telegram's native openInvoice already shows payment success UI
   const [stylePreviewOpen, setStylePreviewOpen] = useState(false);
   const [stylePreviewBackToFlow, setStylePreviewBackToFlow] = useState(false);
+  const [createTabPinned, setCreateTabPinned] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const appliedSharePresetRef = useRef(false);
@@ -633,6 +634,7 @@ export function App() {
     setFlowUploadOpen(false);
     setPrefilledUploadPhoto(null);
     setStylePreviewOpen(false);
+    setStylePreviewBackToFlow(false);
     setCategoryOpen(false);
     setPurchaseOpen(false);
     setViewerOpen(false);
@@ -653,6 +655,7 @@ export function App() {
 
   const transitionToScreen = useCallback(
     (screen: BaseScreen, options?: { closeTransientLayers?: boolean; immediate?: boolean }) => {
+      setCreateTabPinned(false);
       if (options?.closeTransientLayers ?? true) {
         closeTransientLayers();
       }
@@ -770,6 +773,7 @@ export function App() {
   }, [setPhotos]);
 
   const openCreate = () => {
+    setCreateTabPinned(true);
     setActiveLegalDoc(null);
     cancelPendingScreenTransition();
     // If already in create flow, don't reset — user stays where they are
@@ -846,6 +850,7 @@ export function App() {
   };
 
   const handlePickStyleFromHome = (style: StyleItem) => {
+    setCreateTabPinned(false);
     applyStyleSelection(style);
     setSelectedSourceTab("styles");
     setStylePreviewBackToFlow(false);
@@ -854,6 +859,7 @@ export function App() {
   };
 
   const handlePickStyleFromCreateTab = (style: StyleItem) => {
+    setCreateTabPinned(true);
     applyStyleSelection(style);
     setSelectedSourceTab("styles");
     setStylePreviewBackToFlow(true);
@@ -868,6 +874,7 @@ export function App() {
     setSelectedSourceTab(payload.sourceTab);
 
     if (payload.sourceTab === "styles") {
+      setCreateTabPinned(true);
       setStylePreviewBackToFlow(true);
       setFlowStyleOpen(false);
       setStylePreviewOpen(true);
@@ -1150,6 +1157,7 @@ export function App() {
 
   const handleUseAsReference = () => {
     if (!selectedPhoto) return;
+    setCreateTabPinned(true);
     setViewerOpen(false);
     setFlowInitialTab("custom");
     setFlowInitialCustomPrompt(selectedPhoto.prompt || selectedPrompt || "");
@@ -1292,11 +1300,13 @@ export function App() {
       <ModelsPricingScreen isOpen={modelsOpen} models={models} packages={packages} onClose={() => setModelsOpen(false)} />
       <StylePreviewScreen
         isOpen={stylePreviewOpen}
+        styles={styles}
         style={selectedStyle}
         onClose={() => {
           setStylePreviewOpen(false);
           if (stylePreviewBackToFlow) setFlowStyleOpen(true);
         }}
+        onSelectStyle={applyStyleSelection}
         onCreate={() => {
           setStylePreviewOpen(false);
           setCategoryOpen(false);
@@ -1322,9 +1332,10 @@ export function App() {
 
       <TabBar
         activeScreen={activeScreen}
-        isCreateActive={flowStyleOpen || flowUploadOpen || (stylePreviewOpen && stylePreviewBackToFlow)}
+        isCreateActive={createTabPinned || flowStyleOpen || flowUploadOpen || stylePreviewBackToFlow}
         photosBadge={activeScreen === "photos" ? 0 : newPhotosCount}
         onChange={(screen) => {
+          setCreateTabPinned(false);
           if (screen === "photos") {
             setSeenDoneOrderIds((prev) => {
               const next = new Set(prev);
@@ -1351,6 +1362,7 @@ export function App() {
         description="Баланса недостаточно для генерации. Пополните счёт — монеты начисляются мгновенно."
         actionLabel="Пополнить баланс"
         onAction={() => {
+          setCreateTabPinned(false);
           setPaywallModalOpen(false);
           setFlowUploadOpen(false);
           setFlowStyleOpen(false);

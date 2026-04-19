@@ -46,27 +46,34 @@ describe("PhotoViewerScreen layout", () => {
     expect(screen.getByText("Фото")).toBeInTheDocument();
     expect(screen.getByAltText("Голливуд")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Скачать" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Добавить в избранное" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Поделиться" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Действия" })).toBeInTheDocument();
 
     const photoBlock = container.querySelector(".viewer-photo");
     const body = container.querySelector(".viewer-body");
+    const styleBlock = container.querySelector(".viewer-style-block");
     const promptBlock = container.querySelector(".viewer-prompt-block");
     const promptHeader = container.querySelector(".viewer-prompt-header");
     const actionsRow = container.querySelector(".viewer-actions-row");
 
     expect(photoBlock).toBeTruthy();
     expect(body).toBeTruthy();
+    expect(styleBlock).toBeTruthy();
     expect(promptBlock).toBeTruthy();
     expect(promptHeader).toBeTruthy();
     expect(actionsRow).toBeTruthy();
     expect(photoBlock?.nextElementSibling).toBe(body);
     expect(body?.children[0]).toBe(actionsRow);
-    expect(body?.children[1]).toBe(promptBlock);
-    expect(within(actionsRow as HTMLElement).getAllByRole("button")).toHaveLength(3);
+    expect(body?.children[1]).toBe(styleBlock);
+    expect(body?.children[2]).toBe(promptBlock);
+    expect(within(actionsRow as HTMLElement).getAllByRole("button")).toHaveLength(4);
+    expect(within(actionsRow as HTMLElement).getByRole("button", { name: "Добавить в избранное" })).toBeInTheDocument();
     expect(within(actionsRow as HTMLElement).getByRole("button", { name: "Скачать" })).toBeInTheDocument();
     expect(within(actionsRow as HTMLElement).getByRole("button", { name: "Поделиться" })).toBeInTheDocument();
     expect(within(actionsRow as HTMLElement).getByRole("button", { name: "Действия" })).toBeInTheDocument();
+    expect(styleBlock?.children[0]).toHaveTextContent("Стиль");
+    expect(styleBlock?.children[1]).toHaveTextContent("Голливуд");
     expect(promptBlock?.firstElementChild).toBe(promptHeader);
     expect(promptHeader?.children[0]).toHaveTextContent("Запрос");
     expect(promptHeader?.children[1]).toHaveAttribute("aria-label", "Копировать промпт");

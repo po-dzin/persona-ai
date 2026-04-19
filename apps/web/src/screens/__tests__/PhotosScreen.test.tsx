@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -110,5 +110,36 @@ describe("PhotosScreen", () => {
 
     await user.click(screen.getByRole("button", { name: "Избранные" }));
     expect(container.querySelectorAll(".photo-item")).toHaveLength(1);
+  });
+
+  it("keeps photo card disabled until preview image has loaded", () => {
+    const readyPhoto: PhotoRecord = {
+      orderId: "o4",
+      styleCode: "hollywood",
+      modelId: "nb2-1k",
+      status: "done",
+      prompt: "p4",
+      resultUrl: "https://cdn.example.com/o4.jpg",
+      isFavorite: false,
+      createdAt: "2026-04-10T12:03:00Z",
+      updatedAt: "2026-04-10T12:03:00Z",
+    };
+
+    render(
+      <PhotosScreen
+        photos={[readyPhoto]}
+        styles={styles}
+        favorites={new Set()}
+        onOpenPhoto={vi.fn()}
+      />,
+    );
+
+    const card = screen.getByRole("button", { name: "Генерация" });
+    expect(card).toBeDisabled();
+
+    const preview = screen.getByAltText("Голливуд");
+    fireEvent.load(preview);
+
+    expect(screen.getByRole("button", { name: "Голливуд" })).not.toBeDisabled();
   });
 });
