@@ -17,7 +17,10 @@ interface FlowStyleScreenProps {
   initialCustomModelId?: string;
   isCreating?: boolean;
   catalogLoading?: boolean;
-  onSelectStyle: (style: StyleItem) => void;
+  onSelectStyle: (
+    style: StyleItem,
+    originRect?: { left: number; top: number; width: number; height: number } | null,
+  ) => void;
   onContinue: (payload: {
     modelId: string;
     prompt: string;
@@ -283,8 +286,17 @@ export function FlowStyleScreen({
                   {block.items.map((style) => (
                     <button
                       key={style.id}
+                      data-style-id={style.id}
                       className={"style-card" + (selectedStyle?.id === style.id ? " selected" : "")}
-                      onClick={() => onSelectStyle(style)}
+                      onClick={(event) => {
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        onSelectStyle(style, {
+                          left: rect.left,
+                          top: rect.top,
+                          width: rect.width,
+                          height: rect.height,
+                        });
+                      }}
                       aria-label={style.name}
                       aria-pressed={selectedStyle?.id === style.id}
                     >

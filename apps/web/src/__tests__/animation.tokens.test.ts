@@ -143,6 +143,12 @@ describe("animation token compliance – key rule contracts", () => {
     );
   });
 
+  it("overlay screen entrance starts fully opaque to prevent previous-tab bleed", () => {
+    expect(indexCss).toMatch(
+      /@keyframes overlayScreenEnter\s*\{[^}]*from\s*\{[^}]*opacity:\s*1;[^}]*\}/s,
+    );
+  });
+
   it("overlay backdrop entrance animation uses --cmp-motion-overlay-enter", () => {
     expect(indexCss).toMatch(
       /animation: overlayBackdropEnter var\(--cmp-motion-overlay-enter\)/,

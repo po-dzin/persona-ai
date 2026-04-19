@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { StyleItem } from "../../data/styles";
@@ -107,4 +107,72 @@ describe("StylePreviewScreen gestures", () => {
     expect(onSelectStyle).toHaveBeenCalledWith(styles[0]);
     expect(screen.getByText("Стиль 2")).toBeInTheDocument();
   });
+
+  it("resets closing state between open sessions", () => {
+    vi.useFakeTimers();
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <StylePreviewScreen
+        isOpen
+        styles={styles}
+        style={styles[1]}
+        onClose={onClose}
+        onSelectStyle={vi.fn()}
+        onCreate={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Назад" }));
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <StylePreviewScreen
+        isOpen={false}
+        styles={styles}
+        style={styles[1]}
+        onClose={onClose}
+        onSelectStyle={vi.fn()}
+        onCreate={vi.fn()}
+      />,
+    );
+
+    rerender(
+      <StylePreviewScreen
+        isOpen
+        styles={styles}
+        style={styles[1]}
+        onClose={onClose}
+        onSelectStyle={vi.fn()}
+        onCreate={vi.fn()}
+      />,
+    );
+
+    const screenEl = document.querySelector(".style-preview-screen");
+    expect(screenEl).toBeTruthy();
+    expect(screenEl?.classList.contains("is-closing-button")).toBe(false);
+    expect(screenEl?.classList.contains("is-closing-pull")).toBe(false);
+  });
+
+  it("adds card-expand opening animation class when origin rect is provided", async () => {
+    render(
+      <main className="app-shell">
+        <StylePreviewScreen
+          isOpen
+          styles={styles}
+          style={styles[1]}
+          originRect={{ left: 40, top: 120, width: 120, height: 160 }}
+          onClose={vi.fn()}
+          onSelectStyle={vi.fn()}
+          onCreate={vi.fn()}
+        />
+      </main>,
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector(".style-preview-panel.is-opening-from-card")).toBeTruthy();
+    });
+  }, 10000);
 });

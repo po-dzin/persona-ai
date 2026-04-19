@@ -36,6 +36,7 @@ describe("FlowStyleScreen", () => {
     expect(onSelectStyle).toHaveBeenCalledTimes(1);
     expect(onSelectStyle).toHaveBeenCalledWith(
       expect.objectContaining({ id: "hollywood" }),
+      expect.any(Object),
     );
   });
 

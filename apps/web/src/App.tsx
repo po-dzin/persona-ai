@@ -56,6 +56,7 @@ const tg = window.Telegram?.WebApp;
 type TgUser = { id: number; first_name?: string; username?: string; photo_url?: string };
 type SharePreview = { orderId?: string; shareToken?: string };
 type LegalDocId = "privacy" | "terms" | "payments" | "disclaimer";
+type PreviewOriginRect = { left: number; top: number; width: number; height: number };
 
 const LEGAL_DOCS: Record<LegalDocId, { title: string; updatedAt: string; sections: Array<{ heading?: string; paragraphs: string[] }> }> = {
   privacy: {
@@ -581,6 +582,7 @@ export function App() {
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   // purchaseSuccessOpen removed — Telegram's native openInvoice already shows payment success UI
   const [stylePreviewOpen, setStylePreviewOpen] = useState(false);
+  const [stylePreviewOriginRect, setStylePreviewOriginRect] = useState<PreviewOriginRect | null>(null);
   const [stylePreviewBackToFlow, setStylePreviewBackToFlow] = useState(false);
   const [createTabPinned, setCreateTabPinned] = useState(false);
   const [viewerMenuOpen, setViewerMenuOpen] = useState(false);
@@ -635,6 +637,7 @@ export function App() {
     setFlowUploadOpen(false);
     setPrefilledUploadPhoto(null);
     setStylePreviewOpen(false);
+    setStylePreviewOriginRect(null);
     setStylePreviewBackToFlow(false);
     setCategoryOpen(false);
     setPurchaseOpen(false);
@@ -856,15 +859,17 @@ export function App() {
     setCreateTabPinned(false);
     applyStyleSelection(style);
     setSelectedSourceTab("styles");
+    setStylePreviewOriginRect(null);
     setStylePreviewBackToFlow(false);
     setCategoryOpen(false);
     setStylePreviewOpen(true);
   };
 
-  const handlePickStyleFromCreateTab = (style: StyleItem) => {
+  const handlePickStyleFromCreateTab = (style: StyleItem, originRect?: PreviewOriginRect | null) => {
     setCreateTabPinned(true);
     applyStyleSelection(style);
     setSelectedSourceTab("styles");
+    setStylePreviewOriginRect(originRect ?? null);
     setStylePreviewBackToFlow(true);
     // Keep create-flow layer mounted under preview to avoid showing previous base tab during transition.
     setFlowStyleOpen(true);
@@ -1307,13 +1312,16 @@ export function App() {
         isOpen={stylePreviewOpen}
         styles={styles}
         style={selectedStyle}
+        originRect={stylePreviewOriginRect}
         onClose={() => {
           setStylePreviewOpen(false);
+          setStylePreviewOriginRect(null);
           if (stylePreviewBackToFlow) setFlowStyleOpen(true);
         }}
         onSelectStyle={applyStyleSelection}
         onCreate={() => {
           setStylePreviewOpen(false);
+          setStylePreviewOriginRect(null);
           setCategoryOpen(false);
           setFlowStyleOpen(false);
           setFlowUploadOpen(true);
