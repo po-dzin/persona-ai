@@ -878,6 +878,14 @@ button, a, [role="button"] { touch-action: manipulation; }
 .tab-item:active { background: var(--sem-border-default); }
 .tab-item svg { width: var(--cmp-space-24); height: var(--cmp-space-24); color: var(--sem-color-text-muted); transition: color var(--cmp-motion-fast) var(--cmp-ease-standard); display: block; }
 .tab-item.active svg { color: var(--sem-color-text-primary); }
+.tab-bar.is-locked .tab-item,
+.tab-bar.is-locked .tab-ai:where(*) {
+  pointer-events: none;
+}
+.tab-bar .tab-item:disabled,
+.tab-bar .tab-ai:disabled {
+  pointer-events: none;
+}
 .tab-icon-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
 .tab-badge {
   position: absolute;
@@ -896,12 +904,6 @@ button, a, [role="button"] { touch-action: manipulation; }
 .tab-photos .tab-icon-wrap {
   width: var(--cmp-space-24);
   height: var(--cmp-space-24);
-}
-.tab-ai-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--cmp-space-4);
 }
 .tab-ai {
   width: var(--cmp-space-58);
@@ -928,6 +930,12 @@ button, a, [role="button"] { touch-action: manipulation; }
 .tab-ai.active {
   box-shadow: var(--sem-shadow-accent-md);
   opacity: 1;
+}
+.tab-ai-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--cmp-space-4);
 }
 
 /* ─── Overlay screens (flows) ─── */
@@ -1464,15 +1472,23 @@ button, a, [role="button"] { touch-action: manipulation; }
   transition: transform var(--cmp-motion-fast) var(--cmp-ease-standard), background var(--cmp-motion-fast) var(--cmp-ease-standard), color var(--cmp-motion-fast) var(--cmp-ease-standard);
 }
 .viewer-icon-btn:active { transform: scale(var(--cmp-state-scale-press-lg)); }
+.photo-viewer-screen.is-sheet-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 .viewer-sheet-backdrop {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: calc(-1 * (var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--cmp-space-0))) + var(--tab-bar-gap)));
   display: flex;
   align-items: flex-end;
   justify-content: center;
   background: var(--sem-color-overlay-scrim);
-  z-index: calc(var(--cmp-z-flow) + 1);
+  z-index: var(--cmp-z-modal);
   animation: overlayBackdropEnter var(--cmp-motion-overlay-enter) var(--cmp-ease-decelerate);
+  touch-action: none;
 }
 .viewer-sheet {
   width: 100%;

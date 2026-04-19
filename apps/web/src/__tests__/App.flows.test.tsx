@@ -271,6 +271,30 @@ describe("App flows", () => {
     expect(photosTab?.classList.contains("active")).toBe(false);
   });
 
+  it("does not reveal previous photos tab under style preview opened from create flow", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Мои фото" }));
+    expect(await screen.findByText("Пока нет фото")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+    expect(screen.queryByText("Пока нет фото")).not.toBeInTheDocument();
+
+    const styleButtons = screen.getAllByRole("button", { name: /Голливуд/ });
+    await user.click(styleButtons[styleButtons.length - 1]);
+    expect(await screen.findByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
+    expect(screen.queryByText("Пока нет фото")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Назад" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Создать в этом стиле" })).not.toBeInTheDocument();
+    });
+    expect(await screen.findByRole("button", { name: "Кастом" })).toBeInTheDocument();
+    expect(screen.queryByText("Пока нет фото")).not.toBeInTheDocument();
+  });
+
   it("does not show historical failed-generation modal on initial load", async () => {
     photosState = [{
       orderId: "ord-failed-old",
@@ -289,5 +313,47 @@ describe("App flows", () => {
     await waitFor(() => {
       expect(screen.queryByText("Генерация завершилась с технической ошибкой. Монеты возвращены автоматически.")).not.toBeInTheDocument();
     });
+  });
+
+  it("locks tab navigation while photo viewer modal menu is open", async () => {
+    const user = userEvent.setup();
+    const recentDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
+    photosState = [{
+      orderId: "ord-done-modal-1",
+      styleCode: "hollywood",
+      modelId: "nb2-1k",
+      status: "done",
+      prompt: "cinematic portrait",
+      resultUrl: "https://example.com/result.jpg",
+      isFavorite: false,
+      createdAt: recentDate,
+      updatedAt: recentDate,
+    }];
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Мои фото" }));
+    await waitFor(() => {
+      expect(document.querySelector(".photos-grid .photo-item")).toBeTruthy();
+    });
+    const preview = document.querySelector(".photos-grid .photo-item img.fill-image-cover");
+    expect(preview).toBeTruthy();
+    fireEvent.load(preview as Element);
+
+    const hollywoodButtons = screen.getAllByRole("button", { name: "Голливуд" });
+    const photoButton = hollywoodButtons.find((btn) => btn.classList.contains("photo-item"));
+    expect(photoButton).toBeTruthy();
+    await user.click(photoButton as HTMLButtonElement);
+    expect(await screen.findByText("Запрос")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Действия" }));
+    expect(await screen.findByRole("button", { name: "Удалить фото" })).toBeInTheDocument();
+    expect(document.querySelector(".tab-bar")?.classList.contains("is-locked")).toBe(true);
+    const homeTabButton = document.querySelector(".tab-bar .tab-item[aria-label='Главная']") as HTMLButtonElement | null;
+    expect(homeTabButton).toBeTruthy();
+    expect(homeTabButton).toBeDisabled();
+
+    await user.click(homeTabButton as HTMLButtonElement);
+    expect(screen.getByText("Запрос")).toBeInTheDocument();
   });
 });
