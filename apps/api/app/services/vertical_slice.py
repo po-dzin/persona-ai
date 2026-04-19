@@ -595,6 +595,24 @@ class VerticalSliceService:
         except Exception:
             logger.warning("_record_media_asset: failed to record asset %s", storage_key)
 
+    def _record_result_asset(self, *, user_id: str, order_id: str, result_url: str) -> None:
+        """Track an R2-hosted result image for TTL-based cleanup.
+
+        Only records assets whose URL starts with our R2 public base URL.
+        Provider CDN URLs (e.g. BFL signed URLs that were NOT mirrored) are skipped.
+        """
+        r2_base = settings.r2_public_base_url.rstrip("/")
+        if not result_url.startswith(r2_base + "/"):
+            return
+        storage_key = result_url[len(r2_base) + 1:]
+        self._record_media_asset(
+            user_id=user_id,
+            order_id=order_id,
+            kind="result",
+            storage_key=storage_key,
+            ttl_hours=settings.result_retention_days * 24,
+        )
+
     def register_upload(self, user_id: str, filename: str) -> dict[str, str]:
         self.get_or_create_user(user_id)
         upload_id = str(uuid4())
@@ -784,6 +802,7 @@ class VerticalSliceService:
                 job.status = "done"
                 job.updated_at = now_iso()
                 mark_generation_succeeded(db, user, order_id=order.order_id)
+                self._record_result_asset(user_id=order.user_id, order_id=order.order_id, result_url=submit.result_url)
             else:
                 order.status = "processing"
                 recompute_user_state(db, user, source="system", reason="order_processing")
@@ -956,10 +975,8 @@ class VerticalSliceService:
                     if user and order.result_url:
                         mark_generation_succeeded(db, user, order_id=order.order_id)
                         _tg_notify = (order.user_id, order.result_url, order.order_id)
+                        self._record_result_asset(user_id=order.user_id, order_id=order.order_id, result_url=order.result_url)
                     logger.info("webhook_generation_done provider=%s order_id=%s user_id=%s", provider, order_id, order.user_id)
-                    # NOTE: result_url points to the provider's CDN (NanoBanana/BFL/etc.),
-                    # not to our R2 bucket. We only track assets we own in R2.
-                    # Record result in media_assets once we proxy/store results ourselves.
                 elif event_type == "processing":
                     order.status = "processing"
                     if job:
