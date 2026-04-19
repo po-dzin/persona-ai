@@ -1384,6 +1384,25 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .viewer-heart:active { transform: scale(var(--cmp-state-scale-press-lg)); background: var(--sem-color-overlay-13); }
 .viewer-body { padding: var(--cmp-space-12) var(--cmp-space-page-edge); }
+.viewer-style-block {
+  background: var(--sem-color-bg-surface);
+  border-radius: var(--cmp-space-14);
+  padding: var(--cmp-space-12) var(--cmp-space-14);
+  margin-bottom: var(--cmp-space-10);
+}
+.viewer-style-label {
+  font-size: var(--cmp-type-caption-size);
+  font-weight: 600;
+  color: var(--sem-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--cmp-letter-wide-md);
+}
+.viewer-style-value {
+  margin-top: var(--cmp-space-4);
+  font-size: var(--cmp-type-body-sm-size);
+  font-weight: 600;
+  color: var(--sem-color-text-primary);
+}
 .viewer-prompt-block {
   background: var(--sem-color-bg-surface); border-radius: var(--cmp-space-14);
   padding: var(--cmp-space-14);
@@ -1420,6 +1439,9 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .viewer-download-btn {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--cmp-space-8);
+}
+.viewer-heart-btn {
+  color: var(--sem-color-text-secondary);
 }
 .viewer-btn {
   padding: var(--cmp-space-13) var(--cmp-space-10); border-radius: var(--cmp-space-12); border: none;

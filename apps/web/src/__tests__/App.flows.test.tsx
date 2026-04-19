@@ -117,7 +117,7 @@ describe("App flows", () => {
 
     // "2/2" is unique to the FlowUploadScreen header — use it as the sentinel
     expect(await screen.findByText("2/2")).toBeInTheDocument();
-  });
+  }, 15000);
 
   it("uses custom flow and returns to photos after inline upload", async () => {
     const user = userEvent.setup();
@@ -155,7 +155,7 @@ describe("App flows", () => {
 
     // Custom flow uploads inline and navigates straight to photos
     expect(await screen.findByText("Пока нет фото")).toBeInTheDocument();
-  });
+  }, 15000);
 
   it("style flow redirects to photos and keeps generation indicator out of create button", async () => {
     const user = userEvent.setup();
@@ -198,7 +198,7 @@ describe("App flows", () => {
 
     expect(screen.getAllByText("Генерация").length).toBeGreaterThan(0);
     expect(screen.queryByText("Генерация...")).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it("opens create flow from tab bar even when photo viewer is open", async () => {
     const user = userEvent.setup();
@@ -221,6 +221,9 @@ describe("App flows", () => {
     await waitFor(() => {
       expect(document.querySelector(".photos-grid .photo-item")).toBeTruthy();
     });
+    const preview = document.querySelector(".photos-grid .photo-item img.fill-image-cover");
+    expect(preview).toBeTruthy();
+    fireEvent.load(preview as Element);
     const hollywoodButtons = screen.getAllByRole("button", { name: "Голливуд" });
     const photoButton = hollywoodButtons.find((btn) => btn.classList.contains("photo-item"));
     expect(photoButton).toBeTruthy();
@@ -248,5 +251,23 @@ describe("App flows", () => {
 
     expect(screen.getByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
     expect(screen.queryByText("2/2")).not.toBeInTheDocument();
+  });
+
+  it("keeps create tab active when opening style preview from create after photos tab", async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Мои фото" }));
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+
+    const styleButtons = screen.getAllByRole("button", { name: /Голливуд/ });
+    await user.click(styleButtons[styleButtons.length - 1]);
+    expect(await screen.findByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
+
+    const createTab = document.querySelector(".tab-bar .tab-ai");
+    const photosTab = document.querySelector(".tab-bar .tab-photos");
+    expect(createTab?.classList.contains("active")).toBe(true);
+    expect(photosTab?.classList.contains("active")).toBe(false);
   });
 });

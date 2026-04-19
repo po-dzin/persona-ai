@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { StyleItem } from "../data/styles";
 import type { PhotoRecord } from "../utils/api";
@@ -21,9 +21,16 @@ function dateLabel(iso: string): string {
 export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, favorites, isLoading }: PhotosScreenProps) {
   const [filter, setFilter] = useState("Все");
   const [imageErrorIds, setImageErrorIds] = useState<Set<string>>(new Set());
+  const [loadedImageIds, setLoadedImageIds] = useState<Set<string>>(new Set());
   const isUiGenerating = (photo: PhotoRecord) =>
     generatingOrderIds ? generatingOrderIds.has(photo.orderId) : isPhotoGenerating(photo);
-  const queuedCount = photos.filter((p) => isUiGenerating(p)).length;
+  const isWaitingImageLoad = (photo: PhotoRecord) =>
+    Boolean(photo.resultUrl)
+    && photo.status !== "failed"
+    && !imageErrorIds.has(photo.orderId)
+    && !loadedImageIds.has(photo.orderId);
+  const isGeneratingCard = (photo: PhotoRecord) => isUiGenerating(photo) || isWaitingImageLoad(photo);
+  const queuedCount = photos.filter((p) => isGeneratingCard(p)).length;
   const styleByCode = useMemo(() => Object.fromEntries(styles.map((s) => [s.id, s])), [styles]);
   const categories = useMemo(() => {
     const seen = new Set<string>();
@@ -61,6 +68,24 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
     };
   });
 
+  useEffect(() => {
+    const photoIds = new Set(photos.map((p) => p.orderId));
+    setLoadedImageIds((prev) => {
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (photoIds.has(id)) next.add(id);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+    setImageErrorIds((prev) => {
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (photoIds.has(id)) next.add(id);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [photos]);
+
   return (
     <section className="screen photos-screen">
       {queuedCount > 1 ? (
@@ -85,7 +110,7 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
       ) : null}
 
       {queuedCount === 1 ? (() => {
-        const activePhoto = photos.find((p) => isUiGenerating(p))!;
+        const activePhoto = photos.find((p) => isGeneratingCard(p))!;
         const activeStyle = styleByCode[activePhoto.styleCode];
         return (
           <div className="queue-single">
@@ -134,8 +159,7 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
         <div className="photos-grid">
           {datedItems.map(({ photo, showDivider, dividerLabel }) => {
             const style = styleByCode[photo.styleCode];
-            const isGenerating = isUiGenerating(photo);
-            const isBackendGenerating = isPhotoGenerating(photo);
+            const isGenerating = isGeneratingCard(photo);
             const isFailed = photo.status === "failed";
             const bg = style?.gradient || "var(--sem-gradient-photo-fallback)";
             const isImageBroken = imageErrorIds.has(photo.orderId);
@@ -145,14 +169,22 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
                 <button
                   className="photo-item"
                   onClick={() => onOpenPhoto(photo)}
-                  disabled={isBackendGenerating}
-                  aria-label={isBackendGenerating ? "Генерация" : (style?.name || photo.styleCode)}
+                  disabled={isGenerating}
+                  aria-label={isGenerating ? "Генерация" : (style?.name || photo.styleCode)}
                 >
-                  {photo.resultUrl && !isGenerating && !isFailed && !isImageBroken ? (
+                  {photo.resultUrl && !isFailed && !isImageBroken ? (
                     <img
                       className="photo-bg fill-image-cover"
                       src={photo.resultUrl}
                       alt={style?.name || photo.styleCode}
+                      onLoad={() => {
+                        setLoadedImageIds((prev) => {
+                          if (prev.has(photo.orderId)) return prev;
+                          const next = new Set(prev);
+                          next.add(photo.orderId);
+                          return next;
+                        });
+                      }}
                       onError={() => {
                         setImageErrorIds((prev) => {
                           const next = new Set(prev);

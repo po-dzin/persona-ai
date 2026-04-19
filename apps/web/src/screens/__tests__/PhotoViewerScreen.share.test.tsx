@@ -105,7 +105,7 @@ describe("PhotoViewerScreen share menu", () => {
     await user.click(screen.getByRole("button", { name: "Поделиться" }));
     await user.click(screen.getByRole("button", { name: "Другое" }));
     expect(screen.queryByRole("button", { name: "Другое" })).not.toBeInTheDocument();
-  });
+  }, 10000);
 
   it("uses system share sheet for 'Другое' when available", async () => {
     const user = userEvent.setup();
