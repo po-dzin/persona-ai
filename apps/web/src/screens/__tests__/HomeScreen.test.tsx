@@ -299,6 +299,23 @@ describe("HomeScreen – category transition animation state", () => {
     expect(within(rail).getByRole("button", { name: "Студийный портрет" })).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("ignores touch-started swipe attempts while transition lock is active", () => {
+    vi.useFakeTimers();
+    const { panels, rail } = renderHome();
+
+    fireEvent.click(within(rail).getByRole("button", { name: "Тренды" }));
+    expect(panels).toHaveClass("is-transitioning");
+
+    fireEvent.touchStart(panels, {
+      touches: [{ clientX: 240, clientY: 160 }],
+    });
+    fireEvent.touchMove(panels, {
+      touches: [{ clientX: 140, clientY: 165 }],
+    });
+
+    expect(panels).not.toHaveClass("is-dragging");
+  });
+
   it("active panel carries only is-active class after transition completes", () => {
     vi.useFakeTimers();
     const { container, rail } = renderHome();

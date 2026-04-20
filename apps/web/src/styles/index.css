@@ -319,22 +319,22 @@ button, a, [role="button"] { touch-action: manipulation; }
   opacity: 1;
   z-index: var(--cmp-z-selected);
 }
-.home-styles-panels.is-dragging .home-styles-panel {
+.home-styles-panels.is-dragging:not(.is-transitioning) .home-styles-panel {
   transition: none;
 }
 /* Suppress card press-scale during swipe so it doesn't stick */
-.home-styles-panels.is-dragging .style-card,
-.home-styles-panels.is-dragging .style-card:active {
+.home-styles-panels.is-dragging:not(.is-transitioning) .style-card,
+.home-styles-panels.is-dragging:not(.is-transitioning) .style-card:active {
   transform: none;
   transition: none;
 }
-.home-styles-panels.is-dragging .home-styles-panel.is-active {
+.home-styles-panels.is-dragging:not(.is-transitioning) .home-styles-panel.is-active {
   transform: translateX(calc(var(--home-swipe-ratio) * 100%));
 }
-.home-styles-panels.is-dragging .home-styles-panel.is-adjacent-next {
+.home-styles-panels.is-dragging:not(.is-transitioning) .home-styles-panel.is-adjacent-next {
   transform: translateX(calc((1 + var(--home-swipe-ratio)) * 100%));
 }
-.home-styles-panels.is-dragging .home-styles-panel.is-adjacent-prev {
+.home-styles-panels.is-dragging:not(.is-transitioning) .home-styles-panel.is-adjacent-prev {
   transform: translateX(calc((-1 + var(--home-swipe-ratio)) * 100%));
 }
 /* Panels that are neither entering nor leaving must not animate during a
