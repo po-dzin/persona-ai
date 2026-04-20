@@ -1492,7 +1492,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   top: 0;
   left: 0;
   right: 0;
-  bottom: calc(-1 * (var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--cmp-space-0))) + var(--tab-bar-gap)));
+  bottom: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
