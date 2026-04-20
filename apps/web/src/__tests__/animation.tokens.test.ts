@@ -190,7 +190,7 @@ describe("animation token compliance – panel flicker fix", () => {
 
   it("suppresses transition during drag for all panels", () => {
     expect(indexCss).toMatch(
-      /\.home-styles-panels\.is-dragging\s+\.home-styles-panel\s*\{[^}]*transition:\s*none/s,
+      /\.home-styles-panels\.is-dragging:not\(\.is-transitioning\)\s+\.home-styles-panel\s*\{[^}]*transition:\s*none/s,
     );
   });
 });

@@ -89,6 +89,7 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const touchStartTs = useRef<number | null>(null);
+  const gestureAxisRef = useRef<"none" | "x" | "y">("none");
   const isSwipeGestureRef = useRef(false);
   const dragOffsetRef = useRef(0);
   const categoryTransitionTimerRef = useRef<number | null>(null);
@@ -105,6 +106,7 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     touchStartX.current = null;
     touchStartY.current = null;
     touchStartTs.current = null;
+    gestureAxisRef.current = "none";
     isSwipeGestureRef.current = false;
     dragOffsetRef.current = 0;
     setDragOffsetPx(0);
@@ -214,7 +216,7 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     const el = panelsRef.current;
     if (!el) return;
     const handler = (e: TouchEvent) => {
-      if (isSwipeGestureRef.current) e.preventDefault();
+      if (gestureAxisRef.current === "x" || isSwipeGestureRef.current) e.preventDefault();
     };
     el.addEventListener("touchmove", handler, { passive: false });
     return () => el.removeEventListener("touchmove", handler);
@@ -266,6 +268,7 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
+    if (isCategoryTransitioning) return;
     clearTouchTracking();
     // Reset per-swipe animation start positions
     panelsRef.current?.style.removeProperty("--panel-enter-from");
@@ -291,6 +294,11 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     const idx = allCategories.indexOf(activeCategory);
     const atLeftEdge = idx <= 0 && dx > 0;
     const atRightEdge = idx >= allCategories.length - 1 && dx < 0;
+    if (gestureAxisRef.current === "none") {
+      if (absDx < 6 && absDy < 6) return;
+      gestureAxisRef.current = absDx > absDy * 0.9 ? "x" : "y";
+    }
+    if (gestureAxisRef.current !== "x") return;
     if (!isSwipeGestureRef.current) {
       if (!shouldActivateHorizontalSwipe({ absDx, absDy, verticalToleranceRatio: 0.8 })) return;
       if (atLeftEdge || atRightEdge) return;
@@ -315,6 +323,10 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
       touchStartTs.current === null ||
       isCategoryTransitioning
     ) {
+      clearTouchTracking();
+      return;
+    }
+    if (gestureAxisRef.current === "y") {
       clearTouchTracking();
       return;
     }
