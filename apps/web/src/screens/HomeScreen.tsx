@@ -7,6 +7,7 @@ import { readMotionTokenMs } from "../utils/motionTokens";
 import { isPhotoGenerating } from "../utils/photoStatus";
 import {
   getHorizontalSwipeKeyframeOffsets,
+  resolveGestureAxis,
   shouldActivateHorizontalSwipe,
   shouldCommitHorizontalSwipe,
 } from "../utils/swipeGesture";
@@ -294,10 +295,14 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     const idx = allCategories.indexOf(activeCategory);
     const atLeftEdge = idx <= 0 && dx > 0;
     const atRightEdge = idx >= allCategories.length - 1 && dx < 0;
-    if (gestureAxisRef.current === "none") {
-      if (absDx < 6 && absDy < 6) return;
-      gestureAxisRef.current = absDx > absDy * 0.9 ? "x" : "y";
-    }
+    gestureAxisRef.current = resolveGestureAxis({
+      current: gestureAxisRef.current,
+      absDx,
+      absDy,
+      idleThresholdPx: 6,
+      horizontalBiasRatio: 0.9,
+    });
+    if (gestureAxisRef.current === "none") return;
     if (gestureAxisRef.current !== "x") return;
     if (!isSwipeGestureRef.current) {
       if (!shouldActivateHorizontalSwipe({ absDx, absDy, verticalToleranceRatio: 0.8 })) return;

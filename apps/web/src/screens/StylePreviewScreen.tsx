@@ -4,6 +4,7 @@ import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { readMotionTokenMs } from "../utils/motionTokens";
 import {
   getHorizontalSwipeKeyframeOffsets,
+  resolveGestureAxis,
   shouldActivateHorizontalSwipe,
   shouldCommitHorizontalSwipe,
   SWIPE_ACTIVATION_PX,
@@ -43,6 +44,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
   const dragOffsetRef = useRef(0);
   const isHorizontalGestureRef = useRef(false);
   const isPullGestureRef = useRef(false);
+  const gestureAxisRef = useRef<"none" | "x" | "y">("none");
   const openedAtRef = useRef(0);
   const [isOpeningFromCard, setIsOpeningFromCard] = useState(false);
   const [openingVars, setOpeningVars] = useState<CSSProperties | null>(null);
@@ -100,6 +102,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       dragOffsetRef.current = 0;
       isHorizontalGestureRef.current = false;
       isPullGestureRef.current = false;
+      gestureAxisRef.current = "none";
       stageRef.current?.style.removeProperty("--style-preview-enter-from");
       stageRef.current?.style.removeProperty("--style-preview-leave-from");
       setIsOpeningFromCard(false);
@@ -216,6 +219,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     dragOffsetRef.current = 0;
     isHorizontalGestureRef.current = false;
     isPullGestureRef.current = false;
+    gestureAxisRef.current = "none";
     setIsDragging(false);
     setDragOffsetPx(0);
   };
@@ -285,12 +289,18 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     const absDy = Math.abs(dy);
     const canSwipeNext = currentIndex >= 0 && currentIndex < styles.length - 1;
     const canSwipePrev = currentIndex > 0;
+    gestureAxisRef.current = resolveGestureAxis({
+      current: gestureAxisRef.current,
+      absDx,
+      absDy,
+      idleThresholdPx: 6,
+      horizontalBiasRatio: 0.9,
+    });
+    if (gestureAxisRef.current === "none") return;
 
     if (!isHorizontalGestureRef.current && !isPullGestureRef.current) {
-      if (!shouldActivateHorizontalSwipe({ absDx, absDy, activationPx: SWIPE_ACTIVATION_PX, verticalToleranceRatio: 0.95 })) {
-        if (!(dy > 0 && absDy > absDx * 1.05)) return;
-      }
-      if (absDx > absDy * 1.05) {
+      if (gestureAxisRef.current === "x") {
+        if (!shouldActivateHorizontalSwipe({ absDx, absDy, activationPx: SWIPE_ACTIVATION_PX, verticalToleranceRatio: 0.95 })) return;
         const direction = dx < 0 ? "next" : "prev";
         if ((direction === "next" && !canSwipeNext) || (direction === "prev" && !canSwipePrev)) return;
         const neighbor = styles[currentIndex + (direction === "next" ? 1 : -1)] ?? null;

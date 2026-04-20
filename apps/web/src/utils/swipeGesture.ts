@@ -1,6 +1,21 @@
 export const SWIPE_ACTIVATION_PX = 10;
 export const SWIPE_FLICK_MIN_DISTANCE_PX = 24;
 export const SWIPE_FLICK_MIN_VELOCITY_PX_PER_MS = 0.35;
+export type GestureAxis = "none" | "x" | "y";
+
+export function resolveGestureAxis(params: {
+  current: GestureAxis;
+  absDx: number;
+  absDy: number;
+  idleThresholdPx?: number;
+  horizontalBiasRatio?: number;
+}): GestureAxis {
+  if (params.current !== "none") return params.current;
+  const idleThresholdPx = params.idleThresholdPx ?? 6;
+  const horizontalBiasRatio = params.horizontalBiasRatio ?? 0.9;
+  if (params.absDx < idleThresholdPx && params.absDy < idleThresholdPx) return "none";
+  return params.absDx > params.absDy * horizontalBiasRatio ? "x" : "y";
+}
 
 export function shouldActivateHorizontalSwipe(params: {
   absDx: number;
