@@ -1202,8 +1202,19 @@ export function App() {
     triggerHaptic(isMedium ? "medium" : "light");
   };
 
+  const isGestureSystemLocked =
+    stylePreviewOpen ||
+    categoryOpen ||
+    purchaseOpen ||
+    modelsOpen ||
+    viewerMenuOpen ||
+    queuedModalOpen ||
+    paywallModalOpen ||
+    telegramModalOpen ||
+    Boolean(lastError || asyncFailError);
+
   return (
-    <main className="app-shell" onClickCapture={handleUiTapHaptic}>
+    <main className={`app-shell${isGestureSystemLocked ? " gesture-system-locked" : ""}`} onClickCapture={handleUiTapHaptic}>
       {activeScreen === "home" ? (
         <HomeScreen
           styles={styles}
@@ -1346,7 +1357,7 @@ export function App() {
       <TabBar
         activeScreen={activeScreen}
         isCreateActive={createTabPinned || flowStyleOpen || flowUploadOpen || stylePreviewBackToFlow}
-        isLocked={viewerMenuOpen}
+        isLocked={isGestureSystemLocked}
         photosBadge={activeScreen === "photos" ? 0 : newPhotosCount}
         onChange={(screen) => {
           setCreateTabPinned(false);

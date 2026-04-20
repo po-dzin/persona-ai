@@ -357,6 +357,23 @@ describe("App flows", () => {
     expect(screen.getByText("Запрос")).toBeInTheDocument();
   });
 
+  it("locks tab navigation while style preview fullscreen is open", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Создать" }));
+    expect(await screen.findByRole("button", { name: "Кастом" })).toBeInTheDocument();
+
+    const styleButtons = screen.getAllByRole("button", { name: /Голливуд/ });
+    await user.click(styleButtons[styleButtons.length - 1]);
+    expect(await screen.findByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
+
+    expect(document.querySelector(".tab-bar")?.classList.contains("is-locked")).toBe(true);
+    const homeTabButton = document.querySelector(".tab-bar .tab-item[aria-label='Главная']") as HTMLButtonElement | null;
+    expect(homeTabButton).toBeTruthy();
+    expect(homeTabButton).toBeDisabled();
+  });
+
   it("keeps create style-grid stable across repeated preview open-close cycles", async () => {
     const user = userEvent.setup();
 

@@ -59,6 +59,17 @@ button, a, [role="button"] { touch-action: manipulation; }
   background: var(--sem-color-bg-primary);
   margin: 0 auto;
 }
+.app-shell.gesture-system-locked .screen {
+  pointer-events: none;
+}
+.app-shell.gesture-system-locked .overlay-screen,
+.app-shell.gesture-system-locked .modal-backdrop,
+.app-shell.gesture-system-locked .sheet-backdrop {
+  pointer-events: auto;
+}
+.app-shell.gesture-system-locked .tab-bar {
+  pointer-events: none;
+}
 
 /* ─── Screens ─── */
 /*
@@ -1481,7 +1492,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   top: 0;
   left: 0;
   right: 0;
-  bottom: calc(-1 * (var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--cmp-space-0))) + var(--tab-bar-gap)));
+  bottom: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;

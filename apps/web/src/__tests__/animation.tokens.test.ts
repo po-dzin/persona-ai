@@ -155,6 +155,12 @@ describe("animation token compliance – key rule contracts", () => {
     );
   });
 
+  it("photo viewer sheet backdrop is anchored to screen bottom (above tab bar)", () => {
+    expect(indexCss).toMatch(
+      /\.viewer-sheet-backdrop\s*\{[^}]*bottom:\s*0;/s,
+    );
+  });
+
   it("modal card entrance animation uses --cmp-motion-modal-enter", () => {
     expect(indexCss).toMatch(
       /animation: modalCardEnter var\(--cmp-motion-modal-enter\)/,
