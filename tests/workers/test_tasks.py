@@ -27,6 +27,8 @@ def _seed_user(db, user_id: str = "u1", credits: int = 100) -> UserRow:
         created_at=_now(),
     )
     db.add(user)
+    # Ensure parent row exists before dependent rows are added in the same tx.
+    db.flush()
     return user
 
 
