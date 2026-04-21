@@ -43,7 +43,7 @@ END $$;
 
 DO $$ BEGIN
     CREATE TYPE wallet_tx_type AS ENUM (
-        'trial_grant',
+        'onboarding_bonus',
         'package_purchase',
         'debit_generation',
         'refund_generation',
