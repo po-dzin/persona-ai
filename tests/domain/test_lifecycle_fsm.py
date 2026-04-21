@@ -63,6 +63,8 @@ def test_last_model_cost_affects_low_balance_threshold() -> None:
         user.last_payment_at = now_utc()
         user.last_success_generation_at = now_utc()
         db.add(user)
+        # Flush parent first so FK checks for dependent rows are deterministic.
+        db.flush()
         db.add(
             OrderRow(
                 order_id="ord-fsm-cost",

@@ -10,6 +10,11 @@ import os
 # In CI: TEST_DATABASE_URL=postgresql://... (set in ci.yml) enables real Postgres.
 # Locally: falls back to in-memory SQLite.
 os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:")
+# Tests must use a single privileged URL from TEST_DATABASE_URL.
+# If APP/WORKER role-scoped URLs leak from env, reset_db may run as app_api/app_worker
+# and fail on TRUNCATE with insufficient privilege.
+os.environ["APP_DATABASE_URL"] = ""
+os.environ["WORKER_DATABASE_URL"] = ""
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("INTEGRATION_MODE", "mock")
 
@@ -17,6 +22,8 @@ import sys
 from pathlib import Path
 
 import pytest
+from sqlalchemy import event
+from sqlalchemy.exc import ProgrammingError
 
 ROOT = Path(__file__).resolve().parent.parent
 API_DIR = ROOT / "apps" / "api"
@@ -42,11 +49,78 @@ def apply_sql_migrations():
         runpy.run_path(str(ROOT / "infra" / "db" / "migrate.py"), run_name="__main__")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def force_system_rls_for_test_connections():
+    """Default all PostgreSQL test connections to system RLS mode.
+
+    CI often runs tests with a non-superuser role. Without explicit mode,
+    migration 0009 defaults to deny-all, which breaks test setup inserts.
+    """
+    db_url = os.environ["DATABASE_URL"]
+    if db_url.startswith("sqlite"):
+        return
+
+    from app.core.db import engine
+
+    def _set_rls_system(dbapi_connection):
+        with dbapi_connection.cursor() as cur:
+            cur.execute("SELECT set_config('app.rls_mode', 'system', false)")
+            cur.execute("SELECT set_config('app.current_user_id', '', false)")
+
+    @event.listens_for(engine, "connect")
+    def _set_rls_system_on_connect(dbapi_connection, _connection_record):
+        _set_rls_system(dbapi_connection)
+
+    @event.listens_for(engine, "checkout")
+    def _set_rls_system_on_checkout(dbapi_connection, _connection_record, _connection_proxy):
+        _set_rls_system(dbapi_connection)
+
+
 @pytest.fixture(autouse=True)
 def reset_db():
-    """Drop and recreate all ORM-managed tables before each test for clean isolation."""
+    """Reset test data before each test while preserving migrated PG schema state."""
     from app.core.db import Base, engine
+    from sqlalchemy import inspect, text
 
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    # Defensive reset: prevent leaked per-test RLS UUID context across test cases.
+    from app.core.db import activate_rls
+    activate_rls(None)
+
+    db_url = os.environ["DATABASE_URL"]
+    if db_url.startswith("sqlite"):
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+    else:
+        # Keep the migration-managed PostgreSQL schema intact: dropping tables
+        # removes RLS policies, FORCE RLS, grants, and seeded reference data.
+        with engine.begin() as conn:
+            inspector = inspect(conn)
+            existing_tables = set(inspector.get_table_names(schema="public"))
+            table_names = [
+                f'public."{table.name}"'
+                for table in Base.metadata.sorted_tables
+                if table.name in existing_tables
+            ]
+            if table_names:
+                truncate_blocked = False
+                try:
+                    # Use a savepoint so a failed TRUNCATE doesn't poison
+                    # the outer transaction used by the fallback cleanup.
+                    with conn.begin_nested():
+                        conn.execute(
+                            text(
+                                f"TRUNCATE TABLE {', '.join(table_names)} "
+                                "RESTART IDENTITY CASCADE"
+                            )
+                        )
+                except ProgrammingError as exc:
+                    if "permission denied" not in str(exc).lower():
+                        raise
+                    truncate_blocked = True
+
+                if truncate_blocked:
+                    # Lower-privilege fallback for CI users without TRUNCATE rights.
+                    for table_name in reversed(table_names):
+                        conn.execute(text(f"DELETE FROM {table_name}"))
+
     yield

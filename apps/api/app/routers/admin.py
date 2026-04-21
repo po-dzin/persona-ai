@@ -17,7 +17,7 @@ from sqlalchemy import text
 from app.core.auth import parse_tg_user
 from app.core.db import (
     UserRow,
-    get_session,
+    get_system_session,
     _is_sqlite,
 )
 from app.core.rate_limit import admin_limiter
@@ -150,7 +150,7 @@ def overview(days: int = Query(default=7, ge=1, le=90)):
     `days` controls the primary comparison period (1 / 7 / 30).
     Always returns today + period + alltime.
     """
-    with get_session() as session:
+    with get_system_session() as session:
         total_users = _scalar(session, "SELECT COUNT(*) FROM users")
         paying_users = _scalar(
             session,
@@ -256,7 +256,7 @@ def overview(days: int = Query(default=7, ge=1, le=90)):
 @router.get("/timeseries", dependencies=[Depends(require_admin)])
 def timeseries(days: int = Query(default=30, ge=7, le=90)):
     """Daily breakdown for charts: users, generations, revenue."""
-    with get_session() as session:
+    with get_system_session() as session:
         users_sql = f"""
             SELECT {_trunc_day()} as day, COUNT(*) as new_users
             FROM users WHERE {_interval(days)}
@@ -292,7 +292,7 @@ def timeseries(days: int = Query(default=30, ge=7, le=90)):
 @router.get("/revenue", dependencies=[Depends(require_admin)])
 def revenue(days: int = Query(default=30, ge=1, le=365)):
     """Revenue breakdown: by package, recent payments, totals."""
-    with get_session() as session:
+    with get_system_session() as session:
         # By package
         by_package = _serialize_rows(_rows(
             session,
@@ -355,7 +355,7 @@ def revenue(days: int = Query(default=30, ge=1, le=365)):
 @router.get("/generations", dependencies=[Depends(require_admin)])
 def generations(days: int = Query(default=7, ge=1, le=90)):
     """Generation stats: by status, by style, by model, recent failures."""
-    with get_session() as session:
+    with get_system_session() as session:
         # By status
         by_status = {
             r["status"]: r["cnt"]
@@ -558,7 +558,7 @@ def users_list(
     """
     count_sql = f"SELECT COUNT(*) FROM ({inner_sql}) AS _sub"
 
-    with get_session() as session:
+    with get_system_session() as session:
         rows = _serialize_rows(_rows(session, sql, params))
         total = _scalar(session, count_sql, {k: v for k, v in params.items() if k not in ("limit", "offset")})
 
@@ -573,7 +573,7 @@ def users_list(
 @router.get("/users/{user_id}", dependencies=[Depends(require_admin)])
 def user_detail(user_id: str):
     """Full user profile: balance, orders history, payments history."""
-    with get_session() as session:
+    with get_system_session() as session:
         result = session.execute(
             text("SELECT * FROM users WHERE user_id = :uid"), {"uid": user_id}
         )
@@ -626,7 +626,7 @@ def user_detail(user_id: str):
 
 @router.get("/lifecycle/overview", dependencies=[Depends(require_admin)])
 def lifecycle_overview(days: int = Query(default=30, ge=1, le=180)):
-    with get_session() as session:
+    with get_system_session() as session:
         states_rows = _rows(
             session,
             "SELECT lifecycle_state as state, COUNT(*) as cnt FROM users GROUP BY lifecycle_state",
@@ -710,7 +710,7 @@ def lifecycle_users(
 
     count_sql = f"SELECT COUNT(*) FROM users u {where_sql}"
 
-    with get_session() as session:
+    with get_system_session() as session:
         rows = _serialize_rows(_rows(session, sql, params))
         total = _scalar(session, count_sql, {k: v for k, v in params.items() if k not in ("limit", "offset")})
 
@@ -724,7 +724,7 @@ def lifecycle_users(
 
 @router.get("/lifecycle/users/{user_id}/timeline", dependencies=[Depends(require_admin)])
 def lifecycle_user_timeline(user_id: str):
-    with get_session() as session:
+    with get_system_session() as session:
         user = session.get(UserRow, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="user_not_found")
@@ -777,7 +777,7 @@ def lifecycle_force_transition(
     if payload.to_state not in LIFECYCLE_STATES:
         raise HTTPException(status_code=400, detail="invalid_lifecycle_state")
 
-    with get_session() as session:
+    with get_system_session() as session:
         user = session.get(UserRow, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="user_not_found")
@@ -799,7 +799,7 @@ def lifecycle_lock(
     payload: LifecycleLockRequest,
     actor: AdminActor = Depends(get_admin_actor),
 ):
-    with get_session() as session:
+    with get_system_session() as session:
         user = session.get(UserRow, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="user_not_found")
@@ -814,7 +814,7 @@ def lifecycle_unlock(
     payload: LifecycleLockRequest,
     actor: AdminActor = Depends(get_admin_actor),
 ):
-    with get_session() as session:
+    with get_system_session() as session:
         user = session.get(UserRow, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="user_not_found")
@@ -829,7 +829,7 @@ def lifecycle_recompute(
     payload: LifecycleLockRequest = Body(default=LifecycleLockRequest(reason="manual_recompute")),
     actor: AdminActor = Depends(get_admin_actor),
 ):
-    with get_session() as session:
+    with get_system_session() as session:
         user = session.get(UserRow, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="user_not_found")

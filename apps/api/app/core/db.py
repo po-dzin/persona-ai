@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Generator
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    ForeignKey,
     Index,
     Integer,
     String,
@@ -23,24 +25,46 @@ from app.core.settings import settings
 
 _is_sqlite = settings.database_url.startswith("sqlite")
 
-if _is_sqlite:
-    from sqlalchemy.pool import StaticPool
 
-    engine = create_engine(
-        settings.database_url,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-else:
-    engine = create_engine(
-        settings.database_url,
+def _make_engine(url: str):
+    if url.startswith("sqlite"):
+        from sqlalchemy.pool import StaticPool
+        return create_engine(
+            url,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+    return create_engine(
+        url,
         pool_pre_ping=True,
         pool_size=5,
         max_overflow=10,
-        connect_args={"sslmode": "require"} if "render.com" in settings.database_url else {},
+        connect_args={"sslmode": "require"} if "render.com" in url else {},
     )
 
+
+# Primary engine — used by get_session() (user requests, app_api role when configured).
+engine = _make_engine(settings.database_url)
+
+# System engine — used by get_system_session() (workers, admin, system paths).
+# Falls back to the primary engine when WORKER_DATABASE_URL is not set.
+_app_url = settings.app_database_url or settings.database_url
+_system_url = settings.worker_database_url or settings.database_url
+if _app_url != settings.database_url:
+    engine = _make_engine(_app_url)
+_system_engine = _make_engine(_system_url) if _system_url != _app_url else engine
+
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
+_SystemSessionLocal = sessionmaker(bind=_system_engine, autocommit=False, autoflush=False, expire_on_commit=False)
+
+# Per-async-task UUID for automatic RLS propagation.
+# Set by activate_rls(); read by get_session() to enforce RLS on every new transaction.
+_rls_uuid_var: ContextVar[UUID | None] = ContextVar("rls_uuid", default=None)
+
+
+def activate_rls(user_uuid: UUID | None) -> None:
+    """Record the current user UUID in async context so all subsequent sessions enforce RLS."""
+    _rls_uuid_var.set(user_uuid)
 
 
 class Base(DeclarativeBase):
@@ -81,7 +105,7 @@ class OrderRow(Base):
     )
 
     order_id = Column(String, primary_key=True)
-    user_id = Column(String, nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
     style_code = Column(String, nullable=False)
     source_key = Column(String, nullable=False)
     model_id = Column(String, nullable=False)
@@ -103,7 +127,7 @@ class JobRow(Base):
     )
 
     job_id = Column(String, primary_key=True)
-    order_id = Column(String, nullable=False, index=True)
+    order_id = Column(String, ForeignKey("orders.order_id", ondelete="CASCADE"), nullable=False, index=True)
     provider = Column(String, nullable=False)
     status = Column(String, nullable=False, default="queued")
     provider_task_id = Column(String, nullable=True)
@@ -122,7 +146,7 @@ class PaymentRow(Base):
     provider = Column(String, nullable=False)
     status = Column(String, nullable=False)
     package_code = Column(String, nullable=False)
-    user_id = Column(String, nullable=True)
+    user_id = Column(String, ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True)
     amount = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), nullable=False)
 
@@ -180,8 +204,8 @@ class MediaAssetRow(Base):
     )
 
     id = Column(String, primary_key=True)
-    user_id = Column(String, nullable=False, index=True)
-    order_id = Column(String, nullable=True)
+    user_id = Column(String, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
+    order_id = Column(String, ForeignKey("orders.order_id", ondelete="SET NULL"), nullable=True)
     kind = Column(String, nullable=False)   # "source" | "result"
     storage_bucket = Column(String, nullable=False)
     storage_key = Column(String, nullable=False)
@@ -547,14 +571,15 @@ def _run_column_migrations() -> None:
 def set_rls_context(db: Session, user_uuid) -> None:
     """Activate per-transaction RLS enforcement for the given user UUID.
 
-    Uses set_config(..., is_local=true) so the setting reverts automatically
-    when the transaction ends — no manual cleanup needed.
+    Also records the UUID in the async-task ContextVar so that all
+    subsequent get_session() calls in the same request/task automatically
+    enforce RLS without needing another explicit call.
 
-    No-op on SQLite (RLS is a PostgreSQL-only feature).
-    No-op if user_uuid is None (e.g. admin / cron paths).
+    No-op on SQLite. No-op if user_uuid is None.
     """
     if _is_sqlite or user_uuid is None:
         return
+    activate_rls(user_uuid)
     db.execute(
         text("SELECT set_config('app.current_user_id', :uuid, true)"),
         {"uuid": str(user_uuid)},
@@ -564,9 +589,42 @@ def set_rls_context(db: Session, user_uuid) -> None:
 
 @contextmanager
 def get_session() -> Generator[Session, None, None]:
-    """Context-manager that commits on success and rolls back on exception."""
+    """User-context session: enforces RLS when a UUID is set via activate_rls().
+
+    If no UUID is in the ContextVar the session runs in the DB default mode
+    ('system' after migration 0007), correct for paths that run before user
+    identity is established (e.g. get_or_create_user).
+    """
     session = SessionLocal()
     try:
+        uuid = _rls_uuid_var.get()
+        if uuid is not None and not _is_sqlite:
+            session.execute(
+                text("SELECT set_config('app.current_user_id', :uuid, true)"),
+                {"uuid": str(uuid)},
+            )
+            session.execute(text("SELECT set_config('app.rls_mode', 'enforce', true)"))
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@contextmanager
+def get_system_session() -> Generator[Session, None, None]:
+    """System-context session: explicitly sets app.rls_mode = 'system'.
+
+    Uses the system engine (WORKER_DATABASE_URL / app_worker role when configured).
+    Use for workers, admin routes, startup hooks, and any path that legitimately
+    accesses rows across multiple users. Never use inside user-facing request handlers.
+    """
+    session = _SystemSessionLocal()
+    try:
+        if not _is_sqlite:
+            session.execute(text("SELECT set_config('app.rls_mode', 'system', true)"))
         yield session
         session.commit()
     except Exception:
