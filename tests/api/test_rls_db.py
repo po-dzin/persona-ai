@@ -46,8 +46,8 @@ def two_users(pg_session):
     for uid, puuid in ((uid_a, uuid_a), (uid_b, uuid_b)):
         pg_session.execute(
             text(
-                "INSERT INTO users (user_id, id, paid_credits, lifecycle_state, created_at, updated_at) "
-                "VALUES (:uid, CAST(:uuid AS uuid), 20, 'S0', now(), now())"
+                "INSERT INTO users (user_id, id, paid_credits, lifecycle_state, created_at) "
+                "VALUES (:uid, CAST(:uuid AS uuid), 20, 'S0', now())"
             ),
             {"uid": uid, "uuid": puuid},
         )
