@@ -56,6 +56,8 @@ def two_users(pg_session):
 
 
 def _set_enforce(session, user_uuid: str) -> None:
+    # SET ROLE so FORCE RLS applies — CI uses superuser which bypasses it otherwise.
+    session.execute(text("SET ROLE app_api"))
     session.execute(text("SELECT set_config('app.rls_mode', 'enforce', true)"))
     session.execute(
         text("SELECT set_config('app.current_user_id', :uuid, true)"),
@@ -64,12 +66,14 @@ def _set_enforce(session, user_uuid: str) -> None:
 
 
 def _set_system(session) -> None:
+    session.execute(text("SET ROLE app_api"))
     session.execute(text("SELECT set_config('app.rls_mode', 'system', true)"))
     session.execute(text("SELECT set_config('app.current_user_id', '', true)"))
 
 
 def _clear_mode(session) -> None:
-    """Unset rls_mode — should fall back to 'system' default per app_rls_mode()."""
+    """Unset rls_mode — falls back to 'deny' per app_rls_mode() after migration 0009."""
+    session.execute(text("SET ROLE app_api"))
     session.execute(text("SELECT set_config('app.rls_mode', '', true)"))
     session.execute(text("SELECT set_config('app.current_user_id', '', true)"))
 
@@ -123,9 +127,9 @@ def two_orders(pg_session, two_users):
             text(
                 "INSERT INTO orders "
                 "(order_id, user_id, style_code, source_key, model_id, prompt, aspect_ratio, "
-                " status, credit_cost, created_at, updated_at) "
+                " status, credit_cost, is_favorite, created_at, updated_at) "
                 "VALUES (:oid, :uid, 'test', 'k', 'nb2-1k', 'p', '1:1', "
-                "        'draft', 1, now(), now())"
+                "        'draft', 1, false, now(), now())"
             ),
             {"oid": oid, "uid": uid},
         )
@@ -171,6 +175,7 @@ def test_activate_rls_propagates_to_new_session(two_users):
     activate_rls(_uuid.UUID(user_a["uuid"]))
     try:
         with get_session() as db:
+            db.execute(text("SET ROLE app_api"))
             rows = db.execute(text("SELECT user_id FROM users")).fetchall()
             ids = {r[0] for r in rows}
             assert ids == {user_a["user_id"]}, (
@@ -190,6 +195,7 @@ def test_get_system_session_bypasses_user_uuid(two_users):
     activate_rls(_uuid.UUID(user_a["uuid"]))
     try:
         with get_system_session() as db:
+            db.execute(text("SET ROLE app_api"))
             rows = db.execute(text("SELECT user_id FROM users")).fetchall()
             ids = {r[0] for r in rows}
             assert user_a["user_id"] in ids
