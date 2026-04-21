@@ -62,11 +62,18 @@ def force_system_rls_for_test_connections():
 
     from app.core.db import engine
 
-    @event.listens_for(engine, "connect")
-    def _set_rls_system_on_connect(dbapi_connection, _connection_record):
+    def _set_rls_system(dbapi_connection):
         with dbapi_connection.cursor() as cur:
             cur.execute("SELECT set_config('app.rls_mode', 'system', false)")
             cur.execute("SELECT set_config('app.current_user_id', '', false)")
+
+    @event.listens_for(engine, "connect")
+    def _set_rls_system_on_connect(dbapi_connection, _connection_record):
+        _set_rls_system(dbapi_connection)
+
+    @event.listens_for(engine, "checkout")
+    def _set_rls_system_on_checkout(dbapi_connection, _connection_record, _connection_proxy):
+        _set_rls_system(dbapi_connection)
 
 
 @pytest.fixture(autouse=True)
@@ -74,6 +81,10 @@ def reset_db():
     """Reset test data before each test while preserving migrated PG schema state."""
     from app.core.db import Base, engine
     from sqlalchemy import inspect, text
+
+    # Defensive reset: prevent leaked per-test RLS UUID context across test cases.
+    from app.core.db import activate_rls
+    activate_rls(None)
 
     db_url = os.environ["DATABASE_URL"]
     if db_url.startswith("sqlite"):
