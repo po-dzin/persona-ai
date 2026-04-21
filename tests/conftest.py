@@ -22,6 +22,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from sqlalchemy import event
 from sqlalchemy.exc import ProgrammingError
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -46,6 +47,26 @@ def apply_sql_migrations():
         import runpy
         # migrate.py reads DATABASE_URL from env, applies all *.sql files idempotently
         runpy.run_path(str(ROOT / "infra" / "db" / "migrate.py"), run_name="__main__")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def force_system_rls_for_test_connections():
+    """Default all PostgreSQL test connections to system RLS mode.
+
+    CI often runs tests with a non-superuser role. Without explicit mode,
+    migration 0009 defaults to deny-all, which breaks test setup inserts.
+    """
+    db_url = os.environ["DATABASE_URL"]
+    if db_url.startswith("sqlite"):
+        return
+
+    from app.core.db import engine
+
+    @event.listens_for(engine, "connect")
+    def _set_rls_system_on_connect(dbapi_connection, _connection_record):
+        with dbapi_connection.cursor() as cur:
+            cur.execute("SELECT set_config('app.rls_mode', 'system', false)")
+            cur.execute("SELECT set_config('app.current_user_id', '', false)")
 
 
 @pytest.fixture(autouse=True)
@@ -88,7 +109,7 @@ def reset_db():
 
                 if truncate_blocked:
                     # Lower-privilege fallback for CI users without TRUNCATE rights.
-                    for table_name in table_names:
+                    for table_name in reversed(table_names):
                         conn.execute(text(f"DELETE FROM {table_name}"))
 
     yield
