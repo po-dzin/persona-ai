@@ -24,24 +24,37 @@ from app.core.settings import settings
 
 _is_sqlite = settings.database_url.startswith("sqlite")
 
-if _is_sqlite:
-    from sqlalchemy.pool import StaticPool
 
-    engine = create_engine(
-        settings.database_url,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-else:
-    engine = create_engine(
-        settings.database_url,
+def _make_engine(url: str):
+    if url.startswith("sqlite"):
+        from sqlalchemy.pool import StaticPool
+        return create_engine(
+            url,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+    return create_engine(
+        url,
         pool_pre_ping=True,
         pool_size=5,
         max_overflow=10,
-        connect_args={"sslmode": "require"} if "render.com" in settings.database_url else {},
+        connect_args={"sslmode": "require"} if "render.com" in url else {},
     )
 
+
+# Primary engine — used by get_session() (user requests, app_api role when configured).
+engine = _make_engine(settings.database_url)
+
+# System engine — used by get_system_session() (workers, admin, system paths).
+# Falls back to the primary engine when WORKER_DATABASE_URL is not set.
+_app_url = settings.app_database_url or settings.database_url
+_system_url = settings.worker_database_url or settings.database_url
+if _app_url != settings.database_url:
+    engine = _make_engine(_app_url)
+_system_engine = _make_engine(_system_url) if _system_url != _app_url else engine
+
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
+_SystemSessionLocal = sessionmaker(bind=_system_engine, autocommit=False, autoflush=False, expire_on_commit=False)
 
 # Per-async-task UUID for automatic RLS propagation.
 # Set by activate_rls(); read by get_session() to enforce RLS on every new transaction.
@@ -603,11 +616,11 @@ def get_session() -> Generator[Session, None, None]:
 def get_system_session() -> Generator[Session, None, None]:
     """System-context session: explicitly sets app.rls_mode = 'system'.
 
-    Use for workers, admin routes, startup hooks, and any path that
-    legitimately accesses rows across multiple users. Never use inside
-    user-facing request handlers.
+    Uses the system engine (WORKER_DATABASE_URL / app_worker role when configured).
+    Use for workers, admin routes, startup hooks, and any path that legitimately
+    accesses rows across multiple users. Never use inside user-facing request handlers.
     """
-    session = SessionLocal()
+    session = _SystemSessionLocal()
     try:
         if not _is_sqlite:
             session.execute(text("SELECT set_config('app.rls_mode', 'system', true)"))

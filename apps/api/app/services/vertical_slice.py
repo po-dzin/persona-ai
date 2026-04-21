@@ -8,7 +8,7 @@ import logging
 
 from app.adapters.http_client import ProviderHTTPError
 from app.adapters.provider_registry import build_provider_registry
-from app.core.db import JobRow, MediaAssetRow, OrderRow, PaymentRow, UserRow, activate_rls, get_session, set_rls_context
+from app.core.db import JobRow, MediaAssetRow, OrderRow, PaymentRow, UserRow, activate_rls, get_session, get_system_session, set_rls_context
 from app.core.settings import settings
 from app.services.lifecycle import (
     mark_generation_succeeded,
@@ -444,7 +444,7 @@ class VerticalSliceService:
         first_name: str | None = None,
         username: str | None = None,
     ) -> UserRow:
-        with get_session() as db:
+        with get_system_session() as db:
             user = db.get(UserRow, user_id)
             if not user:
                 user = UserRow(
@@ -580,7 +580,7 @@ class VerticalSliceService:
 
         try:
             expires_at = now_utc() + timedelta(hours=ttl_hours)
-            with get_session() as db:
+            with get_system_session() as db:
                 db.add(MediaAssetRow(
                     id=str(uuid4()),
                     user_id=user_id,
@@ -820,7 +820,7 @@ class VerticalSliceService:
             }
 
     def order_status(self, order_id: str) -> dict[str, Any]:
-        with get_session() as db:
+        with get_system_session() as db:
             order = db.get(OrderRow, order_id)
             if not order:
                 raise ValueError("order_not_found")
@@ -936,7 +936,7 @@ class VerticalSliceService:
 
         _tg_notify: tuple[str, str, str] | None = None  # (user_id, result_url, order_id)
 
-        with get_session() as db:
+        with get_system_session() as db:
             # Idempotency: check if this event was already processed
             existing = (
                 db.query(PaymentRow)
@@ -1156,7 +1156,7 @@ class VerticalSliceService:
         return None
 
     def _find_order(self, order_id: str) -> "OrderRow":
-        with get_session() as db:
+        with get_system_session() as db:
             order = db.get(OrderRow, order_id)
             if not order:
                 raise ValueError("order_not_found")

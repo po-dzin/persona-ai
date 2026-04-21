@@ -23,6 +23,11 @@ class Settings:
 
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/live_photo")
+    # Optional role-scoped URLs. When set, API uses app_api role and workers use
+    # app_worker role, giving true DB-level isolation. Fall back to database_url
+    # when not configured (single-connection mode, current default).
+    app_database_url: str = os.getenv("APP_DATABASE_URL", "")
+    worker_database_url: str = os.getenv("WORKER_DATABASE_URL", "")
 
     r2_endpoint: str = os.getenv("R2_ENDPOINT", "https://example.r2.cloudflarestorage.com")
     r2_bucket: str = os.getenv("R2_BUCKET", "live-photo")
