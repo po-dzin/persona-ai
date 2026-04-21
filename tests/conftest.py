@@ -44,9 +44,31 @@ def apply_sql_migrations():
 
 @pytest.fixture(autouse=True)
 def reset_db():
-    """Drop and recreate all ORM-managed tables before each test for clean isolation."""
+    """Reset test data before each test while preserving migrated PG schema state."""
     from app.core.db import Base, engine
+    from sqlalchemy import inspect, text
 
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    db_url = os.environ["DATABASE_URL"]
+    if db_url.startswith("sqlite"):
+        Base.metadata.drop_all(bind=engine)
+        Base.metadata.create_all(bind=engine)
+    else:
+        # Keep the migration-managed PostgreSQL schema intact: dropping tables
+        # removes RLS policies, FORCE RLS, grants, and seeded reference data.
+        with engine.begin() as conn:
+            inspector = inspect(conn)
+            existing_tables = set(inspector.get_table_names(schema="public"))
+            table_names = [
+                f'public."{table.name}"'
+                for table in Base.metadata.sorted_tables
+                if table.name in existing_tables
+            ]
+            if table_names:
+                conn.execute(
+                    text(
+                        f"TRUNCATE TABLE {', '.join(table_names)} "
+                        "RESTART IDENTITY CASCADE"
+                    )
+                )
+
     yield
