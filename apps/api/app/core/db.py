@@ -9,6 +9,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    ForeignKey,
     Index,
     Integer,
     String,
@@ -104,7 +105,7 @@ class OrderRow(Base):
     )
 
     order_id = Column(String, primary_key=True)
-    user_id = Column(String, nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
     style_code = Column(String, nullable=False)
     source_key = Column(String, nullable=False)
     model_id = Column(String, nullable=False)
@@ -126,7 +127,7 @@ class JobRow(Base):
     )
 
     job_id = Column(String, primary_key=True)
-    order_id = Column(String, nullable=False, index=True)
+    order_id = Column(String, ForeignKey("orders.order_id", ondelete="CASCADE"), nullable=False, index=True)
     provider = Column(String, nullable=False)
     status = Column(String, nullable=False, default="queued")
     provider_task_id = Column(String, nullable=True)
@@ -145,7 +146,7 @@ class PaymentRow(Base):
     provider = Column(String, nullable=False)
     status = Column(String, nullable=False)
     package_code = Column(String, nullable=False)
-    user_id = Column(String, nullable=True)
+    user_id = Column(String, ForeignKey("users.user_id", ondelete="SET NULL"), nullable=True)
     amount = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime(timezone=True), nullable=False)
 
@@ -203,8 +204,8 @@ class MediaAssetRow(Base):
     )
 
     id = Column(String, primary_key=True)
-    user_id = Column(String, nullable=False, index=True)
-    order_id = Column(String, nullable=True)
+    user_id = Column(String, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
+    order_id = Column(String, ForeignKey("orders.order_id", ondelete="SET NULL"), nullable=True)
     kind = Column(String, nullable=False)   # "source" | "result"
     storage_bucket = Column(String, nullable=False)
     storage_key = Column(String, nullable=False)
