@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from app.core.db import get_session, init_db
+from app.core.db import get_system_session, init_db
 from app.core.settings import settings
 from app.routers.v1 import router as v1_router, _executor
 from app.routers.admin import router as admin_router
@@ -62,7 +62,7 @@ def _register_tg_webhook() -> None:
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_db()
     try:
-        with get_session() as session:
+        with get_system_session() as session:
             ran, users_count = run_backfill_once(session)
             if ran:
                 _logger.info("lifecycle_backfill_completed users=%s", users_count)

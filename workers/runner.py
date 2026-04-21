@@ -27,7 +27,7 @@ def reconciliation_stale_jobs() -> dict:
 
     Safe to run frequently — idempotent, skips already-failed jobs.
     """
-    from app.core.db import JobRow, OrderRow, UserRow, SessionLocal
+    from app.core.db import JobRow, OrderRow, UserRow, get_system_session
     from app.core.settings import settings
 
     started_at = _now()
@@ -37,8 +37,7 @@ def reconciliation_stale_jobs() -> dict:
     already_done = 0
     errors = 0
 
-    db = SessionLocal()
-    try:
+    with get_system_session() as db:
         stale_jobs = (
             db.query(JobRow)
             .filter(
@@ -91,14 +90,6 @@ def reconciliation_stale_jobs() -> dict:
                 )
                 errors += 1
 
-        db.commit()
-    except Exception as exc:
-        db.rollback()
-        logger.error("reconciliation_stale_jobs: DB error: %s", exc)
-        raise
-    finally:
-        db.close()
-
     result = {
         "started_at": started_at.isoformat(),
         "cutoff": cutoff.isoformat(),
@@ -118,10 +109,9 @@ def refund_technical_failure(order_id: str) -> dict:
     Idempotent: zeroes credit_cost after refunding so double-calls are safe.
     Only refunds orders with fail_reason_code == 'technical_failed'.
     """
-    from app.core.db import OrderRow, UserRow, SessionLocal
+    from app.core.db import OrderRow, UserRow, get_system_session
 
-    db = SessionLocal()
-    try:
+    with get_system_session() as db:
         order = db.get(OrderRow, order_id)
         if not order:
             logger.warning("refund_technical_failure: order %s not found", order_id)
@@ -145,26 +135,19 @@ def refund_technical_failure(order_id: str) -> dict:
         refunded = order.credit_cost
         user.paid_credits += refunded
         order.credit_cost = 0
-        db.commit()
 
-        logger.info(
-            "refund_technical_failure: refunded %d credits to user %s for order %s",
-            refunded,
-            user.user_id,
-            order_id,
-        )
-        return {
-            "order_id": order_id,
-            "user_id": user.user_id,
-            "refunded_credits": refunded,
-            "status": "refunded",
-        }
-    except Exception as exc:
-        db.rollback()
-        logger.error("refund_technical_failure: DB error for order %s: %s", order_id, exc)
-        raise
-    finally:
-        db.close()
+    logger.info(
+        "refund_technical_failure: refunded %d credits to user %s for order %s",
+        refunded,
+        user.user_id,
+        order_id,
+    )
+    return {
+        "order_id": order_id,
+        "user_id": user.user_id,
+        "refunded_credits": refunded,
+        "status": "refunded",
+    }
 
 
 def cleanup_expired_assets() -> dict:
@@ -179,7 +162,7 @@ def cleanup_expired_assets() -> dict:
     Result URLs point to provider CDNs (not our R2), so we only clear the
     DB reference — no R2 delete needed for them.
     """
-    from app.core.db import MediaAssetRow, OrderRow, SessionLocal
+    from app.core.db import MediaAssetRow, OrderRow, get_system_session
     from app.adapters.r2_client import delete_object
     from app.core.settings import settings
 
@@ -189,8 +172,7 @@ def cleanup_expired_assets() -> dict:
     error_count = 0
 
     # ── Step 1: delete expired R2 source assets ──────────────────────────────
-    db = SessionLocal()
-    try:
+    with get_system_session() as db:
         expired = (
             db.query(MediaAssetRow)
             .filter(MediaAssetRow.expires_at <= started_at)
@@ -217,20 +199,11 @@ def cleanup_expired_assets() -> dict:
                 )
                 error_count += 1
 
-        db.commit()
-    except Exception as exc:
-        db.rollback()
-        logger.error("cleanup_expired_assets: DB error (R2 phase): %s", exc)
-        raise
-    finally:
-        db.close()
-
     # ── Step 2: null out result_url on done orders past retention window ──────
     # Provider CDN links (NanoBanana/BFL) expire after ~14 days. Clear the
     # stale reference so the API never returns a broken URL.
     result_cutoff = started_at - timedelta(days=settings.result_retention_days)
-    db = SessionLocal()
-    try:
+    with get_system_session() as db:
         stale_orders = (
             db.query(OrderRow)
             .filter(
@@ -246,18 +219,11 @@ def cleanup_expired_assets() -> dict:
             order.updated_at = started_at
             cleared_result_urls += 1
 
-        db.commit()
         if cleared_result_urls:
             logger.info(
                 "cleanup_expired_assets: cleared result_url on %d expired orders",
                 cleared_result_urls,
             )
-    except Exception as exc:
-        db.rollback()
-        logger.error("cleanup_expired_assets: DB error (result_url phase): %s", exc)
-        raise
-    finally:
-        db.close()
 
     result = {
         "started_at": started_at.isoformat(),

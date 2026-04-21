@@ -8,7 +8,7 @@ import logging
 
 from app.adapters.http_client import ProviderHTTPError
 from app.adapters.provider_registry import build_provider_registry
-from app.core.db import JobRow, MediaAssetRow, OrderRow, PaymentRow, UserRow, get_session, set_rls_context
+from app.core.db import JobRow, MediaAssetRow, OrderRow, PaymentRow, UserRow, activate_rls, get_session, set_rls_context
 from app.core.settings import settings
 from app.services.lifecycle import (
     mark_generation_succeeded,
@@ -472,6 +472,8 @@ class VerticalSliceService:
                 if changed:
                     db.commit()
                     db.refresh(user)
+            # Propagate UUID to ContextVar so all subsequent sessions enforce RLS.
+            activate_rls(user.id)
             return user
 
     def get_balance(self, user_id: str) -> dict[str, Any]:
