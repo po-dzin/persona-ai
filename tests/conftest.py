@@ -70,16 +70,24 @@ def reset_db():
                 if table.name in existing_tables
             ]
             if table_names:
+                truncate_blocked = False
                 try:
-                    conn.execute(
-                        text(
-                            f"TRUNCATE TABLE {', '.join(table_names)} "
-                            "RESTART IDENTITY CASCADE"
+                    # Use a savepoint so a failed TRUNCATE doesn't poison
+                    # the outer transaction used by the fallback cleanup.
+                    with conn.begin_nested():
+                        conn.execute(
+                            text(
+                                f"TRUNCATE TABLE {', '.join(table_names)} "
+                                "RESTART IDENTITY CASCADE"
+                            )
                         )
-                    )
-                except ProgrammingError:
-                    # Some CI DB users don't own tables and cannot TRUNCATE.
-                    # Fallback to DELETE to preserve isolation with lower privileges.
+                except ProgrammingError as exc:
+                    if "permission denied" not in str(exc).lower():
+                        raise
+                    truncate_blocked = True
+
+                if truncate_blocked:
+                    # Lower-privilege fallback for CI users without TRUNCATE rights.
                     for table_name in table_names:
                         conn.execute(text(f"DELETE FROM {table_name}"))
 
