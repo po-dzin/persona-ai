@@ -47,7 +47,7 @@ def two_users(pg_session):
         pg_session.execute(
             text(
                 "INSERT INTO users (user_id, id, paid_credits, lifecycle_state, created_at, updated_at) "
-                "VALUES (:uid, :uuid::uuid, 20, 'S0', now(), now())"
+                "VALUES (:uid, CAST(:uuid AS uuid), 20, 'S0', now(), now())"
             ),
             {"uid": uid, "uuid": puuid},
         )
@@ -100,15 +100,15 @@ def test_rls_users_system_sees_all(pg_session, two_users):
     assert user_b["user_id"] in ids
 
 
-def test_rls_users_default_sees_all(pg_session, two_users):
-    """Unset mode falls back to 'system' — all rows visible."""
+def test_rls_users_default_denies_all(pg_session, two_users):
+    """Unset mode falls back to 'deny' (migration 0009) — empty result-set."""
     user_a, user_b = two_users
 
     _clear_mode(pg_session)
     rows = pg_session.execute(text("SELECT user_id FROM users")).fetchall()
     ids = {r[0] for r in rows}
-    assert user_a["user_id"] in ids
-    assert user_b["user_id"] in ids
+    assert user_a["user_id"] not in ids
+    assert user_b["user_id"] not in ids
 
 
 # ── orders table ─────────────────────────────────────────────────────────────
