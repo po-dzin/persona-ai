@@ -22,6 +22,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from sqlalchemy.exc import ProgrammingError
 
 ROOT = Path(__file__).resolve().parent.parent
 API_DIR = ROOT / "apps" / "api"
@@ -69,11 +70,17 @@ def reset_db():
                 if table.name in existing_tables
             ]
             if table_names:
-                conn.execute(
-                    text(
-                        f"TRUNCATE TABLE {', '.join(table_names)} "
-                        "RESTART IDENTITY CASCADE"
+                try:
+                    conn.execute(
+                        text(
+                            f"TRUNCATE TABLE {', '.join(table_names)} "
+                            "RESTART IDENTITY CASCADE"
+                        )
                     )
-                )
+                except ProgrammingError:
+                    # Some CI DB users don't own tables and cannot TRUNCATE.
+                    # Fallback to DELETE to preserve isolation with lower privileges.
+                    for table_name in table_names:
+                        conn.execute(text(f"DELETE FROM {table_name}"))
 
     yield
