@@ -10,6 +10,11 @@ import os
 # In CI: TEST_DATABASE_URL=postgresql://... (set in ci.yml) enables real Postgres.
 # Locally: falls back to in-memory SQLite.
 os.environ["DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:")
+# Tests must use a single privileged URL from TEST_DATABASE_URL.
+# If APP/WORKER role-scoped URLs leak from env, reset_db may run as app_api/app_worker
+# and fail on TRUNCATE with insufficient privilege.
+os.environ["APP_DATABASE_URL"] = ""
+os.environ["WORKER_DATABASE_URL"] = ""
 os.environ.setdefault("APP_ENV", "test")
 os.environ.setdefault("INTEGRATION_MODE", "mock")
 
