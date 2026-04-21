@@ -55,6 +55,8 @@ def _seed_order(
         updated_at=_now(),
     )
     db.add(order)
+    # Parent for JobRow(order_id) must exist before dependent insert.
+    db.flush()
     return order
 
 
@@ -75,6 +77,7 @@ def _seed_job(
         updated_at=old_ts,
     )
     db.add(job)
+    db.flush()
     return job
 
 
@@ -250,6 +253,7 @@ class TestCleanupExpiredAssets:
         monkeypatch.setattr(r2_mod, "delete_object", lambda key: True)
 
         db = SessionLocal()
+        _seed_user(db, user_id="u1")
         db.add(MediaAssetRow(
             id="asset1",
             user_id="u1",
@@ -276,6 +280,7 @@ class TestCleanupExpiredAssets:
         monkeypatch.setattr(r2_mod, "delete_object", lambda key: False)
 
         db = SessionLocal()
+        _seed_user(db, user_id="u1")
         db.add(MediaAssetRow(
             id="asset2",
             user_id="u1",
