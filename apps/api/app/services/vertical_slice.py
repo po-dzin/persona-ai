@@ -488,6 +488,7 @@ class VerticalSliceService:
     ) -> dict[str, Any]:
         user = self.get_or_create_user(user_id, first_name=first_name, username=username)
         with get_session() as db:
+            set_rls_context(db, user.id)
             generations_count = (
                 db.query(OrderRow)
                 .filter(OrderRow.user_id == user_id)
@@ -650,7 +651,7 @@ class VerticalSliceService:
         aspect_ratio: str = "1:1",
         enhance_prompt: bool = True,
     ) -> OrderRow:
-        self.get_or_create_user(user_id)
+        user = self.get_or_create_user(user_id)
         model = self._resolve_model(model_id)
         style = STYLE_BY_ID.get(style_code)
         order_id = str(uuid4())
@@ -680,9 +681,8 @@ class VerticalSliceService:
             updated_at=now_iso(),
         )
         with get_session() as db:
+            set_rls_context(db, user.id)
             db.add(order)
-            db.commit()
-            db.refresh(order)
         return order
 
     def generate(
@@ -708,7 +708,10 @@ class VerticalSliceService:
         return self.start_order(order.order_id)
 
     def start_order(self, order_id: str, requesting_user_id: str | None = None) -> dict[str, Any]:
+        requesting_user = self.get_or_create_user(requesting_user_id) if requesting_user_id else None
         with get_session() as db:
+            if requesting_user:
+                set_rls_context(db, requesting_user.id)
             order = db.get(OrderRow, order_id)
             if not order:
                 raise ValueError("order_not_found")
@@ -836,9 +839,9 @@ class VerticalSliceService:
             }
 
     def history(self, user_id: str) -> list[dict[str, Any]]:
+        user = self.get_or_create_user(user_id)
         with get_session() as db:
-            user = db.get(UserRow, user_id)
-            set_rls_context(db, user.id if user else None)
+            set_rls_context(db, user.id)
             orders = (
                 db.query(OrderRow)
                 .filter(OrderRow.user_id == user_id)
@@ -848,9 +851,9 @@ class VerticalSliceService:
             return [self._serialize_order(o) for o in orders]
 
     def photos(self, user_id: str) -> list[dict[str, Any]]:
+        user = self.get_or_create_user(user_id)
         with get_session() as db:
-            user = db.get(UserRow, user_id)
-            set_rls_context(db, user.id if user else None)
+            set_rls_context(db, user.id)
             orders = (
                 db.query(OrderRow)
                 .filter(OrderRow.user_id == user_id)
@@ -873,9 +876,9 @@ class VerticalSliceService:
             ]
 
     def toggle_favorite(self, user_id: str, order_id: str) -> dict[str, Any]:
+        user = self.get_or_create_user(user_id)
         with get_session() as db:
-            user = db.get(UserRow, user_id)
-            set_rls_context(db, user.id if user else None)
+            set_rls_context(db, user.id)
             order = db.get(OrderRow, order_id)
             if not order:
                 raise ValueError("order_not_found")
@@ -887,9 +890,9 @@ class VerticalSliceService:
             return {"order_id": order_id, "is_favorite": order.is_favorite}
 
     def delete_photo(self, user_id: str, order_id: str) -> dict[str, Any]:
+        user = self.get_or_create_user(user_id)
         with get_session() as db:
-            user = db.get(UserRow, user_id)
-            set_rls_context(db, user.id if user else None)
+            set_rls_context(db, user.id)
             order = db.get(OrderRow, order_id)
             if not order:
                 raise ValueError("order_not_found")
@@ -904,7 +907,7 @@ class VerticalSliceService:
     # -------------------------------------------------------------- payments
 
     def purchase(self, user_id: str, package_code: str, provider: str = "telegram") -> dict[str, Any]:
-        self.get_or_create_user(user_id)
+        user = self.get_or_create_user(user_id)
         canonical_code = self._normalize_package_code(package_code)
         package = self._resolve_package(canonical_code)
         if package is None:
@@ -921,6 +924,7 @@ class VerticalSliceService:
         }
         result = self.ingest_webhook(provider, event_id, payload)
         with get_session() as db:
+            set_rls_context(db, user.id)
             user = db.get(UserRow, user_id)
             return {
                 "payment_id": payment_id,
@@ -1165,7 +1169,7 @@ class VerticalSliceService:
     def on_miniapp_opened(self, user_id: str) -> None:
         from app.services.lifecycle import mark_miniapp_opened
 
-        with get_session() as db:
+        with get_system_session() as db:
             user = db.get(UserRow, user_id)
             if user:
                 mark_miniapp_opened(db, user)
@@ -1173,7 +1177,7 @@ class VerticalSliceService:
     def on_bot_started(self, user_id: str) -> None:
         from app.services.lifecycle import mark_bot_started
 
-        with get_session() as db:
+        with get_system_session() as db:
             user = db.get(UserRow, user_id)
             if user:
                 mark_bot_started(db, user)
