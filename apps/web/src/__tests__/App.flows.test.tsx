@@ -374,6 +374,26 @@ describe("App flows", () => {
     expect(homeTabButton).toBeDisabled();
   });
 
+  it("keeps tab bar interactive on pricing screen", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: "Баланс" }));
+    await user.click(screen.getByRole("button", { name: "Описание тарифов →" }));
+    expect(await screen.findByText("Описание тарифов")).toBeInTheDocument();
+
+    const tabBar = document.querySelector(".tab-bar");
+    expect(tabBar?.classList.contains("is-locked")).toBe(false);
+    const homeTabButton = document.querySelector(".tab-bar .tab-item[aria-label='Главная']") as HTMLButtonElement | null;
+    expect(homeTabButton).toBeTruthy();
+    expect(homeTabButton).not.toBeDisabled();
+
+    await user.click(homeTabButton as HTMLButtonElement);
+    await waitFor(() => {
+      expect(screen.queryByText("Описание тарифов")).not.toBeInTheDocument();
+    });
+  });
+
   it("keeps create style-grid stable across repeated preview open-close cycles", async () => {
     const user = userEvent.setup();
 

@@ -1205,8 +1205,6 @@ export function App() {
   const isGestureSystemLocked =
     stylePreviewOpen ||
     categoryOpen ||
-    purchaseOpen ||
-    modelsOpen ||
     viewerMenuOpen ||
     queuedModalOpen ||
     paywallModalOpen ||
