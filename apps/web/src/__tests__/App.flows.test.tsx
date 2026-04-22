@@ -315,7 +315,7 @@ describe("App flows", () => {
     });
   });
 
-  it("locks tab navigation while photo viewer modal menu is open", async () => {
+  it("keeps tab navigation interactive while photo viewer modal menu is open", async () => {
     const user = userEvent.setup();
     const recentDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
     photosState = [{
@@ -348,16 +348,19 @@ describe("App flows", () => {
 
     await user.click(screen.getByRole("button", { name: "Действия" }));
     expect(await screen.findByRole("button", { name: "Удалить фото" })).toBeInTheDocument();
-    expect(document.querySelector(".tab-bar")?.classList.contains("is-locked")).toBe(true);
+    expect(document.querySelector(".tab-bar")?.classList.contains("is-locked")).toBe(false);
     const homeTabButton = document.querySelector(".tab-bar .tab-item[aria-label='Главная']") as HTMLButtonElement | null;
     expect(homeTabButton).toBeTruthy();
-    expect(homeTabButton).toBeDisabled();
+    expect(homeTabButton).not.toBeDisabled();
 
     await user.click(homeTabButton as HTMLButtonElement);
-    expect(screen.getByText("Запрос")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Запрос")).not.toBeInTheDocument();
+    });
+    expect(document.querySelector(".tab-bar .tab-item[aria-label='Главная']")?.classList.contains("active")).toBe(true);
   });
 
-  it("locks tab navigation while style preview fullscreen is open", async () => {
+  it("keeps tab navigation interactive while style preview fullscreen is open", async () => {
     const user = userEvent.setup();
     render(<App />);
 
@@ -368,10 +371,16 @@ describe("App flows", () => {
     await user.click(styleButtons[styleButtons.length - 1]);
     expect(await screen.findByRole("button", { name: "Создать в этом стиле" })).toBeInTheDocument();
 
-    expect(document.querySelector(".tab-bar")?.classList.contains("is-locked")).toBe(true);
+    expect(document.querySelector(".tab-bar")?.classList.contains("is-locked")).toBe(false);
     const homeTabButton = document.querySelector(".tab-bar .tab-item[aria-label='Главная']") as HTMLButtonElement | null;
     expect(homeTabButton).toBeTruthy();
-    expect(homeTabButton).toBeDisabled();
+    expect(homeTabButton).not.toBeDisabled();
+
+    await user.click(homeTabButton as HTMLButtonElement);
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Создать в этом стиле" })).not.toBeInTheDocument();
+    });
+    expect(document.querySelector(".tab-bar .tab-item[aria-label='Главная']")?.classList.contains("active")).toBe(true);
   });
 
   it("keeps tab bar interactive on pricing screen", async () => {

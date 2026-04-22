@@ -67,9 +67,6 @@ button, a, [role="button"] { touch-action: manipulation; }
 .app-shell.gesture-system-locked .sheet-backdrop {
   pointer-events: auto;
 }
-.app-shell.gesture-system-locked .tab-bar {
-  pointer-events: none;
-}
 
 /* ─── Screens ─── */
 /*
@@ -1490,11 +1487,13 @@ button, a, [role="button"] { touch-action: manipulation; }
   overscroll-behavior: none;
 }
 .viewer-sheet-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: fixed;
+  top: max(var(--tg-top-inset, var(--cmp-space-0)), env(safe-area-inset-top, var(--cmp-space-0)));
+  left: 50%;
+  width: min(100vw, var(--cmp-size-shell-max-width));
+  right: auto;
+  bottom: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--cmp-space-0))) + var(--tab-bar-gap));
+  transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
   justify-content: center;

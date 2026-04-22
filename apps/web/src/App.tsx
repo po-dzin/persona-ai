@@ -560,7 +560,13 @@ export function App() {
   const uiGeneratingOrderIds = useMemo(() => {
     const ids = new Set<string>();
     photos.forEach((photo) => {
+      const hasRenderableResult = Boolean((photo.resultUrl || "").trim());
       if (isPhotoGenerating(photo)) {
+        ids.add(photo.orderId);
+        return;
+      }
+      const status = String(photo.status || "").toLowerCase();
+      if (status !== "done" && status !== "failed" && !hasRenderableResult) {
         ids.add(photo.orderId);
         return;
       }
@@ -1355,7 +1361,7 @@ export function App() {
       <TabBar
         activeScreen={activeScreen}
         isCreateActive={createTabPinned || flowStyleOpen || flowUploadOpen || stylePreviewBackToFlow}
-        isLocked={isGestureSystemLocked}
+        isLocked={false}
         photosBadge={activeScreen === "photos" ? 0 : newPhotosCount}
         onChange={(screen) => {
           setCreateTabPinned(false);
