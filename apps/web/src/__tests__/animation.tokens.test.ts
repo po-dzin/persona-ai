@@ -161,6 +161,18 @@ describe("animation token compliance – key rule contracts", () => {
     );
   });
 
+  it("style preview card-open/card-close modes disable overlay zoom animation overlap", () => {
+    expect(indexCss).toMatch(
+      /\.style-preview-screen\.is-opening-from-card,\s*\.style-preview-screen\.is-closing-to-card\s*\{[^}]*animation:\s*none;/s,
+    );
+  });
+
+  it("style preview pull mode does not animate transform while finger is dragging", () => {
+    expect(indexCss).toMatch(
+      /\.style-preview-panel\.is-active\.is-pulling\s*\{[^}]*transition:\s*border-radius var\(--cmp-motion-fast\) var\(--cmp-ease-standard\);/s,
+    );
+  });
+
   it("modal card entrance animation uses --cmp-motion-modal-enter", () => {
     expect(indexCss).toMatch(
       /animation: modalCardEnter var\(--cmp-motion-modal-enter\)/,
