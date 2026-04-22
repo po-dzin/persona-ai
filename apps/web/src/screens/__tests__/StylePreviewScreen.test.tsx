@@ -200,4 +200,53 @@ describe("StylePreviewScreen gestures", () => {
       expect(document.querySelector(".style-preview-panel.is-opening-from-card")).toBeTruthy();
     });
   }, 10000);
+
+  it("closes to the currently active grid card when it exists (not stale origin card)", () => {
+    vi.useFakeTimers();
+    render(
+      <main className="app-shell">
+        <button className="style-card" data-style-id="s2" />
+        <StylePreviewScreen
+          isOpen
+          styles={styles}
+          style={styles[1]}
+          originRect={{ left: 8, top: 24, width: 60, height: 80 }}
+          onClose={vi.fn()}
+          onSelectStyle={vi.fn()}
+          onCreate={vi.fn()}
+        />
+      </main>,
+    );
+
+    const shell = document.querySelector(".app-shell") as HTMLElement;
+    const targetCard = document.querySelector('.style-card[data-style-id="s2"]') as HTMLElement;
+    shell.getBoundingClientRect = vi.fn(() => ({
+      left: 0,
+      top: 0,
+      width: 400,
+      height: 800,
+      right: 400,
+      bottom: 800,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }));
+    targetCard.getBoundingClientRect = vi.fn(() => ({
+      left: 50,
+      top: 500,
+      width: 100,
+      height: 120,
+      right: 150,
+      bottom: 620,
+      x: 50,
+      y: 500,
+      toJSON: () => ({}),
+    }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Назад" }));
+
+    const panel = document.querySelector(".style-preview-panel.is-active") as HTMLElement;
+    expect(panel.style.getPropertyValue("--style-preview-origin-tx")).toBe("-100px");
+    expect(panel.style.getPropertyValue("--style-preview-origin-ty")).toBe("160px");
+  });
 });

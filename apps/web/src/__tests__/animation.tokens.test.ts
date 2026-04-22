@@ -155,9 +155,21 @@ describe("animation token compliance – key rule contracts", () => {
     );
   });
 
-  it("photo viewer sheet backdrop is anchored to screen bottom (above tab bar)", () => {
+  it("photo viewer sheet backdrop is anchored above tab bar with safe-area offset", () => {
     expect(indexCss).toMatch(
-      /\.viewer-sheet-backdrop\s*\{[^}]*bottom:\s*0;/s,
+      /\.viewer-sheet-backdrop\s*\{[^}]*bottom:\s*calc\(var\(--cmp-space-52\)\s*\+\s*var\(--tg-bottom-inset,\s*env\(safe-area-inset-bottom,\s*var\(--cmp-space-0\)\)\)\s*\+\s*var\(--tab-bar-gap\)\);/s,
+    );
+  });
+
+  it("style preview card-open/card-close modes disable overlay zoom animation overlap", () => {
+    expect(indexCss).toMatch(
+      /\.style-preview-screen\.is-opening-from-card,\s*\.style-preview-screen\.is-closing-to-card\s*\{[^}]*animation:\s*none;/s,
+    );
+  });
+
+  it("style preview pull mode does not animate transform while finger is dragging", () => {
+    expect(indexCss).toMatch(
+      /\.style-preview-panel\.is-active\.is-pulling\s*\{[^}]*transition:\s*border-radius var\(--cmp-motion-fast\) var\(--cmp-ease-standard\);/s,
     );
   });
 

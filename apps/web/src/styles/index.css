@@ -67,9 +67,6 @@ button, a, [role="button"] { touch-action: manipulation; }
 .app-shell.gesture-system-locked .sheet-backdrop {
   pointer-events: auto;
 }
-.app-shell.gesture-system-locked .tab-bar {
-  pointer-events: none;
-}
 
 /* ─── Screens ─── */
 /*
@@ -290,6 +287,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   position: relative;
   overflow-x: clip;   /* clips side-panels horizontally without creating scroll container */
   overflow-y: visible; /* adjacent panels are never clipped at the bottom */
+  background: var(--sem-color-bg-primary);
   transition: height var(--cmp-motion-swipe) var(--cmp-ease-standard);
   --home-swipe-ratio: 0;
 }
@@ -300,8 +298,9 @@ button, a, [role="button"] { touch-action: manipulation; }
   visibility: hidden;
   pointer-events: none;
   overflow: hidden; /* prevent off-screen panels' content from adding to page scroll height */
-  transform: translateX(0);
+  transform: translateX(0) translateZ(0);
   transition: transform var(--cmp-motion-swipe) var(--cmp-ease-standard);
+  backface-visibility: hidden;
   will-change: transform, opacity;
 }
 .home-styles-panel.is-active,
@@ -1488,11 +1487,13 @@ button, a, [role="button"] { touch-action: manipulation; }
   overscroll-behavior: none;
 }
 .viewer-sheet-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: fixed;
+  top: max(var(--tg-top-inset, var(--cmp-space-0)), env(safe-area-inset-top, var(--cmp-space-0)));
+  left: 50%;
+  width: min(100vw, var(--cmp-size-shell-max-width));
+  right: auto;
+  bottom: calc(var(--cmp-space-52) + var(--tg-bottom-inset, env(safe-area-inset-bottom, var(--cmp-space-0))) + var(--tab-bar-gap));
+  transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1660,6 +1661,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 .style-preview-screen.is-opening-from-card,
 .style-preview-screen.is-closing-to-card {
   background: transparent;
+  animation: none;
 }
 .style-preview-screen.is-pulling {
   background: var(--sem-color-overlay-scrim);
@@ -1718,7 +1720,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .style-preview-panel.is-active.is-pulling {
   border-radius: var(--cmp-space-22);
-  transition: transform var(--cmp-motion-fast) var(--cmp-ease-standard), border-radius var(--cmp-motion-fast) var(--cmp-ease-standard);
+  transition: border-radius var(--cmp-motion-fast) var(--cmp-ease-standard);
 }
 .style-preview-panel.is-incoming {
   z-index: var(--cmp-z-base);

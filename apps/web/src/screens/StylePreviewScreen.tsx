@@ -184,15 +184,17 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
   };
 
   const resolveCloseTargetRect = () => {
-    if (originRect) return originRect;
     if (!activeStyle) return null;
     const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function"
       ? CSS.escape(activeStyle.id)
       : activeStyle.id.replace(/"/g, "\\\"");
     const button = document.querySelector(`.style-card[data-style-id="${escapedId}"]`) as HTMLElement | null;
-    if (!button) return null;
-    const rect = button.getBoundingClientRect();
-    return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    if (button) {
+      const rect = button.getBoundingClientRect();
+      return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    }
+    if (originRect) return originRect;
+    return null;
   };
 
   useEffect(() => {
