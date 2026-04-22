@@ -27,6 +27,13 @@ def _seed_balance(user_id: str, paid_credits: int) -> None:
         db.commit()
 
 
+def test_healthz_reports_ok() -> None:
+    client = _client()
+    res = client.get("/healthz")
+    assert res.status_code == 200
+    assert res.json() == {"status": "ok"}
+
+
 def test_packages_endpoint_exposes_5_tiers() -> None:
     client = _client()
     res = client.get("/v1/packages")

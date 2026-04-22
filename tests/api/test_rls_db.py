@@ -204,3 +204,67 @@ def test_get_system_session_bypasses_user_uuid(two_users):
             )
     finally:
         activate_rls(None)
+
+
+def test_create_order_succeeds_with_default_deny_and_cleared_context():
+    """Regression: create_order must not fail under default-deny RLS (no pre-activated context)."""
+    from app.core.db import OrderRow, activate_rls, get_system_session
+    from app.services.vertical_slice import VerticalSliceService
+
+    svc = VerticalSliceService()
+    user_id = f"u-create-deny-{uuid.uuid4().hex[:8]}"
+    svc.get_or_create_user(user_id)
+    activate_rls(None)
+
+    order = svc.create_order(
+        user_id=user_id,
+        style_code="hollywood",
+        source_key="source/test/photo.jpg",
+        model_id="nb2-1k",
+        aspect_ratio="1:1",
+    )
+
+    with get_system_session() as db:
+        stored = db.get(OrderRow, order.order_id)
+        assert stored is not None
+        assert stored.user_id == user_id
+        assert stored.status == "awaiting_credit_or_payment"
+
+
+def test_photo_mutations_work_with_default_deny_and_no_pre_rls_context():
+    """Regression: own photo favorite/delete must work even when ContextVar is empty."""
+    from app.core.db import OrderRow, activate_rls, get_system_session
+    from app.services.vertical_slice import VerticalSliceService, now_iso
+
+    svc = VerticalSliceService()
+    user_id = f"u-photo-deny-{uuid.uuid4().hex[:8]}"
+    svc.get_or_create_user(user_id)
+    order_id = str(uuid.uuid4())
+
+    with get_system_session() as db:
+        db.add(
+            OrderRow(
+                order_id=order_id,
+                user_id=user_id,
+                style_code="hollywood",
+                source_key="source/test/photo.jpg",
+                model_id="nb2-1k",
+                prompt="test",
+                aspect_ratio="1:1",
+                status="done",
+                credit_cost=10,
+                result_url="https://cdn.example.com/photo.jpg",
+                created_at=now_iso(),
+                updated_at=now_iso(),
+            )
+        )
+
+    activate_rls(None)
+    fav = svc.toggle_favorite(user_id, order_id)
+    assert fav["is_favorite"] is True
+
+    deleted = svc.delete_photo(user_id, order_id)
+    assert deleted["deleted"] is True
+
+    with get_system_session() as db:
+        assert db.get(OrderRow, order_id) is None
