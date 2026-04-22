@@ -86,7 +86,7 @@ def create_app() -> FastAPI:
     @app.get("/healthz", tags=["infra"])
     def healthz() -> Response:
         try:
-            with get_session() as db:
+            with get_system_session() as db:
                 db.execute(text("SELECT 1"))
             return Response(content='{"status":"ok"}', media_type="application/json")
         except Exception:
