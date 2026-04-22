@@ -155,9 +155,9 @@ describe("animation token compliance – key rule contracts", () => {
     );
   });
 
-  it("photo viewer sheet backdrop is anchored to screen bottom (above tab bar)", () => {
+  it("photo viewer sheet backdrop is anchored above tab bar with safe-area offset", () => {
     expect(indexCss).toMatch(
-      /\.viewer-sheet-backdrop\s*\{[^}]*bottom:\s*0;/s,
+      /\.viewer-sheet-backdrop\s*\{[^}]*bottom:\s*calc\(var\(--cmp-space-52\)\s*\+\s*var\(--tg-bottom-inset,\s*env\(safe-area-inset-bottom,\s*var\(--cmp-space-0\)\)\)\s*\+\s*var\(--tab-bar-gap\)\);/s,
     );
   });
 

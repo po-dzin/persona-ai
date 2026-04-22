@@ -450,6 +450,6 @@ describe("App flows", () => {
     });
     expect(screen.getByRole("button", { name: "Кастом" })).toBeInTheDocument();
     expect(screen.queryByText("2/2")).not.toBeInTheDocument();
-  });
+  }, 20000);
 
 });

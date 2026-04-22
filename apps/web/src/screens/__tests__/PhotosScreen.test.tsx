@@ -143,6 +143,32 @@ describe("PhotosScreen", () => {
     expect(screen.getByRole("button", { name: "Голливуд" })).not.toBeDisabled();
   });
 
+  it("keeps generation state when generatingOrderIds misses an in-progress photo", () => {
+    const inProgressPhoto: PhotoRecord = {
+      orderId: "o5",
+      styleCode: "hollywood",
+      modelId: "nb2-1k",
+      status: "processing",
+      prompt: "p5",
+      resultUrl: null,
+      isFavorite: false,
+      createdAt: "2026-04-10T12:05:00Z",
+      updatedAt: "2026-04-10T12:05:00Z",
+    };
+
+    render(
+      <PhotosScreen
+        photos={[inProgressPhoto]}
+        styles={styles}
+        generatingOrderIds={new Set()}
+        favorites={new Set()}
+        onOpenPhoto={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Генерация" })).toBeDisabled();
+  });
+
   it("does not render failed items and removes broken previews from the grid", () => {
     const visibleDone: PhotoRecord = {
       orderId: "ok-1",

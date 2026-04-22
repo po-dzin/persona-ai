@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { ZoomableImage } from "../components/ZoomableImage";
 import type { StyleItem } from "../data/styles";
@@ -92,6 +93,8 @@ export function PhotoViewerScreen({
   }, [isOpen, onMenuOpenChange]);
 
   if (!isOpen || !photo) return null;
+
+  const sheetHost = document.querySelector(".app-shell") ?? document.body;
 
   const handleCopyPrompt = async () => {
     try { await navigator.clipboard.writeText(prompt); } catch { /* unavailable */ }
@@ -282,7 +285,7 @@ export function PhotoViewerScreen({
         </div>
       </div>
 
-      {activeSheet ? (
+      {activeSheet ? createPortal(
         <div
           className="viewer-sheet-backdrop"
           onClick={closeAll}
@@ -396,7 +399,8 @@ export function PhotoViewerScreen({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        sheetHost,
       ) : null}
     </div>
   );

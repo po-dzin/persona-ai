@@ -22,10 +22,16 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
   const [filter, setFilter] = useState("Все");
   const [imageErrorIds, setImageErrorIds] = useState<Set<string>>(new Set());
   const [loadedImageIds, setLoadedImageIds] = useState<Set<string>>(new Set());
-  const isUiGenerating = (photo: PhotoRecord) =>
-    generatingOrderIds ? generatingOrderIds.has(photo.orderId) : isPhotoGenerating(photo);
+  const hasRenderableResult = (photo: PhotoRecord) => Boolean((photo.resultUrl || "").trim());
+  const isUiGenerating = (photo: PhotoRecord) => {
+    if (generatingOrderIds?.has(photo.orderId)) return true;
+    if (isPhotoGenerating(photo)) return true;
+    const status = String(photo.status || "").toLowerCase();
+    // Keep spinner for unknown non-terminal statuses while result URL is absent.
+    return status !== "done" && status !== "failed" && !hasRenderableResult(photo);
+  };
   const isWaitingImageLoad = (photo: PhotoRecord) =>
-    Boolean(photo.resultUrl)
+    hasRenderableResult(photo)
     && photo.status !== "failed"
     && !imageErrorIds.has(photo.orderId)
     && !loadedImageIds.has(photo.orderId);
@@ -174,10 +180,10 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
                   disabled={isGenerating || isFailed || isImageBroken}
                   aria-label={isGenerating ? "Генерация" : (style?.name || photo.styleCode)}
                 >
-                  {photo.resultUrl && !isFailed && !isImageBroken ? (
+                  {hasRenderableResult(photo) && !isFailed && !isImageBroken ? (
                     <img
                       className="photo-bg fill-image-cover"
-                      src={photo.resultUrl}
+                      src={photo.resultUrl!}
                       alt={style?.name || photo.styleCode}
                       onLoad={() => {
                         setLoadedImageIds((prev) => {
