@@ -55,6 +55,9 @@ def _days_since(ts: datetime | None, now: datetime) -> int:
 
 
 def _max_paid_topup_credits(db: Session, user_id: str) -> int:
+    user = db.get(UserRow, user_id)
+    if user and int(user.max_paid_topup_credits or 0) > 0:
+        return int(user.max_paid_topup_credits)
     payments = (
         db.query(PaymentRow.package_code)
         .filter(PaymentRow.user_id == user_id, PaymentRow.status == "paid")
@@ -68,6 +71,8 @@ def _max_paid_topup_credits(db: Session, user_id: str) -> int:
         base_credits = PACKAGE_CREDITS.get(code, 0)
         bonus_credits = PACKAGE_BONUS_COINS.get(code, 0)
         max_topup = max(max_topup, base_credits + bonus_credits)
+    if user and max_topup > int(user.max_paid_topup_credits or 0):
+        user.max_paid_topup_credits = max_topup
     return max_topup
 
 
@@ -268,7 +273,15 @@ def mark_generation_succeeded(db: Session, user: UserRow, *, order_id: str | Non
     maybe_send_lifecycle_message(db, user, now=now)
 
 
-def mark_payment_succeeded(db: Session, user: UserRow, *, payment_id: str | None = None) -> None:
+def mark_payment_succeeded(
+    db: Session,
+    user: UserRow,
+    *,
+    payment_id: str | None = None,
+    topup_credits: int | None = None,
+) -> None:
+    if isinstance(topup_credits, int) and topup_credits > 0:
+        user.max_paid_topup_credits = max(int(user.max_paid_topup_credits or 0), int(topup_credits))
     user.last_payment_at = now_utc()
     now = user.last_payment_at
     recompute_user_state(

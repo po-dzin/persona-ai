@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import hmac
 import json
 from concurrent.futures import ThreadPoolExecutor
@@ -25,6 +24,7 @@ from app.models.api_models import (
     UploadRequest,
     WebhookRequest,
 )
+from app.services.share_links import build_share_link, sign_share_token, verify_share_token
 from app.services.vertical_slice import VerticalSliceService
 
 router = APIRouter(prefix="/v1", tags=["v1"])
@@ -44,17 +44,8 @@ def get_service(request: Request) -> VerticalSliceService:
     return request.app.state.slice_service
 
 
-def _sign_share_token(order_id: str) -> str:
-    """HMAC-SHA256 signature for share tokens to prevent enumeration."""
-    secret = (settings.telegram_bot_token or settings.provider_webhook_secret or "dev-insecure").encode()
-    return hmac.new(secret, order_id.encode(), hashlib.sha256).hexdigest()[:16]  # type: ignore[attr-defined]
-
-
 def _verify_share_token(order_id: str, token: str) -> bool:
-    if settings.env in {"dev", "test", "local"} and not token:
-        return True
-    expected = _sign_share_token(order_id)
-    return hmac.compare_digest(token, expected)
+    return verify_share_token(order_id, token)
 
 
 def _build_photo_share_link(order: dict[str, Any], request: Request) -> str:
@@ -69,7 +60,7 @@ def _build_photo_share_link(order: dict[str, Any], request: Request) -> str:
     order_id = str(order.get("order_id") or "").strip()
     if order_id:
         query["share_order"] = order_id
-        query["share_token"] = _sign_share_token(order_id)
+        query["share_token"] = sign_share_token(order_id)
 
     return urlunparse(parsed._replace(query=urlencode(query)))
 
@@ -175,7 +166,7 @@ def create_order(data: CreateOrderRequest, request: Request, user_id: str = Depe
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"order": svc._serialize_order(order)}
+    return {"order": svc.serialize_order(order)}
 
 
 @router.post("/orders/{order_id}/start")
@@ -377,22 +368,11 @@ def get_shared_photo(order_id: str, request: Request, share_token: str = ""):
         raise HTTPException(status_code=403, detail="invalid_share_token")
     svc = get_service(request)
     try:
-        order = svc._find_order(order_id)
+        return svc.get_shared_photo_payload(order_id)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-    if order.status != "done" or not order.result_url:
-        raise HTTPException(status_code=404, detail="photo_not_available")
-
-    serialized = svc._serialize_order(order)
-    return {
-        "order_id": serialized.get("order_id"),
-        "style_code": serialized.get("style_code"),
-        "model_id": serialized.get("model_id"),
-        "result_url": serialized.get("result_url"),
-        "created_at": serialized.get("created_at"),
-        "updated_at": serialized.get("updated_at"),
-    }
+        code = str(exc)
+        status = 404 if code in {"order_not_found", "photo_not_available"} else 400
+        raise HTTPException(status_code=status, detail=code) from exc
 
 
 @router.get("/share-page/{order_id}", response_class=HTMLResponse, include_in_schema=False)
@@ -402,15 +382,17 @@ def get_share_preview_page(order_id: str, request: Request, share_token: str = "
         raise HTTPException(status_code=403, detail="invalid_share_token")
     svc = get_service(request)
     try:
-        order = svc._find_order(order_id)
+        shared = svc.get_shared_photo_payload(order_id)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        code = str(exc)
+        status = 404 if code in {"order_not_found", "photo_not_available"} else 400
+        raise HTTPException(status_code=status, detail=code) from exc
 
-    if order.status != "done" or not order.result_url:
-        raise HTTPException(status_code=404, detail="photo_not_available")
-
-    img_url = _html.escape(order.result_url)
-    app_link = _build_photo_share_link({"order_id": order_id}, request)
+    img_url = _html.escape(str(shared["result_url"]))
+    app_link = build_share_link(
+        base_url=settings.telegram_miniapp_url.strip() or request.headers.get("origin", "").strip().rstrip("/"),
+        order_id=order_id,
+    ) or "https://example.com"
     app_link_esc = _html.escape(app_link)
     app_link_js = json.dumps(app_link)
 
