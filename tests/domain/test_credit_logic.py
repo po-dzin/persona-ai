@@ -89,6 +89,63 @@ def test_policy_failure_no_auto_refund() -> None:
     assert svc.order_status(order_id)["order"]["fail_reason_code"] == "policy_failed"
 
 
+def test_duplicate_technical_failed_does_not_double_refund() -> None:
+    svc = VerticalSliceService()
+    svc.get_or_create_user("u-dup-refund")
+    _seed_user("u-dup-refund", paid_credits=35)
+
+    order_id = create_order(svc, user_id="u-dup-refund", model_id="nb-pro-4k")
+    started = svc.start_order(order_id)
+    assert started["result"] == "enqueued"
+    assert started["wallet"]["paid_credits"] == 0
+
+    out1 = svc.ingest_webhook(
+        "nano_banana",
+        event_id="evt-tech-dup-1",
+        payload={"order_id": order_id, "event_type": "technical_failed"},
+    )
+    out2 = svc.ingest_webhook(
+        "nano_banana",
+        event_id="evt-tech-dup-2",
+        payload={"order_id": order_id, "event_type": "technical_failed"},
+    )
+
+    assert out1["accepted"] is True
+    assert out2["accepted"] is True
+    assert svc.get_balance("u-dup-refund")["paid_credits"] == 35
+
+
+def test_out_of_order_processing_ignored_after_done() -> None:
+    svc = VerticalSliceService()
+    svc.get_or_create_user("u-out-of-order")
+    _seed_user("u-out-of-order", paid_credits=20)
+
+    order_id = create_order(svc, user_id="u-out-of-order", model_id="nb2-1k")
+    started = svc.start_order(order_id)
+    assert started["result"] == "enqueued"
+
+    done = svc.ingest_webhook(
+        "nano_banana",
+        event_id="evt-ooo-done-1",
+        payload={
+            "order_id": order_id,
+            "event_type": "done",
+            "result_url": "https://cdn.example.com/final.jpg",
+        },
+    )
+    late_processing = svc.ingest_webhook(
+        "nano_banana",
+        event_id="evt-ooo-processing-1",
+        payload={"order_id": order_id, "event_type": "processing"},
+    )
+
+    assert done["accepted"] is True
+    assert late_processing["accepted"] is True
+    status = svc.order_status(order_id)
+    assert status["order"]["status"] == "done"
+    assert status["order"]["result_url"] == "https://cdn.example.com/final.jpg"
+
+
 def test_model_routing_is_deterministic() -> None:
     svc = VerticalSliceService()
     svc.get_or_create_user("u1")

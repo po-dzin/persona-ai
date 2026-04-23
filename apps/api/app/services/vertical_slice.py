@@ -6,18 +6,18 @@ from uuid import uuid4
 
 import logging
 
-from app.adapters.http_client import ProviderHTTPError
 from app.adapters.provider_registry import build_provider_registry
-from app.core.db import JobRow, MediaAssetRow, OrderRow, PaymentRow, UserRow, activate_rls, get_session, get_system_session, set_rls_context
+from app.core.db import JobRow, MediaAssetRow, OrderRow, UserRow, activate_rls, get_session, get_system_session, set_rls_context
 from app.core.settings import settings
 from app.services.lifecycle import (
     mark_generation_succeeded,
-    mark_payment_succeeded,
     recompute_user_state,
 )
 from app.services.package_codes import normalize_package_code
 from app.services.prompt_compiler import compile_prompt, compile_prompt_template
+from app.services.share_links import build_share_link
 from app.services.style_catalog import load_style_catalog
+from app.services.webhook_service import WebhookService
 
 logger = logging.getLogger(__name__)
 
@@ -435,6 +435,7 @@ class VerticalSliceService:
 
     def __init__(self) -> None:
         self.provider_registry = build_provider_registry()
+        self.webhook_service = WebhookService(self)
 
     # ------------------------------------------------------------------ users
 
@@ -937,159 +938,13 @@ class VerticalSliceService:
     def ingest_webhook(self, provider: str, event_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         provider = GENERATION_PROVIDER_ALIASES.get(provider, provider)
         logger.info("webhook_received provider=%s event_id=%s", provider, event_id)
-
-        _tg_notify: tuple[str, str, str] | None = None  # (user_id, result_url, order_id)
-
         with get_system_session() as db:
-            # Idempotency: check if this event was already processed
-            existing = (
-                db.query(PaymentRow)
-                .filter(PaymentRow.payment_id == event_id)
-                .first()
+            return self.webhook_service.ingest(
+                db=db,
+                provider=provider,
+                event_id=event_id,
+                payload=payload,
             )
-            if existing:
-                logger.info("webhook_deduplicated provider=%s event_id=%s", provider, event_id)
-                return {"deduplicated": True}
-
-            # Provider generation webhook (result/failure callback)
-            if provider in self.provider_registry:
-                order_id = str(payload.get("order_id", ""))
-                event_type = str(payload.get("event_type", "done"))
-                if not order_id:
-                    logger.warning("webhook_ignored_no_order_id provider=%s event_id=%s", provider, event_id)
-                    return {"deduplicated": False, "ignored": True}
-
-                order = db.get(OrderRow, order_id)
-                if not order:
-                    logger.warning("webhook_ignored_order_not_found provider=%s event_id=%s order_id=%s", provider, event_id, order_id)
-                    return {"deduplicated": False, "ignored": True}
-
-                job = (
-                    db.query(JobRow)
-                    .filter(JobRow.order_id == order_id)
-                    .order_by(JobRow.updated_at.desc())
-                    .first()
-                )
-
-                if event_type == "done":
-                    order.status = "done"
-                    order.result_url = payload.get("result_url")
-                    if job:
-                        job.status = "done"
-                        job.updated_at = now_iso()
-                    user = db.get(UserRow, order.user_id)
-                    if user and order.result_url:
-                        mark_generation_succeeded(db, user, order_id=order.order_id)
-                        _tg_notify = (order.user_id, order.result_url, order.order_id)
-                        self._record_result_asset(user_id=order.user_id, order_id=order.order_id, result_url=order.result_url)
-                    logger.info("webhook_generation_done provider=%s order_id=%s user_id=%s", provider, order_id, order.user_id)
-                elif event_type == "processing":
-                    order.status = "processing"
-                    if job:
-                        job.status = "processing"
-                        job.updated_at = now_iso()
-                    logger.info("webhook_generation_processing provider=%s order_id=%s", provider, order_id)
-                elif event_type == "technical_failed":
-                    order.status = "failed"
-                    order.fail_reason_code = "technical_failed"
-                    if job:
-                        job.status = "failed"
-                        job.updated_at = now_iso()
-                    user = db.get(UserRow, order.user_id)
-                    if user:
-                        user.paid_credits += order.credit_cost
-                        logger.info(
-                            "webhook_generation_failed_refund provider=%s order_id=%s user_id=%s credits_refunded=%d",
-                            provider, order_id, order.user_id, order.credit_cost,
-                        )
-                    else:
-                        logger.error("webhook_generation_failed_no_user provider=%s order_id=%s user_id=%s", provider, order_id, order.user_id)
-                elif event_type == "policy_failed":
-                    order.status = "failed"
-                    order.fail_reason_code = "policy_failed"
-                    if job:
-                        job.status = "failed"
-                        job.updated_at = now_iso()
-                    logger.info("webhook_generation_policy_failed provider=%s order_id=%s user_id=%s", provider, order_id, order.user_id)
-                else:
-                    logger.warning("webhook_unknown_event_type provider=%s event_type=%s order_id=%s", provider, event_type, order_id)
-
-                order.updated_at = now_iso()
-                db.commit()
-
-            # Payment webhook (Stars / Stripe)
-            if provider in {"telegram", "stripe"}:
-                # Use provider-specific charge ID for deduplication, not event_id,
-                # to prevent double-credit if the same payment arrives with different event_ids.
-                if provider == "telegram":
-                    payment_id = str(payload.get("telegram_payment_charge_id") or event_id)
-                elif provider == "stripe":
-                    payment_id = str(payload.get("stripe_payment_intent_id") or event_id)
-                else:
-                    payment_id = event_id
-
-                # Second idempotency check on the resolved payment_id
-                if payment_id != event_id:
-                    dup = db.query(PaymentRow).filter(PaymentRow.payment_id == payment_id).first()
-                    if dup:
-                        return {"deduplicated": True}
-
-                user_id = payload.get("user_id")
-                package_code_raw = str(payload.get("package_code", ""))
-                package_code = self._normalize_package_code(package_code_raw)
-                status = str(payload.get("status", "paid"))
-                package = self._resolve_package(package_code)
-                amount = int(payload.get("amount", package["stars_price"] if package else 0))
-
-                payment = PaymentRow(
-                    payment_id=payment_id,
-                    provider=provider,
-                    status=status,
-                    package_code=package_code,
-                    user_id=str(user_id) if user_id else None,
-                    amount=amount,
-                    created_at=now_iso(),
-                )
-                db.add(payment)
-
-                if status == "paid" and user_id and package:
-                    uid = str(user_id)
-                    # SELECT FOR UPDATE prevents double-credit on duplicate webhooks
-                    user = (
-                        db.query(UserRow)
-                        .filter(UserRow.user_id == uid)
-                        .with_for_update()
-                        .first()
-                    )
-                    if not user:
-                        user = UserRow(
-                            user_id=uid,
-                            paid_credits=0,
-                            lifecycle_state="S0",
-                            lifecycle_state_updated_at=now_iso(),
-                            created_at=now_iso(),
-                        )
-                        db.add(user)
-                    base_credits = package["credits"]
-                    bonus_credits = package["bonus_coins"]
-                    user.paid_credits += base_credits + bonus_credits
-                    mark_payment_succeeded(db, user, payment_id=payment_id)
-                    logger.info(
-                        "payment_credited user_id=%s package=%s credits=%d+%d total_now=%d",
-                        uid, package_code, base_credits, bonus_credits, user.paid_credits,
-                    )
-                else:
-                    logger.warning(
-                        "payment_skipped_credit status=%s user_id=%s package=%s",
-                        status, user_id, package_code,
-                    )
-
-                db.commit()
-
-        if _tg_notify:
-            self._notify_tg_generation_done(*_tg_notify)
-
-        return {"deduplicated": False, "accepted": True}
 
     def _notify_tg_generation_done(self, user_id: str, result_url: str, order_id: str) -> None:
         if not settings.telegram_bot_token:
@@ -1103,20 +958,7 @@ class VerticalSliceService:
             logger.warning("tg_notification_failed user_id=%s order_id=%s", user_id, order_id, exc_info=True)
 
     def _build_share_link(self, order_id: str) -> str | None:
-        import hashlib
-        import hmac as _hmac
-        from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
-
-        base = settings.telegram_miniapp_url.strip().rstrip("/")
-        if not base:
-            return None
-        secret = (settings.telegram_bot_token or settings.provider_webhook_secret or "").encode()
-        token = _hmac.new(secret, order_id.encode(), hashlib.sha256).hexdigest()[:16]
-        parsed = urlparse(base)
-        query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-        query["share_order"] = order_id
-        query["share_token"] = token
-        return urlunparse(parsed._replace(query=urlencode(query)))
+        return build_share_link(base_url=settings.telegram_miniapp_url, order_id=order_id)
 
     # ------------------------------------------------------------ helpers
 
@@ -1165,6 +1007,26 @@ class VerticalSliceService:
             if not order:
                 raise ValueError("order_not_found")
             return order
+
+    def find_order(self, order_id: str) -> "OrderRow":
+        return self._find_order(order_id)
+
+    def serialize_order(self, order: OrderRow) -> dict[str, Any]:
+        return self._serialize_order(order)
+
+    def get_shared_photo_payload(self, order_id: str) -> dict[str, Any]:
+        order = self._find_order(order_id)
+        if order.status != "done" or not order.result_url:
+            raise ValueError("photo_not_available")
+        serialized = self._serialize_order(order)
+        return {
+            "order_id": serialized.get("order_id"),
+            "style_code": serialized.get("style_code"),
+            "model_id": serialized.get("model_id"),
+            "result_url": serialized.get("result_url"),
+            "created_at": serialized.get("created_at"),
+            "updated_at": serialized.get("updated_at"),
+        }
 
     def on_miniapp_opened(self, user_id: str) -> None:
         from app.services.lifecycle import mark_miniapp_opened

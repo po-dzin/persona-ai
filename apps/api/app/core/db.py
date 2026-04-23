@@ -81,6 +81,7 @@ class UserRow(Base):
     first_name = Column(String, nullable=True)
     username = Column(String, nullable=True)
     paid_credits = Column(Integer, default=0, nullable=False)
+    max_paid_topup_credits = Column(Integer, default=0, nullable=False)
     lifecycle_state = Column(String, nullable=False, default="S0")
     lifecycle_state_updated_at = Column(DateTime(timezone=True), nullable=True)
     bot_started_at = Column(DateTime(timezone=True), nullable=True)
@@ -215,368 +216,188 @@ class MediaAssetRow(Base):
     created_at = Column(DateTime(timezone=True), nullable=False)
 
 
+class WebhookEventRow(Base):
+    __tablename__ = "webhook_events"
+    __table_args__ = (
+        UniqueConstraint("provider", "event_id", name="uq_webhook_events_provider_event"),
+        Index("idx_webhook_events_created", "created_at"),
+        Index("idx_webhook_events_order_id", "order_id"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    provider = Column(String, nullable=False)
+    event_id = Column(String, nullable=False)
+    event_type = Column(String, nullable=True)
+    order_id = Column(String, nullable=True)
+    payment_id = Column(String, nullable=True)
+    payload_hash = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False)
+
+
 def init_db() -> None:
     """Create all tables if they don't exist. Safe to call on every startup."""
     Base.metadata.create_all(bind=engine)
-    # Column-level migrations for existing databases.
-    # create_all() only creates missing tables; it never alters existing ones.
-    _run_column_migrations()
+    # Runtime DDL is allowed only for local SQLite bootstrap.
+    # PostgreSQL schema changes must go through infra/db/migrations/*.sql
+    if _is_sqlite and settings.env in {"dev", "test", "local"}:
+        _run_sqlite_bootstrap()
 
 
-_VALID_ORDER_STATUSES = (
-    "draft",
-    "awaiting_credit_or_payment",
-    "processing",
-    "done",
-    "failed",
-)
-
-_VALID_LIFECYCLE_STATES = (
-    "S0",
-    "S1",
-    "S2",
-    "S3",
-    "S4",
-    "S5",
-)
-
-
-def _run_column_migrations() -> None:
-    """Apply additive ALTER TABLE migrations idempotently."""
+def _run_sqlite_bootstrap() -> None:
+    """Apply additive SQLite-only bootstrap migrations for local/dev databases."""
     with engine.connect() as conn:
-        if _is_sqlite:
-            # SQLite: check pragma, add if missing
-            order_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(orders)"))}
-            user_cols  = {row[1] for row in conn.execute(text("PRAGMA table_info(users)"))}
-            if "is_favorite" not in order_cols:
-                conn.execute(text(
-                    "ALTER TABLE orders ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0"
-                ))
-            if "first_name" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN first_name TEXT"))
-            if "username" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN username TEXT"))
-            if "lifecycle_state" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_state TEXT NOT NULL DEFAULT 'S0'"))
-            if "lifecycle_state_updated_at" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_state_updated_at TEXT"))
-            if "bot_started_at" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN bot_started_at TEXT"))
-            if "first_miniapp_opened_at" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN first_miniapp_opened_at TEXT"))
-            if "last_miniapp_opened_at" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN last_miniapp_opened_at TEXT"))
-            if "last_success_generation_at" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN last_success_generation_at TEXT"))
-            if "last_payment_at" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN last_payment_at TEXT"))
-            if "zero_balance_since" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN zero_balance_since TEXT"))
-            if "lifecycle_locked" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_locked BOOLEAN NOT NULL DEFAULT 0"))
-            if "lifecycle_lock_reason" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_reason TEXT"))
-            if "lifecycle_lock_by" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_by TEXT"))
-            if "lifecycle_lock_at" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_at TEXT"))
-            if "lifecycle_last_message_state" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_last_message_state TEXT"))
-            if "lifecycle_last_message_at" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_last_message_at TEXT"))
-            if "id" not in user_cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN id TEXT"))
-                # Backfill new rows with a UUID string; SQLite has no gen_random_uuid()
-                conn.execute(text(
-                    "UPDATE users SET id = lower(hex(randomblob(4))) || '-' "
-                    "|| lower(hex(randomblob(2))) || '-4' "
-                    "|| substr(lower(hex(randomblob(2))),2) || '-' "
-                    "|| substr('89ab', abs(random()) % 4 + 1, 1) "
-                    "|| substr(lower(hex(randomblob(2))),2) || '-' "
-                    "|| lower(hex(randomblob(6))) "
-                    "WHERE id IS NULL"
-                ))
-                conn.execute(text(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_uuid ON users(id)"
-                ))
-
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS lifecycle_transitions (
-                    transition_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id TEXT NOT NULL,
-                    from_state TEXT,
-                    to_state TEXT NOT NULL,
-                    reason TEXT NOT NULL,
-                    source TEXT NOT NULL DEFAULT 'system',
-                    actor TEXT,
-                    metadata_json TEXT,
-                    created_at TEXT NOT NULL
-                )
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_lifecycle_transitions_user_created
-                ON lifecycle_transitions(user_id, created_at)
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_lifecycle_transitions_created
-                ON lifecycle_transitions(created_at)
-            """))
-
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS lifecycle_admin_actions (
-                    action_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id TEXT NOT NULL,
-                    action_type TEXT NOT NULL,
-                    actor TEXT NOT NULL,
-                    reason TEXT NOT NULL,
-                    from_state TEXT,
-                    to_state TEXT,
-                    metadata_json TEXT,
-                    created_at TEXT NOT NULL
-                )
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_lifecycle_admin_actions_user_created
-                ON lifecycle_admin_actions(user_id, created_at)
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_lifecycle_admin_actions_created
-                ON lifecycle_admin_actions(created_at)
-            """))
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS media_assets (
-                    id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    order_id TEXT,
-                    kind TEXT NOT NULL,
-                    storage_bucket TEXT NOT NULL,
-                    storage_key TEXT NOT NULL,
-                    expires_at TEXT,
-                    created_at TEXT NOT NULL
-                )
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_media_assets_expires_at
-                ON media_assets(expires_at)
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_media_assets_order_id
-                ON media_assets(order_id)
-            """))
-            conn.execute(text("""
-                CREATE UNIQUE INDEX IF NOT EXISTS uq_media_assets_storage_key
-                ON media_assets(storage_key)
-            """))
+        # SQLite: check pragma, add if missing
+        order_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(orders)"))}
+        user_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(users)"))}
+        if "is_favorite" not in order_cols:
             conn.execute(text(
-                "UPDATE users SET lifecycle_state = 'S5' "
-                "WHERE lifecycle_state IN ('S6', 'INACTIVE_30D')"
+                "ALTER TABLE orders ADD COLUMN is_favorite BOOLEAN NOT NULL DEFAULT 0"
             ))
-            conn.commit()
-        else:
-            # PostgreSQL: ADD COLUMN IF NOT EXISTS is idempotent
+        if "first_name" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN first_name TEXT"))
+        if "username" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN username TEXT"))
+        if "max_paid_topup_credits" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN max_paid_topup_credits INTEGER NOT NULL DEFAULT 0"))
+        if "lifecycle_state" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_state TEXT NOT NULL DEFAULT 'S0'"))
+        if "lifecycle_state_updated_at" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_state_updated_at TEXT"))
+        if "bot_started_at" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN bot_started_at TEXT"))
+        if "first_miniapp_opened_at" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN first_miniapp_opened_at TEXT"))
+        if "last_miniapp_opened_at" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN last_miniapp_opened_at TEXT"))
+        if "last_success_generation_at" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN last_success_generation_at TEXT"))
+        if "last_payment_at" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN last_payment_at TEXT"))
+        if "zero_balance_since" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN zero_balance_since TEXT"))
+        if "lifecycle_locked" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_locked BOOLEAN NOT NULL DEFAULT 0"))
+        if "lifecycle_lock_reason" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_reason TEXT"))
+        if "lifecycle_lock_by" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_by TEXT"))
+        if "lifecycle_lock_at" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_at TEXT"))
+        if "lifecycle_last_message_state" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_last_message_state TEXT"))
+        if "lifecycle_last_message_at" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_last_message_at TEXT"))
+        if "id" not in user_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN id TEXT"))
             conn.execute(text(
-                "ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT FALSE"
+                "UPDATE users SET id = lower(hex(randomblob(4))) || '-' "
+                "|| lower(hex(randomblob(2))) || '-4' "
+                "|| substr(lower(hex(randomblob(2))),2) || '-' "
+                "|| substr('89ab', abs(random()) % 4 + 1, 1) "
+                "|| substr(lower(hex(randomblob(2))),2) || '-' "
+                "|| lower(hex(randomblob(6))) "
+                "WHERE id IS NULL"
             ))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_state TEXT NOT NULL DEFAULT 'S0'"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_state_updated_at TIMESTAMPTZ"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS bot_started_at TIMESTAMPTZ"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_miniapp_opened_at TIMESTAMPTZ"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_miniapp_opened_at TIMESTAMPTZ"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_success_generation_at TIMESTAMPTZ"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_payment_at TIMESTAMPTZ"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS zero_balance_since TIMESTAMPTZ"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_locked BOOLEAN NOT NULL DEFAULT FALSE"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_lock_reason TEXT"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_lock_by TEXT"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_lock_at TIMESTAMPTZ"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_last_message_state TEXT"))
-            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_last_message_at TIMESTAMPTZ"))
-            uuid_col_exists = conn.execute(text(
-                "SELECT 1 FROM information_schema.columns "
-                "WHERE table_name='users' AND column_name='id'"
-            )).fetchone()
-            if not uuid_col_exists:
-                conn.execute(text("ALTER TABLE users ADD COLUMN id UUID"))
-                conn.execute(text(
-                    "UPDATE users SET id = gen_random_uuid() WHERE id IS NULL"
-                ))
-                conn.execute(text(
-                    "ALTER TABLE users ADD CONSTRAINT users_id_unique UNIQUE (id)"
-                ))
-                conn.execute(text(
-                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_uuid ON users(id)"
-                ))
-            # ── Drop obsolete free-trial columns ─────────────────────────────
-            # free_credit_available: migrate old users first (give 20 coins) then drop.
-            fca_exists = conn.execute(text(
-                "SELECT 1 FROM information_schema.columns "
-                "WHERE table_name='users' AND column_name='free_credit_available'"
-            )).fetchone()
-            if fca_exists:
-                conn.execute(text(
-                    "UPDATE users SET paid_credits = paid_credits + 20"
-                    " WHERE free_credit_available = TRUE AND paid_credits = 0"
-                ))
-                conn.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS free_credit_available"))
-            conn.execute(text("ALTER TABLE users DROP COLUMN IF EXISTS free_credits_granted"))
-            conn.execute(text("ALTER TABLE orders DROP COLUMN IF EXISTS is_free_credit_used"))
-
-            # ── TIMESTAMP migration (VARCHAR → TIMESTAMPTZ) ──────────────────
-            # Safe: USING clause parses ISO-8601 strings stored by now_iso().
-            for tbl, col in [
-                ("orders", "created_at"),
-                ("orders", "updated_at"),
-                ("users", "created_at"),
-                ("users", "lifecycle_state_updated_at"),
-                ("users", "bot_started_at"),
-                ("users", "first_miniapp_opened_at"),
-                ("users", "last_miniapp_opened_at"),
-                ("users", "last_success_generation_at"),
-                ("users", "last_payment_at"),
-                ("users", "zero_balance_since"),
-                ("users", "lifecycle_lock_at"),
-                ("users", "lifecycle_last_message_at"),
-                ("payments", "created_at"),
-                ("jobs", "updated_at"),
-            ]:
-                result = conn.execute(text(
-                    f"SELECT data_type FROM information_schema.columns "
-                    f"WHERE table_name='{tbl}' AND column_name='{col}'"
-                )).fetchone()
-                if result and result[0].lower() in ("character varying", "text", "varchar"):
-                    conn.execute(text(
-                        f"ALTER TABLE {tbl} "
-                        f"ALTER COLUMN {col} TYPE TIMESTAMPTZ "
-                        f"USING {col}::TIMESTAMPTZ"
-                    ))
-
-            # ── FK constraints ────────────────────────────────────────────────
-            fk_exists = conn.execute(text(
-                "SELECT 1 FROM information_schema.table_constraints "
-                "WHERE constraint_name='fk_orders_user_id' AND table_name='orders'"
-            )).fetchone()
-            if not fk_exists:
-                conn.execute(text(
-                    "ALTER TABLE orders ADD CONSTRAINT fk_orders_user_id "
-                    "FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE"
-                ))
-
-            fk_pay_exists = conn.execute(text(
-                "SELECT 1 FROM information_schema.table_constraints "
-                "WHERE constraint_name='fk_payments_user_id' AND table_name='payments'"
-            )).fetchone()
-            if not fk_pay_exists:
-                conn.execute(text(
-                    "ALTER TABLE payments ADD CONSTRAINT fk_payments_user_id "
-                    "FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL"
-                ))
-
-            # ── CHECK constraint on orders.status ────────────────────────────
-            check_exists = conn.execute(text(
-                "SELECT 1 FROM information_schema.table_constraints "
-                "WHERE constraint_name='chk_orders_status' AND table_name='orders'"
-            )).fetchone()
-            if not check_exists:
-                valid = ", ".join(f"'{s}'" for s in _VALID_ORDER_STATUSES)
-                conn.execute(text(
-                    f"ALTER TABLE orders ADD CONSTRAINT chk_orders_status "
-                    f"CHECK (status IN ({valid}))"
-                ))
-
             conn.execute(text(
-                "UPDATE users SET lifecycle_state = 'S5' "
-                "WHERE lifecycle_state IN ('S6', 'INACTIVE_30D')"
-            ))
-            valid = ", ".join(f"'{s}'" for s in _VALID_LIFECYCLE_STATES)
-            conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_lifecycle_state"))
-            conn.execute(text(
-                f"ALTER TABLE users ADD CONSTRAINT chk_users_lifecycle_state "
-                f"CHECK (lifecycle_state IN ({valid}))"
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_uuid ON users(id)"
             ))
 
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS lifecycle_transitions (
-                    transition_id BIGSERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    from_state TEXT NULL,
-                    to_state TEXT NOT NULL,
-                    reason TEXT NOT NULL,
-                    source TEXT NOT NULL DEFAULT 'system',
-                    actor TEXT NULL,
-                    metadata_json TEXT NULL,
-                    created_at TIMESTAMPTZ NOT NULL
-                )
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_lifecycle_transitions_user_created
-                ON lifecycle_transitions(user_id, created_at)
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_lifecycle_transitions_created
-                ON lifecycle_transitions(created_at)
-            """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS lifecycle_transitions (
+                transition_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                from_state TEXT,
+                to_state TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT 'system',
+                actor TEXT,
+                metadata_json TEXT,
+                created_at TEXT NOT NULL
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_lifecycle_transitions_user_created
+            ON lifecycle_transitions(user_id, created_at)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_lifecycle_transitions_created
+            ON lifecycle_transitions(created_at)
+        """))
 
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS lifecycle_admin_actions (
-                    action_id BIGSERIAL PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    action_type TEXT NOT NULL,
-                    actor TEXT NOT NULL,
-                    reason TEXT NOT NULL,
-                    from_state TEXT NULL,
-                    to_state TEXT NULL,
-                    metadata_json TEXT NULL,
-                    created_at TIMESTAMPTZ NOT NULL
-                )
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_lifecycle_admin_actions_user_created
-                ON lifecycle_admin_actions(user_id, created_at)
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_lifecycle_admin_actions_created
-                ON lifecycle_admin_actions(created_at)
-            """))
-
-            conn.execute(text("""
-                CREATE TABLE IF NOT EXISTS media_assets (
-                    id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    order_id TEXT,
-                    kind TEXT NOT NULL,
-                    storage_bucket TEXT NOT NULL,
-                    storage_key TEXT NOT NULL,
-                    expires_at TIMESTAMPTZ,
-                    created_at TIMESTAMPTZ NOT NULL,
-                    CONSTRAINT uq_media_assets_storage_key UNIQUE (storage_key)
-                )
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_media_assets_expires_at
-                ON media_assets(expires_at)
-            """))
-            conn.execute(text("""
-                CREATE INDEX IF NOT EXISTS idx_media_assets_order_id
-                ON media_assets(order_id)
-            """))
-            # Idempotent: add unique constraint on existing tables that predate this migration
-            conn.execute(text("""
-                DO $$
-                BEGIN
-                    IF NOT EXISTS (
-                        SELECT 1 FROM information_schema.table_constraints
-                        WHERE constraint_name = 'uq_media_assets_storage_key'
-                          AND table_name = 'media_assets'
-                    ) THEN
-                        ALTER TABLE media_assets
-                            ADD CONSTRAINT uq_media_assets_storage_key UNIQUE (storage_key);
-                    END IF;
-                END $$
-            """))
-
-            conn.commit()
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS lifecycle_admin_actions (
+                action_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                action_type TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                from_state TEXT,
+                to_state TEXT,
+                metadata_json TEXT,
+                created_at TEXT NOT NULL
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_lifecycle_admin_actions_user_created
+            ON lifecycle_admin_actions(user_id, created_at)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_lifecycle_admin_actions_created
+            ON lifecycle_admin_actions(created_at)
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS media_assets (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                order_id TEXT,
+                kind TEXT NOT NULL,
+                storage_bucket TEXT NOT NULL,
+                storage_key TEXT NOT NULL,
+                expires_at TEXT,
+                created_at TEXT NOT NULL
+            )
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_media_assets_expires_at
+            ON media_assets(expires_at)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_media_assets_order_id
+            ON media_assets(order_id)
+        """))
+        conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_media_assets_storage_key
+            ON media_assets(storage_key)
+        """))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS webhook_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                provider TEXT NOT NULL,
+                event_id TEXT NOT NULL,
+                event_type TEXT,
+                order_id TEXT,
+                payment_id TEXT,
+                payload_hash TEXT,
+                created_at TEXT NOT NULL
+            )
+        """))
+        conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_webhook_events_provider_event
+            ON webhook_events(provider, event_id)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_webhook_events_created
+            ON webhook_events(created_at)
+        """))
+        conn.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_webhook_events_order_id
+            ON webhook_events(order_id)
+        """))
+        conn.execute(text(
+            "UPDATE users SET lifecycle_state = 'S5' "
+            "WHERE lifecycle_state IN ('S6', 'INACTIVE_30D')"
+        ))
+        conn.commit()
 
 
 def set_rls_context(db: Session, user_uuid) -> None:

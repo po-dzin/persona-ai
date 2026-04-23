@@ -278,6 +278,87 @@ def test_generate_and_provider_webhook_finalize_photo() -> None:
     assert photos[0]["result_url"] == "https://cdn.example.com/photo.jpg"
 
 
+def test_generation_webhook_duplicate_event_id_is_deduplicated() -> None:
+    client = _client()
+    user_id = "u-webhook-dedup"
+    hdrs = _headers(user_id)
+
+    up = client.post("/v1/uploads", json={"filename": "dup.jpg"}, headers=hdrs).json()
+    generated = client.post(
+        "/v1/generate",
+        json={
+            "source_key": up["source_key"],
+            "model_id": "nb2-1k",
+            "style_code": "cyberpunk",
+            "aspect_ratio": "1:1",
+        },
+        headers=hdrs,
+    ).json()
+    order_id = generated["order"]["order_id"]
+
+    payload = {
+        "event_id": "evt-gen-dedup-1",
+        "payload": {
+            "order_id": order_id,
+            "event_type": "done",
+            "result_url": "https://cdn.example.com/dedup.jpg",
+        },
+    }
+    first = client.post("/v1/webhooks/nano_banana", json=payload)
+    second = client.post("/v1/webhooks/nano_banana", json=payload)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json().get("accepted") is True
+    assert second.json().get("deduplicated") is True
+
+
+def test_generation_webhook_out_of_order_processing_does_not_reopen_done() -> None:
+    client = _client()
+    user_id = "u-webhook-ooo"
+    hdrs = _headers(user_id)
+
+    up = client.post("/v1/uploads", json={"filename": "ooo.jpg"}, headers=hdrs).json()
+    generated = client.post(
+        "/v1/generate",
+        json={
+            "source_key": up["source_key"],
+            "model_id": "nb2-1k",
+            "style_code": "anime",
+            "aspect_ratio": "1:1",
+        },
+        headers=hdrs,
+    ).json()
+    order_id = generated["order"]["order_id"]
+
+    done = client.post(
+        "/v1/webhooks/nano_banana",
+        json={
+            "event_id": "evt-ooo-done-api",
+            "payload": {
+                "order_id": order_id,
+                "event_type": "done",
+                "result_url": "https://cdn.example.com/ooo.jpg",
+            },
+        },
+    )
+    late_processing = client.post(
+        "/v1/webhooks/nano_banana",
+        json={
+            "event_id": "evt-ooo-processing-api",
+            "payload": {
+                "order_id": order_id,
+                "event_type": "processing",
+            },
+        },
+    )
+    assert done.status_code == 200
+    assert late_processing.status_code == 200
+    order = client.get(f"/v1/orders/{order_id}", headers=hdrs).json()["order"]
+    assert order["status"] == "done"
+    assert order["result_url"] == "https://cdn.example.com/ooo.jpg"
+
+
 def test_generate_accepts_camel_case_payload_fields() -> None:
     client = _client()
     user_id = "u-camel-generate"
