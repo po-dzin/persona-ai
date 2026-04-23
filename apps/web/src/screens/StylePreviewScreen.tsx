@@ -20,6 +20,22 @@ interface StylePreviewScreenProps {
   onCreate: () => void;
 }
 
+const GRADIENT_CLASS_BY_VALUE = {
+  "var(--sem-gradient-style-violet)": "style-preview-gradient-violet",
+  "var(--sem-gradient-style-amber)": "style-preview-gradient-amber",
+  "var(--sem-gradient-style-indigo)": "style-preview-gradient-indigo",
+  "var(--sem-gradient-style-rose)": "style-preview-gradient-rose",
+  "var(--sem-gradient-style-cyan)": "style-preview-gradient-cyan",
+  "var(--sem-gradient-style-magenta)": "style-preview-gradient-magenta",
+  "var(--sem-gradient-style-green)": "style-preview-gradient-green",
+  "var(--sem-gradient-style-gold)": "style-preview-gradient-gold",
+} as const;
+
+function resolveGradientClass(styleItem: StyleItem | null): string {
+  if (!styleItem) return "style-preview-gradient-violet";
+  return GRADIENT_CLASS_BY_VALUE[styleItem.gradient as keyof typeof GRADIENT_CLASS_BY_VALUE] ?? "style-preview-gradient-violet";
+}
+
 export function StylePreviewScreen({ isOpen, styles, style, originRect = null, onClose, onSelectStyle, onCreate }: StylePreviewScreenProps) {
   const initialStyle = style ?? styles[0] ?? null;
   const [activeStyle, setActiveStyle] = useState<StyleItem | null>(initialStyle);
@@ -70,24 +86,6 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     () => (activeStyle ? styles.findIndex((item) => item.id === activeStyle.id) : -1),
     [styles, activeStyle],
   );
-  const gradientClassByValue = useMemo(
-    () => ({
-      "var(--sem-gradient-style-violet)": "style-preview-gradient-violet",
-      "var(--sem-gradient-style-amber)": "style-preview-gradient-amber",
-      "var(--sem-gradient-style-indigo)": "style-preview-gradient-indigo",
-      "var(--sem-gradient-style-rose)": "style-preview-gradient-rose",
-      "var(--sem-gradient-style-cyan)": "style-preview-gradient-cyan",
-      "var(--sem-gradient-style-magenta)": "style-preview-gradient-magenta",
-      "var(--sem-gradient-style-green)": "style-preview-gradient-green",
-      "var(--sem-gradient-style-gold)": "style-preview-gradient-gold",
-    }),
-    [],
-  );
-  const resolveGradientClass = (styleItem: StyleItem | null) => {
-    if (!styleItem) return "style-preview-gradient-violet";
-    return gradientClassByValue[styleItem.gradient as keyof typeof gradientClassByValue] ?? "style-preview-gradient-violet";
-  };
-
   useEffect(() => {
     if (!isOpen) {
       // Reset transient animation state so next open starts from a clean baseline.
