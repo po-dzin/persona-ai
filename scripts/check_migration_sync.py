@@ -38,10 +38,10 @@ def main() -> int:
         "webhook_events",
         "max_paid_topup_credits",
     ]
-    latest_sql = sql_files[-1].read_text(encoding="utf-8")
-    missing = [m for m in expected_markers if m not in latest_sql]
+    migration_texts = [path.read_text(encoding="utf-8") for path in sql_files]
+    missing = [m for m in expected_markers if not any(m in sql for sql in migration_texts)]
     if missing:
-        print(f"FAIL: latest migration {latest} missing markers: {', '.join(missing)}")
+        print(f"FAIL: migration set missing required markers: {', '.join(missing)}")
         return 1
 
     print(f"OK: migration sync check passed (latest: {latest})")

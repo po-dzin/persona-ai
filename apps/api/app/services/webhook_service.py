@@ -6,10 +6,11 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.core.db import JobRow, OrderRow, PaymentRow, UserRow, WebhookEventRow
+from app.core.db import _is_sqlite
+from app.core.db import JobRow, OrderRow, PaymentRow, UserRow
 from app.services.lifecycle import mark_generation_succeeded, mark_payment_succeeded
 
 logger = logging.getLogger(__name__)
@@ -31,19 +32,28 @@ class WebhookService:
         self._owner = owner
 
     def ingest(self, *, db: Session, provider: str, event_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        if not self._register_event(db=db, provider=provider, event_id=event_id, payload=payload):
-            logger.info("webhook_deduplicated provider=%s event_id=%s", provider, event_id)
-            return {"deduplicated": True}
-
         tg_notify: tuple[str, str, str] | None = None
 
         if provider in self._owner.provider_registry:
-            result = self._apply_generation_event(db=db, provider=provider, payload=payload)
-            if result.get("ignored"):
-                return result
+            prepared = self._prepare_generation_event(db=db, provider=provider, payload=payload)
+            if prepared.get("ignored"):
+                return prepared
+            if not self._register_event(db=db, provider=provider, event_id=event_id, payload=payload):
+                logger.info("webhook_deduplicated provider=%s event_id=%s", provider, event_id)
+                return {"deduplicated": True}
+            result = self._apply_generation_event(
+                db=db,
+                provider=provider,
+                order=prepared["order"],
+                event_type=prepared["event_type"],
+                payload=payload,
+            )
             tg_notify = result.get("tg_notify")
 
         if provider in {"telegram", "stripe"}:
+            if not self._register_event(db=db, provider=provider, event_id=event_id, payload=payload):
+                logger.info("webhook_deduplicated provider=%s event_id=%s", provider, event_id)
+                return {"deduplicated": True}
             result = self._apply_payment_event(db=db, provider=provider, event_id=event_id, payload=payload)
             if result.get("deduplicated"):
                 return result
@@ -56,30 +66,42 @@ class WebhookService:
         return {"deduplicated": False, "accepted": True}
 
     def _register_event(self, *, db: Session, provider: str, event_id: str, payload: dict[str, Any]) -> bool:
-        row = WebhookEventRow(
-            provider=provider,
-            event_id=event_id,
-            event_type=str(payload.get("event_type") or ""),
-            order_id=str(payload.get("order_id") or "") or None,
-            payment_id=str(
+        params = {
+            "provider": provider,
+            "event_id": event_id,
+            "event_type": str(payload.get("event_type") or ""),
+            "order_id": str(payload.get("order_id") or "") or None,
+            "payment_id": str(
                 payload.get("telegram_payment_charge_id")
                 or payload.get("stripe_payment_intent_id")
                 or payload.get("payment_id")
                 or ""
             )
             or None,
-            payload_hash=_payload_hash(payload),
-            created_at=now_utc(),
-        )
-        db.add(row)
-        try:
-            db.flush()
-            return True
-        except IntegrityError:
-            db.rollback()
-            return False
+            "payload_hash": _payload_hash(payload),
+            "created_at": now_utc(),
+        }
+        if _is_sqlite:
+            sql = text(
+                """
+                INSERT OR IGNORE INTO webhook_events
+                (provider, event_id, event_type, order_id, payment_id, payload_hash, created_at)
+                VALUES (:provider, :event_id, :event_type, :order_id, :payment_id, :payload_hash, :created_at)
+                """
+            )
+        else:
+            sql = text(
+                """
+                INSERT INTO webhook_events
+                (provider, event_id, event_type, order_id, payment_id, payload_hash, created_at)
+                VALUES (:provider, :event_id, :event_type, :order_id, :payment_id, :payload_hash, :created_at)
+                ON CONFLICT (provider, event_id) DO NOTHING
+                """
+            )
+        result = db.execute(sql, params)
+        return (result.rowcount or 0) > 0
 
-    def _apply_generation_event(self, *, db: Session, provider: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _prepare_generation_event(self, *, db: Session, provider: str, payload: dict[str, Any]) -> dict[str, Any]:
         order_id = str(payload.get("order_id", ""))
         event_type = str(payload.get("event_type", "done"))
         if not order_id:
@@ -90,6 +112,18 @@ class WebhookService:
         if not order:
             logger.warning("webhook_ignored_order_not_found provider=%s order_id=%s", provider, order_id)
             return {"deduplicated": False, "ignored": True}
+        return {"order": order, "event_type": event_type}
+
+    def _apply_generation_event(
+        self,
+        *,
+        db: Session,
+        provider: str,
+        order: OrderRow,
+        event_type: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        order_id = order.order_id
 
         # Out-of-order guard: terminal states are immutable.
         if order.status in {"done", "failed"}:
@@ -100,7 +134,7 @@ class WebhookService:
                 event_type,
                 order.status,
             )
-            return {"deduplicated": False, "accepted": True}
+            return {"tg_notify": None}
 
         job = (
             db.query(JobRow)
