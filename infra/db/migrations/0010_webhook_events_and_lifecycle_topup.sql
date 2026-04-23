@@ -3,6 +3,17 @@
 ALTER TABLE users
     ADD COLUMN IF NOT EXISTS max_paid_topup_credits INTEGER NOT NULL DEFAULT 0;
 
+-- Ensure default/not-null contract even when column was created earlier by ORM.
+ALTER TABLE users
+    ALTER COLUMN max_paid_topup_credits SET DEFAULT 0;
+
+UPDATE users
+SET max_paid_topup_credits = 0
+WHERE max_paid_topup_credits IS NULL;
+
+ALTER TABLE users
+    ALTER COLUMN max_paid_topup_credits SET NOT NULL;
+
 CREATE TABLE IF NOT EXISTS webhook_events (
     id BIGSERIAL PRIMARY KEY,
     provider TEXT NOT NULL,

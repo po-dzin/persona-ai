@@ -81,7 +81,7 @@ class UserRow(Base):
     first_name = Column(String, nullable=True)
     username = Column(String, nullable=True)
     paid_credits = Column(Integer, default=0, nullable=False)
-    max_paid_topup_credits = Column(Integer, default=0, nullable=False)
+    max_paid_topup_credits = Column(Integer, default=0, server_default=text("0"), nullable=False)
     lifecycle_state = Column(String, nullable=False, default="S0")
     lifecycle_state_updated_at = Column(DateTime(timezone=True), nullable=True)
     bot_started_at = Column(DateTime(timezone=True), nullable=True)
