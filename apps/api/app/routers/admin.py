@@ -24,6 +24,7 @@ from app.core.db import (
 )
 from app.core.rate_limit import admin_limiter
 from app.core.settings import settings
+from app.services import admin_queries
 from app.services.lifecycle import (
     LIFECYCLE_STATES,
     admin_force_transition,
@@ -102,37 +103,28 @@ def get_admin_actor(
 
 def _interval(days: int) -> str:
     """SQL fragment: created_at >= <now - N days>"""
-    if _is_sqlite:
-        return f"created_at >= datetime('now', '-{days} days')"
-    return f"created_at >= NOW() - INTERVAL '{days} days'"
+    return admin_queries.interval(days, sqlite=_is_sqlite)
 
 
 def _trunc_day(col: str = "created_at") -> str:
     """SQL fragment: truncate timestamp to day for grouping."""
-    if _is_sqlite:
-        return f"DATE({col})"
-    return f"DATE_TRUNC('day', {col})"
+    return admin_queries.trunc_day(sqlite=_is_sqlite, col=col)
 
 
 def _scalar(session, sql: str, params: dict | None = None) -> Any:
-    row = session.execute(text(sql), params or {}).fetchone()
-    return row[0] if row else 0
+    return admin_queries.scalar(session, sql, params)
 
 
 def _rows(session, sql: str, params: dict | None = None) -> list[dict]:
-    result = session.execute(text(sql), params or {})
-    keys = list(result.keys())
-    return [dict(zip(keys, row)) for row in result.fetchall()]
+    return admin_queries.rows(session, sql, params)
 
 
 def _serialize(val: Any) -> Any:
-    if isinstance(val, datetime):
-        return val.isoformat()
-    return val
+    return admin_queries.serialize(val)
 
 
 def _serialize_rows(rows: list[dict]) -> list[dict]:
-    return [{k: _serialize(v) for k, v in row.items()} for row in rows]
+    return admin_queries.serialize_rows(rows)
 
 
 class LifecycleTransitionRequest(BaseModel):
