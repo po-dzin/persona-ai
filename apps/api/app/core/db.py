@@ -93,6 +93,8 @@ class UserRow(Base):
     lifecycle_lock_reason = Column(Text, nullable=True)
     lifecycle_lock_by = Column(String, nullable=True)
     lifecycle_lock_at = Column(DateTime(timezone=True), nullable=True)
+    lifecycle_last_message_state = Column(String, nullable=True)
+    lifecycle_last_message_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False)
 
 
@@ -236,8 +238,6 @@ _VALID_LIFECYCLE_STATES = (
     "S3",
     "S4",
     "S5",
-    "S6",
-    "INACTIVE_30D",
 )
 
 
@@ -280,6 +280,10 @@ def _run_column_migrations() -> None:
                 conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_by TEXT"))
             if "lifecycle_lock_at" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_lock_at TEXT"))
+            if "lifecycle_last_message_state" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_last_message_state TEXT"))
+            if "lifecycle_last_message_at" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN lifecycle_last_message_at TEXT"))
             if "id" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN id TEXT"))
                 # Backfill new rows with a UUID string; SQLite has no gen_random_uuid()
@@ -363,6 +367,10 @@ def _run_column_migrations() -> None:
                 CREATE UNIQUE INDEX IF NOT EXISTS uq_media_assets_storage_key
                 ON media_assets(storage_key)
             """))
+            conn.execute(text(
+                "UPDATE users SET lifecycle_state = 'S5' "
+                "WHERE lifecycle_state IN ('S6', 'INACTIVE_30D')"
+            ))
             conn.commit()
         else:
             # PostgreSQL: ADD COLUMN IF NOT EXISTS is idempotent
@@ -383,6 +391,8 @@ def _run_column_migrations() -> None:
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_lock_reason TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_lock_by TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_lock_at TIMESTAMPTZ"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_last_message_state TEXT"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS lifecycle_last_message_at TIMESTAMPTZ"))
             uuid_col_exists = conn.execute(text(
                 "SELECT 1 FROM information_schema.columns "
                 "WHERE table_name='users' AND column_name='id'"
@@ -427,6 +437,7 @@ def _run_column_migrations() -> None:
                 ("users", "last_payment_at"),
                 ("users", "zero_balance_since"),
                 ("users", "lifecycle_lock_at"),
+                ("users", "lifecycle_last_message_at"),
                 ("payments", "created_at"),
                 ("jobs", "updated_at"),
             ]:
@@ -474,16 +485,16 @@ def _run_column_migrations() -> None:
                     f"CHECK (status IN ({valid}))"
                 ))
 
-            lifecycle_check_exists = conn.execute(text(
-                "SELECT 1 FROM information_schema.table_constraints "
-                "WHERE constraint_name='chk_users_lifecycle_state' AND table_name='users'"
-            )).fetchone()
-            if not lifecycle_check_exists:
-                valid = ", ".join(f"'{s}'" for s in _VALID_LIFECYCLE_STATES)
-                conn.execute(text(
-                    f"ALTER TABLE users ADD CONSTRAINT chk_users_lifecycle_state "
-                    f"CHECK (lifecycle_state IN ({valid}))"
-                ))
+            conn.execute(text(
+                "UPDATE users SET lifecycle_state = 'S5' "
+                "WHERE lifecycle_state IN ('S6', 'INACTIVE_30D')"
+            ))
+            valid = ", ".join(f"'{s}'" for s in _VALID_LIFECYCLE_STATES)
+            conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_lifecycle_state"))
+            conn.execute(text(
+                f"ALTER TABLE users ADD CONSTRAINT chk_users_lifecycle_state "
+                f"CHECK (lifecycle_state IN ({valid}))"
+            ))
 
             conn.execute(text("""
                 CREATE TABLE IF NOT EXISTS lifecycle_transitions (

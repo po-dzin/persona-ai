@@ -1713,14 +1713,20 @@ button, a, [role="button"] { touch-action: manipulation; }
   z-index: var(--cmp-z-selected);
 }
 .style-preview-panel.is-active.is-opening-from-card {
-  animation: stylePreviewCardExpand var(--cmp-motion-enter) var(--cmp-ease-standard) both;
+  animation: stylePreviewCardExpand var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
+  will-change: transform, border-radius, opacity;
 }
 .style-preview-panel.is-active.is-closing-to-card {
-  animation: stylePreviewCardCollapse var(--cmp-motion-enter) var(--cmp-ease-standard) both;
+  animation: stylePreviewCardCollapse var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
+  will-change: transform, border-radius, opacity;
 }
 .style-preview-panel.is-active.is-pulling {
   border-radius: var(--cmp-space-22);
   transition: border-radius var(--cmp-motion-fast) var(--cmp-ease-standard);
+}
+.style-preview-panel.is-active.is-pull-releasing {
+  border-radius: var(--cmp-space-22);
+  transition: transform var(--cmp-motion-enter) var(--cmp-ease-standard), border-radius var(--cmp-motion-enter) var(--cmp-ease-standard);
 }
 .style-preview-panel.is-incoming {
   z-index: var(--cmp-z-base);
@@ -1810,22 +1816,26 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 @keyframes stylePreviewCardExpand {
   from {
+    opacity: 0.9;
     transform: translate(var(--style-preview-origin-tx, 0), var(--style-preview-origin-ty, 0))
       scale(var(--style-preview-origin-sx, 0.12), var(--style-preview-origin-sy, 0.12));
     border-radius: var(--cmp-space-16);
   }
   to {
+    opacity: 1;
     transform: translate(0, 0) scale(1, 1);
     border-radius: 0;
   }
 }
 @keyframes stylePreviewCardCollapse {
   from {
+    opacity: 1;
     transform: translate(0, var(--style-preview-close-from-ty, 0))
       scale(var(--style-preview-close-from-scale, 1), var(--style-preview-close-from-scale, 1));
     border-radius: var(--cmp-space-22);
   }
   to {
+    opacity: 0.9;
     transform: translate(var(--style-preview-origin-tx, 0), var(--style-preview-origin-ty, 0))
       scale(var(--style-preview-origin-sx, 0.12), var(--style-preview-origin-sy, 0.12));
     border-radius: var(--cmp-space-16);

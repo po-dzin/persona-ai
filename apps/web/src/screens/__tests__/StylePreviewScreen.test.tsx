@@ -59,6 +59,31 @@ describe("StylePreviewScreen gestures", () => {
     expect(onSelectStyle).not.toHaveBeenCalled();
   });
 
+  it("animates pull-release back to position when pull threshold is not reached", () => {
+    vi.useFakeTimers();
+    render(
+      <StylePreviewScreen
+        isOpen
+        styles={styles}
+        style={styles[1]}
+        onClose={vi.fn()}
+        onSelectStyle={vi.fn()}
+        onCreate={vi.fn()}
+      />,
+    );
+
+    const hero = document.querySelector(".style-preview-hero") as HTMLElement;
+    fireEvent.touchStart(hero, { touches: [{ clientX: 120, clientY: 100 }] });
+    fireEvent.touchMove(hero, { touches: [{ clientX: 118, clientY: 150 }] });
+    fireEvent.touchEnd(hero, { changedTouches: [{ clientX: 118, clientY: 150 }] });
+
+    expect(document.querySelector(".style-preview-panel.is-pull-releasing")).toBeTruthy();
+    act(() => {
+      vi.advanceTimersByTime(450);
+    });
+    expect(document.querySelector(".style-preview-panel.is-pull-releasing")).toBeFalsy();
+  });
+
   it("swipes left to next style", () => {
     vi.useFakeTimers();
     const onSelectStyle = vi.fn();

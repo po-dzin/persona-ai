@@ -27,9 +27,7 @@ function midpoint(a: Touch, b: Touch): { x: number; y: number } {
 }
 
 export function ZoomableImage({ src, alt, className = "", onError }: ZoomableImageProps) {
-  const [scale, setScale] = useState(1);
-  const [tx, setTx] = useState(0);
-  const [ty, setTy] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
   const [isPinching, setIsPinching] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
@@ -47,6 +45,24 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
   const modeRef = useRef<"none" | "pinch" | "pan">("none");
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
   const suppressDblClickUntilRef = useRef(0);
+  const zoomedRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
+  const hasPendingTransformRef = useRef(false);
+
+  const flushTransform = () => {
+    hasPendingTransformRef.current = false;
+    if (!imageRef.current) return;
+    imageRef.current.style.transform = `translate3d(${txRef.current}px, ${tyRef.current}px, 0) scale(${scaleRef.current})`;
+  };
+
+  const scheduleTransform = () => {
+    if (hasPendingTransformRef.current) return;
+    hasPendingTransformRef.current = true;
+    rafRef.current = requestAnimationFrame(() => {
+      flushTransform();
+      rafRef.current = null;
+    });
+  };
 
   const clampPan = (nextScale: number, nextTx: number, nextTy: number): { tx: number; ty: number } => {
     const root = rootRef.current;
@@ -69,9 +85,12 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
     scaleRef.current = nextScale;
     txRef.current = clamped.tx;
     tyRef.current = clamped.ty;
-    setScale(nextScale);
-    setTx(clamped.tx);
-    setTy(clamped.ty);
+    const nextIsZoomed = nextScale > 1.01;
+    if (zoomedRef.current !== nextIsZoomed) {
+      zoomedRef.current = nextIsZoomed;
+      setIsZoomed(nextIsZoomed);
+    }
+    scheduleTransform();
   };
 
   useEffect(() => {
@@ -79,17 +98,18 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
     scaleRef.current = 1;
     txRef.current = 0;
     tyRef.current = 0;
-    setScale(1);
-    setTx(0);
-    setTy(0);
+    zoomedRef.current = false;
+    setIsZoomed(false);
     setIsPinching(false);
     modeRef.current = "none";
+    scheduleTransform();
   }, [src]);
 
   useEffect(() => {
-    if (!imageRef.current) return;
-    imageRef.current.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
-  }, [tx, ty, scale]);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const toggleDoubleTapZoom = () => {
     const nextScale = scaleRef.current <= 1.01 ? DOUBLE_TAP_SCALE : 1;
@@ -209,7 +229,7 @@ export function ZoomableImage({ src, alt, className = "", onError }: ZoomableIma
   return (
     <div
       ref={rootRef}
-      className={`zoomable-photo${scale > 1 ? " is-zoomed" : ""}${isPinching ? " is-pinching" : ""} ${className}`.trim()}
+      className={`zoomable-photo${isZoomed ? " is-zoomed" : ""}${isPinching ? " is-pinching" : ""} ${className}`.trim()}
       data-photo-zoom="true"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}

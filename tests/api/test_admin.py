@@ -348,7 +348,8 @@ def test_admin_lifecycle_overview_has_states():
     body = res.json()
     assert "states" in body
     assert "S0" in body["states"]
-    assert "INACTIVE_30D" in body["states"]
+    assert "S5" in body["states"]
+    assert "INACTIVE_30D" not in body["states"]
 
 
 def test_admin_lifecycle_users_filter_and_timeline():
@@ -376,10 +377,10 @@ def test_admin_lifecycle_force_lock_unlock_recompute():
     force = client.post(
         f"/admin/api/lifecycle/users/{uid}/transition",
         headers=_admin_headers(),
-        json={"to_state": "S3", "reason": "manual test"},
+        json={"to_state": "S2", "reason": "manual test"},
     )
     assert force.status_code == 200
-    assert force.json()["to_state"] == "S3"
+    assert force.json()["to_state"] == "S2"
 
     lock = client.post(
         f"/admin/api/lifecycle/users/{uid}/lock",
@@ -408,3 +409,24 @@ def test_admin_lifecycle_force_lock_unlock_recompute():
     assert any(a["action_type"] == "force_transition" for a in timeline["admin_actions"])
     assert any(a["action_type"] == "lock" for a in timeline["admin_actions"])
     assert any(a["action_type"] == "unlock" for a in timeline["admin_actions"])
+
+
+def test_admin_lifecycle_dispatch_due_endpoint():
+    client = _client()
+    uid = "u-life-dispatch"
+    client.get("/v1/me/profile", headers=_user_headers(uid))
+    res = client.post(
+        "/admin/api/lifecycle/dispatch-due",
+        headers=_admin_headers(),
+        json={"limit": 2, "max_seconds": 5},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["ok"] is True
+    assert isinstance(body["processed"], int)
+    assert isinstance(body["sent"], int)
+    assert body["processed"] <= 2
+    assert body["limit"] == 2
+    assert body["max_seconds"] == 5
+    assert "next_cursor" in body
+    assert isinstance(body["wrapped"], bool)
