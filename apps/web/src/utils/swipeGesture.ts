@@ -1,6 +1,11 @@
 export const SWIPE_ACTIVATION_PX = 10;
 export const SWIPE_FLICK_MIN_DISTANCE_PX = 24;
 export const SWIPE_FLICK_MIN_VELOCITY_PX_PER_MS = 0.35;
+export const SWIPE_COMMIT_DISTANCE_PX = 56;
+export const SWIPE_VERTICAL_CLOSE_THRESHOLD_PX = 64;
+export const PULL_CLOSE_THRESHOLD_PX = 110;
+export const GESTURE_IDLE_THRESHOLD_PX = 6;
+export const HORIZONTAL_BIAS_RATIO = 0.9;
 export type GestureAxis = "none" | "x" | "y";
 
 export function resolveGestureAxis(params: {
@@ -11,8 +16,8 @@ export function resolveGestureAxis(params: {
   horizontalBiasRatio?: number;
 }): GestureAxis {
   if (params.current !== "none") return params.current;
-  const idleThresholdPx = params.idleThresholdPx ?? 6;
-  const horizontalBiasRatio = params.horizontalBiasRatio ?? 0.9;
+  const idleThresholdPx = params.idleThresholdPx ?? GESTURE_IDLE_THRESHOLD_PX;
+  const horizontalBiasRatio = params.horizontalBiasRatio ?? HORIZONTAL_BIAS_RATIO;
   if (params.absDx < idleThresholdPx && params.absDy < idleThresholdPx) return "none";
   return params.absDx > params.absDy * horizontalBiasRatio ? "x" : "y";
 }

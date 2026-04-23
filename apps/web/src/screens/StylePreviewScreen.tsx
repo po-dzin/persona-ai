@@ -3,6 +3,11 @@ import type { StyleItem } from "../data/styles";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { readMotionTokenMs } from "../utils/motionTokens";
 import {
+  GESTURE_IDLE_THRESHOLD_PX,
+  HORIZONTAL_BIAS_RATIO,
+  PULL_CLOSE_THRESHOLD_PX,
+  SWIPE_COMMIT_DISTANCE_PX,
+  SWIPE_VERTICAL_CLOSE_THRESHOLD_PX,
   getHorizontalSwipeKeyframeOffsets,
   resolveGestureAxis,
   shouldActivateHorizontalSwipe,
@@ -56,6 +61,10 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     [prefersReducedMotion],
   );
   const closeDurationMs = useMemo(
+    () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-enter", 180)),
+    [prefersReducedMotion],
+  );
+  const cardTransitionDurationMs = useMemo(
     () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-swipe", 280)),
     [prefersReducedMotion],
   );
@@ -63,9 +72,6 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-fast", 140)),
     [prefersReducedMotion],
   );
-  const SWIPE_X_THRESHOLD = 56;
-  const SWIPE_Y_THRESHOLD = 64;
-  const PULL_CLOSE_THRESHOLD = 110;
   const currentIndex = useMemo(
     () => (activeStyle ? styles.findIndex((item) => item.id === activeStyle.id) : -1),
     [styles, activeStyle],
@@ -166,9 +172,12 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       "--style-preview-origin-sy": String(sy),
     } as CSSProperties);
     setIsOpeningFromCard(true);
-    const timer = window.setTimeout(() => setIsOpeningFromCard(false), Math.max(220, closeDurationMs));
+    const timer = window.setTimeout(
+      () => setIsOpeningFromCard(false),
+      Math.max(220, cardTransitionDurationMs),
+    );
     return () => window.clearTimeout(timer);
-  }, [isOpen, originRect, prefersReducedMotion, closeDurationMs]);
+  }, [isOpen, originRect, prefersReducedMotion, cardTransitionDurationMs]);
 
   const computeCardTransformVars = (targetRect: { left: number; top: number; width: number; height: number }) => {
     const shell = document.querySelector(".app-shell") as HTMLElement | null;
@@ -258,17 +267,22 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       setClosingVars(null);
       setIsClosingToCard(false);
     }
+    const closeAnimationDurationMs = cardVars
+      ? cardTransitionDurationMs
+      : reason === "pull"
+        ? cardTransitionDurationMs
+        : closeDurationMs;
     setCloseReason(reason);
     setIsPullReleasing(false);
     clearTouchTracking();
     setIsClosing(true);
-    if (closeDurationMs <= 0) {
+    if (closeAnimationDurationMs <= 0) {
       onClose();
       return;
     }
     closeTimerRef.current = window.setTimeout(() => {
       onClose();
-    }, closeDurationMs);
+    }, closeAnimationDurationMs);
   };
 
   const handleCreate = () => {
@@ -305,8 +319,8 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       current: gestureAxisRef.current,
       absDx,
       absDy,
-      idleThresholdPx: 6,
-      horizontalBiasRatio: 0.9,
+      idleThresholdPx: GESTURE_IDLE_THRESHOLD_PX,
+      horizontalBiasRatio: HORIZONTAL_BIAS_RATIO,
     });
     if (gestureAxisRef.current === "none") return;
 
@@ -378,7 +392,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     const absDy = Math.abs(dy);
 
     if (isPullGestureRef.current || isPulling) {
-      if (pullOffsetY >= PULL_CLOSE_THRESHOLD) {
+      if (pullOffsetY >= PULL_CLOSE_THRESHOLD_PX) {
         requestClose("pull");
       } else {
         isPullGestureRef.current = false;
@@ -394,7 +408,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       return;
     }
 
-    if (!isHorizontalGestureRef.current && dy > SWIPE_Y_THRESHOLD && absDy > absDx * 1.15) {
+    if (!isHorizontalGestureRef.current && dy > SWIPE_VERTICAL_CLOSE_THRESHOLD_PX && absDy > absDx * 1.15) {
       requestClose("pull");
       clearTouchTracking();
       return;
@@ -406,7 +420,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       dx: swipeDx,
       dy,
       durationMs,
-      commitDistancePx: SWIPE_X_THRESHOLD,
+      commitDistancePx: SWIPE_COMMIT_DISTANCE_PX,
       dominantHorizontalRatio: 1 / 1.1,
     }) && (isHorizontalGestureRef.current || Math.abs(swipeDx) > absDy * 1.1);
 

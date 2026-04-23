@@ -6,6 +6,7 @@ All timestamps stored as TIMESTAMPTZ (PostgreSQL) or ISO strings (SQLite dev).
 from __future__ import annotations
 
 import hmac
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -16,6 +17,7 @@ from sqlalchemy import text
 
 from app.core.auth import parse_tg_user
 from app.core.db import (
+    AppMetaRow,
     UserRow,
     get_system_session,
     _is_sqlite,
@@ -28,7 +30,9 @@ from app.services.lifecycle import (
     admin_lock_state,
     admin_recompute_state,
     admin_unlock_state,
+    recompute_user_state,
 )
+from app.services.lifecycle_messaging import maybe_send_lifecycle_message
 
 router = APIRouter(prefix="/admin/api", tags=["admin"])
 
@@ -138,6 +142,46 @@ class LifecycleTransitionRequest(BaseModel):
 
 class LifecycleLockRequest(BaseModel):
     reason: str = Field(..., min_length=3, max_length=500)
+
+
+class LifecycleDispatchRequest(BaseModel):
+    limit: int = Field(default=500, ge=1, le=5000)
+    max_seconds: int = Field(default=5, ge=1, le=60)
+    start_after_user_id: str | None = Field(default=None)
+
+
+_LIFECYCLE_DISPATCH_CURSOR_KEY = "lifecycle_dispatch_cursor_v1"
+
+
+def _load_dispatch_cursor(session) -> str | None:
+    marker = session.get(AppMetaRow, _LIFECYCLE_DISPATCH_CURSOR_KEY)
+    if not marker or not marker.value:
+        return None
+    return marker.value
+
+
+def _save_dispatch_cursor(session, cursor: str | None) -> None:
+    now = datetime.now(timezone.utc)
+    marker = session.get(AppMetaRow, _LIFECYCLE_DISPATCH_CURSOR_KEY)
+    value = cursor or ""
+    if marker is None:
+        session.add(
+            AppMetaRow(
+                key=_LIFECYCLE_DISPATCH_CURSOR_KEY,
+                value=value,
+                updated_at=now,
+            )
+        )
+        return
+    marker.value = value
+    marker.updated_at = now
+
+
+def _fetch_dispatch_batch(session, *, after_user_id: str | None, limit: int) -> list[UserRow]:
+    q = session.query(UserRow).order_by(UserRow.user_id.asc())
+    if after_user_id:
+        q = q.filter(UserRow.user_id > after_user_id)
+    return q.limit(limit).all()
 
 
 # ─────────────────────────── endpoints ───────────────────────────
@@ -836,3 +880,50 @@ def lifecycle_recompute(
         state = admin_recompute_state(session, user, actor=actor.actor, reason=payload.reason)
 
     return {"ok": True, "state": state}
+
+
+@router.post("/lifecycle/dispatch-due")
+def lifecycle_dispatch_due(
+    payload: LifecycleDispatchRequest = Body(default=LifecycleDispatchRequest()),
+    actor: AdminActor = Depends(get_admin_actor),
+):
+    del actor
+    with get_system_session() as session:
+        cursor = payload.start_after_user_id if payload.start_after_user_id is not None else _load_dispatch_cursor(session)
+        users = _fetch_dispatch_batch(session, after_user_id=cursor, limit=payload.limit)
+        wrapped = False
+        if not users and cursor is not None:
+            wrapped = True
+            cursor = None
+            users = _fetch_dispatch_batch(session, after_user_id=None, limit=payload.limit)
+
+        sent = 0
+        processed = 0
+        start = time.monotonic()
+        for user in users:
+            if processed >= payload.limit:
+                break
+            if (time.monotonic() - start) >= payload.max_seconds:
+                break
+            recompute_user_state(
+                session,
+                user,
+                source="system",
+                reason="dispatch_due_tick",
+            )
+            if maybe_send_lifecycle_message(session, user):
+                sent += 1
+            processed += 1
+
+        next_cursor = users[processed - 1].user_id if processed > 0 else cursor
+        _save_dispatch_cursor(session, next_cursor)
+
+    return {
+        "ok": True,
+        "processed": processed,
+        "sent": sent,
+        "limit": payload.limit,
+        "max_seconds": payload.max_seconds,
+        "next_cursor": next_cursor,
+        "wrapped": wrapped,
+    }

@@ -33,6 +33,17 @@ def _tg_api(method: str, payload: dict[str, Any]) -> dict[str, Any]:
         return {}
 
 
+def send_text_message(chat_id: int | str, text: str) -> bool:
+    resp = _tg_api(
+        "sendMessage",
+        {
+            "chat_id": chat_id,
+            "text": text,
+        },
+    )
+    return bool(resp.get("ok"))
+
+
 async def send_start_message(chat_id: int | str) -> None:
     """Send welcome message with 'Open App' button."""
     miniapp_url = settings.telegram_miniapp_url
@@ -41,8 +52,9 @@ async def send_start_message(chat_id: int | str) -> None:
         {
             "chat_id": chat_id,
             "text": (
-                "👋 Привет! Я PersonAI — превращаю твои фото в арт.\n\n"
-                "Нажми кнопку ниже, чтобы открыть приложение 👇"
+                "👋 Привет! Я превращаю обычные фото в 🔥 AI-портреты.\n"
+                "Я уже начислил тебе 20 монет 🎁 — открывай приложение и попробуй!\n\n"
+                "Нажми кнопку ниже, чтобы открыть PersonAI 👇"
             ),
             "reply_markup": {
                 "inline_keyboard": [

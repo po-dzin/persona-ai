@@ -11,7 +11,7 @@ import PeriodPicker from "../components/PeriodPicker";
 import { CHART_COLORS } from "../utils/chartTokens";
 import { formatDateTimeShort } from "../utils/format";
 
-const STATES = ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "INACTIVE_30D"] as const;
+const STATES = ["S0", "S1", "S2", "S3", "S4", "S5"] as const;
 
 export default function Lifecycle() {
   const [days, setDays] = useState(30);
@@ -55,7 +55,7 @@ export default function Lifecycle() {
     if (!reason || reason.trim().length < 3) return;
     try {
       if (action === "force") {
-        const toState = window.prompt(`Целевой статус (${STATES.join(", ")}):`, "S3") ?? "";
+        const toState = window.prompt(`Целевой статус (${STATES.join(", ")}):`, "S2") ?? "";
         if (!STATES.includes(toState as (typeof STATES)[number])) return;
         await api.lifecycleForceTransition(selectedUser, toState, reason.trim());
       } else if (action === "lock") {
