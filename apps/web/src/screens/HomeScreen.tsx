@@ -6,8 +6,6 @@ import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { readMotionTokenMs } from "../utils/motionTokens";
 import { isPhotoGenerating } from "../utils/photoStatus";
 import {
-  GESTURE_IDLE_THRESHOLD_PX,
-  HORIZONTAL_BIAS_RATIO,
   getHorizontalSwipeKeyframeOffsets,
   resolveGestureAxis,
   shouldActivateHorizontalSwipe,
@@ -301,8 +299,8 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
       current: gestureAxisRef.current,
       absDx,
       absDy,
-      idleThresholdPx: GESTURE_IDLE_THRESHOLD_PX,
-      horizontalBiasRatio: HORIZONTAL_BIAS_RATIO,
+      idleThresholdPx: 6,
+      horizontalBiasRatio: 0.9,
     });
     if (gestureAxisRef.current === "none") return;
     if (gestureAxisRef.current !== "x") return;

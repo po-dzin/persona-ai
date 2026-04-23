@@ -961,6 +961,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  will-change: transform, opacity;
   animation: overlayScreenEnter var(--cmp-motion-overlay-enter) var(--cmp-ease-standard);
 }
 .overlay-screen::-webkit-scrollbar { display: none; }
@@ -1655,17 +1656,12 @@ button, a, [role="button"] { touch-action: manipulation; }
   bottom: 0;
   padding-bottom: 0;
   animation: stylePreviewZoomIn var(--cmp-motion-enter) var(--cmp-ease-standard);
+  will-change: transform, opacity;
 }
 .style-preview-screen.is-opening-from-card,
 .style-preview-screen.is-closing-to-card {
   background: transparent;
   animation: none;
-}
-.style-preview-screen.is-opening-from-card,
-.style-preview-screen.is-closing-to-card,
-.style-preview-screen.is-closing-button,
-.style-preview-screen.is-closing-pull {
-  will-change: transform, opacity;
 }
 .style-preview-screen.is-pulling {
   background: var(--sem-color-overlay-scrim);
