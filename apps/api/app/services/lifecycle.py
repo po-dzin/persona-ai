@@ -255,8 +255,11 @@ def mark_miniapp_opened(db: Session, user: UserRow) -> None:
         user.first_miniapp_opened_at = now
     user.last_miniapp_opened_at = now
     recompute_user_state(db, user, source="system", reason="miniapp_opened")
-    from app.services.lifecycle_messaging import maybe_send_lifecycle_message
-    maybe_send_lifecycle_message(db, user, now=now)
+    try:
+        from app.services.lifecycle_messaging import maybe_send_lifecycle_message
+        maybe_send_lifecycle_message(db, user, now=now)
+    except Exception:
+        logger.warning("lifecycle_message_failed user_id=%s", user.user_id, exc_info=True)
 
 
 def mark_generation_succeeded(db: Session, user: UserRow, *, order_id: str | None = None) -> None:
@@ -269,8 +272,11 @@ def mark_generation_succeeded(db: Session, user: UserRow, *, order_id: str | Non
         reason="generation_succeeded",
         metadata={"order_id": order_id} if order_id else None,
     )
-    from app.services.lifecycle_messaging import maybe_send_lifecycle_message
-    maybe_send_lifecycle_message(db, user, now=now)
+    try:
+        from app.services.lifecycle_messaging import maybe_send_lifecycle_message
+        maybe_send_lifecycle_message(db, user, now=now)
+    except Exception:
+        logger.warning("lifecycle_message_failed user_id=%s", user.user_id, exc_info=True)
 
 
 def mark_payment_succeeded(
@@ -291,8 +297,11 @@ def mark_payment_succeeded(
         reason="payment_succeeded",
         metadata={"payment_id": payment_id} if payment_id else None,
     )
-    from app.services.lifecycle_messaging import maybe_send_lifecycle_message
-    maybe_send_lifecycle_message(db, user, now=now)
+    try:
+        from app.services.lifecycle_messaging import maybe_send_lifecycle_message
+        maybe_send_lifecycle_message(db, user, now=now)
+    except Exception:
+        logger.warning("lifecycle_message_failed user_id=%s", user.user_id, exc_info=True)
 
 
 def admin_force_transition(
