@@ -252,6 +252,15 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
         "--style-preview-close-from-scale": String(reason === "pull" ? pullScale : 1),
       } as CSSProperties);
       setIsClosingToCard(true);
+    } else if (!prefersReducedMotion && reason === "pull" && pullOffsetY > 0) {
+      // No card target but pull gesture — capture pull position so panel can
+      // animate FROM where the finger was instead of snapping back to centre.
+      const pullScale = Math.max(0.84, 1 - pullOffsetY / 1400);
+      setClosingVars({
+        "--style-preview-close-from-ty": `${pullOffsetY}px`,
+        "--style-preview-close-from-scale": String(pullScale),
+      } as CSSProperties);
+      setIsClosingToCard(false);
     } else {
       setClosingVars(null);
       setIsClosingToCard(false);
@@ -436,9 +445,13 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
             setPendingStyle(null);
             setSwipeDirection(null);
             setIsSwipeAnimating(false);
-            stageRef.current?.style.removeProperty("--style-preview-enter-from");
-            stageRef.current?.style.removeProperty("--style-preview-leave-from");
             onSelectStyle(nextStyle);
+            // Clean up CSS vars after React commits so in-flight animations aren't
+            // recalculated mid-fill on Safari, which can cause a 1-frame flash.
+            requestAnimationFrame(() => {
+              stageRef.current?.style.removeProperty("--style-preview-enter-from");
+              stageRef.current?.style.removeProperty("--style-preview-leave-from");
+            });
           }, swipeDurationMs);
         }
       }
@@ -450,9 +463,13 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     clearTouchTracking();
   };
 
+  // Pull-close without a card target: panel plays a dedicated animation from the
+  // pull position so the content doesn't snap back to centre before fading out.
+  const isClosingPullDirect = isClosing && !isClosingToCard && closeReason === "pull" && closingVars !== null;
+
   const panelClass = isSwipeAnimating
     ? `style-preview-panel is-active ${swipeDirection === "next" ? "is-outgoing-next" : "is-outgoing-prev"}`
-    : `style-preview-panel is-active${isOpeningFromCard ? " is-opening-from-card" : ""}${isClosingToCard ? " is-closing-to-card" : ""}${isPulling && !isClosing ? " is-pulling" : ""}${isPullReleasing && !isClosing ? " is-pull-releasing" : ""}`;
+    : `style-preview-panel is-active${isOpeningFromCard ? " is-opening-from-card" : ""}${isClosingToCard ? " is-closing-to-card" : ""}${isClosingPullDirect ? " is-closing-pull-panel" : ""}${isPulling && !isClosing ? " is-pulling" : ""}${isPullReleasing && !isClosing ? " is-pull-releasing" : ""}`;
 
   const incomingClass = isDragging
     ? `style-preview-panel is-incoming ${swipeDirection === "next" ? "is-adjacent-next" : "is-adjacent-prev"}`
@@ -464,8 +481,9 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     "overlay-screen style-preview-screen",
     isOpeningFromCard ? "is-opening-from-card" : "",
     (isPulling || isPullReleasing) && !isClosing ? "is-pulling" : "",
-    isClosingToCard ? "is-closing-to-card" : "",
-    isClosing && !isClosingToCard ? (closeReason === "pull" ? "is-closing-pull" : "is-closing-button") : "",
+    // Both card-collapse and pull-direct: the panel handles the animation, screen is transparent
+    (isClosingToCard || isClosingPullDirect) ? "is-closing-to-card" : "",
+    isClosing && !isClosingToCard && !isClosingPullDirect ? (closeReason === "pull" ? "is-closing-pull" : "is-closing-button") : "",
   ].filter(Boolean).join(" ");
 
   if (!isOpen || !style || !activeStyle) return null;

@@ -477,6 +477,7 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
                     type="button"
                     key={style.id}
                     className="style-card style-card-grid"
+                    data-style-id={style.id}
                     onClick={() => onPreviewStyle(style)}
                     aria-label={style.name}
                   >
