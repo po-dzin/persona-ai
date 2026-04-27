@@ -29,7 +29,7 @@ def _tg_api(method: str, payload: dict[str, Any]) -> dict[str, Any]:
     try:
         with urlopen(req, timeout=10) as resp:
             return json.loads(resp.read())
-    except URLError:
+    except Exception:
         return {}
 
 

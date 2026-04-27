@@ -31,6 +31,7 @@ export function CategoryScreen({ isOpen, category, styles, onClose, onPreviewSty
             type="button"
             key={style.id}
             className="style-card"
+            data-style-id={style.id}
             onClick={() => onPreviewStyle(style)}
             aria-label={style.name}
           >

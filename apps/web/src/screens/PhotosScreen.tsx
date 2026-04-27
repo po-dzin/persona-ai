@@ -11,6 +11,8 @@ interface PhotosScreenProps {
   onOpenPhoto: (photo: PhotoRecord) => void;
   favorites: Set<string>;
   isLoading?: boolean;
+  /** Override current timestamp (ms). Used in tests to keep retention window stable. */
+  nowMs?: number;
 }
 
 function dateLabel(iso: string): string {
@@ -18,7 +20,7 @@ function dateLabel(iso: string): string {
   return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "long" });
 }
 
-export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, favorites, isLoading }: PhotosScreenProps) {
+export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, favorites, isLoading, nowMs }: PhotosScreenProps) {
   const [filter, setFilter] = useState("Все");
   const [imageErrorIds, setImageErrorIds] = useState<Set<string>>(new Set());
   const [loadedImageIds, setLoadedImageIds] = useState<Set<string>>(new Set());
@@ -52,7 +54,7 @@ export function PhotosScreen({ photos, styles, generatingOrderIds, onOpenPhoto, 
   const filterItems = useMemo(() => ["Все", "Избранные", ...categories], [categories]);
 
   const RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
-  const cutoff = Date.now() - RETENTION_MS;
+  const cutoff = (nowMs ?? Date.now()) - RETENTION_MS;
   const withinRetention = photos.filter(
     (p) => p.status !== "done" || new Date(p.createdAt).getTime() > cutoff,
   );

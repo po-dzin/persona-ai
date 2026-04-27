@@ -304,6 +304,7 @@
   --cmp-state-opacity-disabled: 0.55;
   --cmp-state-opacity-arrow: 0.3;
   --cmp-state-opacity-press-soft: 0.75;
+  --cmp-state-opacity-press: 0.6;
 
   --cmp-state-scale-press-sm: 0.98;
   --cmp-state-scale-press-md: 0.97;

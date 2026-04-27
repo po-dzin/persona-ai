@@ -66,6 +66,9 @@ const photos: PhotoRecord[] = [
   },
 ];
 
+// Pin "now" to April 15 so the 14-day retention window always covers the 2026-04-10 fixture dates.
+const NOW_MS = new Date("2026-04-15T00:00:00Z").getTime();
+
 describe("PhotosScreen", () => {
   it("shows filter chips as Все + Избранные + категории (without per-style chips)", () => {
     const { container } = render(
@@ -74,6 +77,7 @@ describe("PhotosScreen", () => {
         styles={styles}
         favorites={new Set(["o2"])}
         onOpenPhoto={vi.fn()}
+        nowMs={NOW_MS}
       />,
     );
 
@@ -100,6 +104,7 @@ describe("PhotosScreen", () => {
         styles={styles}
         favorites={new Set(["o2"])}
         onOpenPhoto={vi.fn()}
+        nowMs={NOW_MS}
       />,
     );
 
@@ -131,6 +136,7 @@ describe("PhotosScreen", () => {
         styles={styles}
         favorites={new Set()}
         onOpenPhoto={vi.fn()}
+        nowMs={NOW_MS}
       />,
     );
 
@@ -163,6 +169,7 @@ describe("PhotosScreen", () => {
         generatingOrderIds={new Set()}
         favorites={new Set()}
         onOpenPhoto={vi.fn()}
+        nowMs={NOW_MS}
       />,
     );
 
@@ -199,6 +206,7 @@ describe("PhotosScreen", () => {
         styles={styles}
         favorites={new Set()}
         onOpenPhoto={vi.fn()}
+        nowMs={NOW_MS}
       />,
     );
 

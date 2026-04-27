@@ -269,7 +269,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--cmp-space-grid-gap);
   padding: var(--cmp-space-4) var(--cmp-space-grid-edge) var(--cmp-space-20);
-  animation: gridFadeIn var(--cmp-motion-enter) var(--cmp-ease-standard);
+  animation: gridFadeIn var(--cmp-motion-enter) var(--cmp-ease-standard) both;
 }
 @keyframes gridFadeIn {
   from { opacity: 0; transform: translateY(var(--cmp-space-6)); }
@@ -328,6 +328,9 @@ button, a, [role="button"] { touch-action: manipulation; }
 .home-styles-panel.is-outgoing {
   opacity: 1;
   z-index: var(--cmp-z-selected);
+  /* Suppress CSS transition so removing the animation class doesn't trigger
+     a snap-back transition from fill-forward position to natural position. */
+  transition: none;
 }
 .home-styles-panels.is-dragging:not(.is-transitioning) .home-styles-panel {
   transition: none;
@@ -366,20 +369,22 @@ button, a, [role="button"] { touch-action: manipulation; }
   animation: homePanelEnterFromLeft var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
 }
 @keyframes homePanelEnterFromRight {
-  from { transform: translateX(var(--panel-enter-from, 100%)); }
-  to { transform: translateX(0); }
+  from { transform: translateX(var(--panel-enter-from, 100%)) translateZ(0); }
+  to { transform: translateX(0) translateZ(0); }
 }
 @keyframes homePanelEnterFromLeft {
-  from { transform: translateX(var(--panel-enter-from, -100%)); }
-  to { transform: translateX(0); }
+  from { transform: translateX(var(--panel-enter-from, -100%)) translateZ(0); }
+  to { transform: translateX(0) translateZ(0); }
 }
 @keyframes homePanelLeaveToLeft {
-  from { transform: translateX(var(--panel-leave-from, 0%)); }
-  to { transform: translateX(-100%); }
+  from { transform: translateX(var(--panel-leave-from, 0%)) translateZ(0); opacity: 1; }
+  98% { transform: translateX(-100%) translateZ(0); opacity: 1; }
+  to { transform: translateX(-100%) translateZ(0); opacity: 0; }
 }
 @keyframes homePanelLeaveToRight {
-  from { transform: translateX(var(--panel-leave-from, 0%)); }
-  to { transform: translateX(100%); }
+  from { transform: translateX(var(--panel-leave-from, 0%)) translateZ(0); opacity: 1; }
+  98% { transform: translateX(100%) translateZ(0); opacity: 1; }
+  to { transform: translateX(100%) translateZ(0); opacity: 0; }
 }
 .home-styles-grid {
   animation: none;
@@ -638,7 +643,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   border-radius: var(--cmp-space-10);
   pointer-events: none;
   box-shadow: 0 2px 8px var(--pr-overlay-18);
-  z-index: 2;
+  z-index: var(--cmp-z-selected);
 }
 .package-icon {
   width: var(--cmp-space-42); height: var(--cmp-space-42);
@@ -962,7 +967,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   will-change: transform, opacity;
-  animation: overlayScreenEnter var(--cmp-motion-overlay-enter) var(--cmp-ease-standard);
+  animation: overlayScreenEnter var(--cmp-motion-overlay-enter) var(--cmp-ease-standard) both;
 }
 .overlay-screen::-webkit-scrollbar { display: none; }
 
@@ -1250,7 +1255,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   inset: 0;
   background: var(--sem-color-overlay-scrim);
   z-index: var(--cmp-z-modal);
-  animation: overlayBackdropEnter var(--cmp-motion-overlay-enter) var(--cmp-ease-decelerate);
+  animation: overlayBackdropEnter var(--cmp-motion-overlay-enter) var(--cmp-ease-decelerate) both;
 }
 .modal-backdrop { display: flex; align-items: center; justify-content: center; padding: var(--cmp-space-24); }
 .sheet-backdrop { display: flex; align-items: flex-end; justify-content: center; }
@@ -1263,7 +1268,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   width: 100%;
   text-align: center;
   box-shadow: 0 var(--cmp-space-24) var(--cmp-space-48) var(--sem-color-overlay-chip);
-  animation: modalCardEnter var(--cmp-motion-modal-enter) var(--cmp-ease-standard);
+  animation: modalCardEnter var(--cmp-motion-modal-enter) var(--cmp-ease-standard) both;
 }
 .modal-icon {
   width: var(--cmp-space-56); height: var(--cmp-space-56);
@@ -1499,7 +1504,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   justify-content: center;
   background: var(--sem-color-overlay-scrim);
   z-index: var(--cmp-z-modal);
-  animation: overlayBackdropEnter var(--cmp-motion-overlay-enter) var(--cmp-ease-decelerate);
+  animation: overlayBackdropEnter var(--cmp-motion-overlay-enter) var(--cmp-ease-decelerate) both;
   touch-action: none;
 }
 .viewer-sheet {
@@ -1512,7 +1517,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   max-height: min(68vh, calc(100dvh - var(--cmp-space-120)));
   display: flex;
   flex-direction: column;
-  animation: viewerSheetEnter var(--cmp-motion-enter) var(--cmp-ease-standard);
+  animation: viewerSheetEnter var(--cmp-motion-enter) var(--cmp-ease-standard) both;
 }
 .viewer-sheet-handle {
   width: var(--cmp-space-36);
@@ -1559,7 +1564,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .viewer-icon-btn.active { background: var(--sem-color-bg-elevated); color: var(--sem-color-text-inverse); }
 .motion-popover-enter {
-  animation: popoverEnter var(--cmp-motion-popover-enter) var(--cmp-ease-standard);
+  animation: popoverEnter var(--cmp-motion-popover-enter) var(--cmp-ease-standard) both;
 }
 
 /* ─── Models list ─── */
@@ -1655,7 +1660,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   top: 0;
   bottom: 0;
   padding-bottom: 0;
-  animation: stylePreviewZoomIn var(--cmp-motion-enter) var(--cmp-ease-standard);
+  animation: stylePreviewZoomIn var(--cmp-motion-enter) var(--cmp-ease-standard) both;
   will-change: transform, opacity;
 }
 .style-preview-screen.is-opening-from-card,
@@ -1720,6 +1725,10 @@ button, a, [role="button"] { touch-action: manipulation; }
   animation: stylePreviewCardCollapse var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
   will-change: transform, border-radius, opacity;
 }
+.style-preview-panel.is-active.is-closing-pull-panel {
+  animation: stylePreviewPullClose var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
+  will-change: transform, border-radius, opacity;
+}
 .style-preview-panel.is-active.is-pulling {
   border-radius: var(--cmp-space-22);
   transition: border-radius var(--cmp-motion-fast) var(--cmp-ease-standard);
@@ -1771,7 +1780,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   transition: transform var(--cmp-motion-fast) var(--cmp-ease-standard), opacity var(--cmp-motion-fast) var(--cmp-ease-standard);
 }
 .style-preview-top .flow-back:active {
-  opacity: 0.6;
+  opacity: var(--cmp-state-opacity-press);
 }
 .style-preview-name-top {
   font-size: var(--cmp-type-title-xl-size);
@@ -1861,21 +1870,35 @@ button, a, [role="button"] { touch-action: manipulation; }
     transform: translateY(22%) scale(0.94);
   }
 }
+@keyframes stylePreviewPullClose {
+  from {
+    opacity: 1;
+    transform: translateY(var(--style-preview-close-from-ty, 0)) scale(var(--style-preview-close-from-scale, 1));
+    border-radius: var(--cmp-space-22);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(55%) scale(0.88);
+    border-radius: var(--cmp-space-16);
+  }
+}
 @keyframes stylePreviewEnterFromRight {
-  from { transform: translateX(var(--style-preview-enter-from, 100%)); }
-  to { transform: translateX(0); }
+  from { transform: translateX(var(--style-preview-enter-from, 100%)); opacity: 1; }
+  to { transform: translateX(0); opacity: 1; }
 }
 @keyframes stylePreviewEnterFromLeft {
-  from { transform: translateX(var(--style-preview-enter-from, -100%)); }
-  to { transform: translateX(0); }
+  from { transform: translateX(var(--style-preview-enter-from, -100%)); opacity: 1; }
+  to { transform: translateX(0); opacity: 1; }
 }
 @keyframes stylePreviewLeaveToLeft {
-  from { transform: translateX(var(--style-preview-leave-from, 0%)); }
-  to { transform: translateX(-100%); }
+  from { transform: translateX(var(--style-preview-leave-from, 0%)); opacity: 1; }
+  98% { transform: translateX(-100%); opacity: 1; }
+  to { transform: translateX(-100%); opacity: 0; }
 }
 @keyframes stylePreviewLeaveToRight {
-  from { transform: translateX(var(--style-preview-leave-from, 0%)); }
-  to { transform: translateX(100%); }
+  from { transform: translateX(var(--style-preview-leave-from, 0%)); opacity: 1; }
+  98% { transform: translateX(100%); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
 }
 
 /* ─── Category page ─── */
