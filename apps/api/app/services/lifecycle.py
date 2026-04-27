@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.core.db import (
     AppMetaRow,
