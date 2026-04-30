@@ -40,6 +40,10 @@ services:
         sync: false
       - key: PROVIDER_REQUEST_TIMEOUT_SECONDS
         value: "90"
+      - key: ADMIN_USER_IDS
+        sync: false
+      - key: ADMIN_SECRET_TOKEN
+        sync: false
     healthCheckPath: /healthz
     # Run SQL migrations before each deploy (idempotent — safe to re-run).
     preDeployCommand: python infra/db/migrate.py
