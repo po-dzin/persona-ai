@@ -147,22 +147,36 @@ def handle_successful_payment(
         logger.error("payment_package_not_resolved user_id=%s payload=%s stars=%s", user_id, payload, stars)
         return
 
+    # Use the Telegram charge ID as the stable idempotency key so Telegram
+    # retries of the same payment are deduplicated correctly.  Fall back to a
+    # deterministic key when the charge ID is absent (local dev / mocks).
     from uuid import uuid4
-    event_id = f"tg-stars-{user_id}-{stars}-{uuid4()}"
+    event_id = telegram_payment_charge_id or f"tg-stars-{user_id}-{stars}-{uuid4()}"
     logger.info("payment_crediting user_id=%s package=%s stars=%s event_id=%s", user_id, package_code, stars, event_id)
-    svc.ingest_webhook(
-        "telegram",
-        event_id,
-        {
-            "payment_id": event_id,
-            "user_id": user_id,
-            "package_code": package_code,
-            "status": "paid",
-            "amount": stars,
-        },
-    )
-    if settings.free_demo_mode and telegram_payment_charge_id:
-        # Demo transactions: credit coins, then refund Stars to user.
+    try:
+        svc.ingest_webhook(
+            "telegram",
+            event_id,
+            {
+                "telegram_payment_charge_id": telegram_payment_charge_id,
+                "user_id": user_id,
+                "package_code": package_code,
+                "status": "paid",
+                "amount": stars,
+            },
+        )
+    except Exception:
+        # Re-raise so the webhook handler returns 5xx to Telegram.
+        # Telegram will retry the delivery, and our stable event_id
+        # (telegram_payment_charge_id) ensures the retry is idempotent.
+        logger.error(
+            "payment_ingest_failed user_id=%s package=%s event_id=%s",
+            user_id, package_code, event_id, exc_info=True,
+        )
+        raise
+    # Refund only for the TEST demo package so real purchases are never
+    # auto-refunded even when FREE_DEMO_MODE is enabled in production.
+    if settings.free_demo_mode and package_code == "TEST" and telegram_payment_charge_id:
         refund_star_payment(
             user_id=user_id,
             telegram_payment_charge_id=telegram_payment_charge_id,
@@ -207,13 +221,23 @@ def send_photo_to_user(chat_id: str, photo_url: str, app_link: str | None = None
 
 
 def register_webhook(webhook_url: str, secret: str) -> dict[str, Any]:
-    """Call once to register bot webhook with Telegram."""
+    """Register (or re-register) the bot webhook with Telegram.
+
+    Always calls setWebhook so that a rotated TELEGRAM_WEBHOOK_SECRET is
+    applied immediately — getWebhookInfo does not expose the current secret,
+    so a URL-only equality check would silently skip secret updates and cause
+    every subsequent webhook request to be rejected with 403.
+
+    drop_pending_updates is intentionally omitted so successful_payment events
+    that queued during a deploy restart are not silently discarded.
+    """
+    logger.info("tg_webhook_registering url=%s", webhook_url)
     return _tg_api(
         "setWebhook",
         {
             "url": webhook_url,
             "secret_token": secret,
             "allowed_updates": ["message", "pre_checkout_query"],
-            "drop_pending_updates": True,
+            # drop_pending_updates intentionally omitted.
         },
     )
