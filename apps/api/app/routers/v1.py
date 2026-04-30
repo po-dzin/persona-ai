@@ -468,7 +468,9 @@ async def _handle_tg_update(update: dict[str, Any], svc: VerticalSliceService) -
 
     sp = message.get("successful_payment")
     if sp and user_id:
-        handle_successful_payment(
+        import asyncio
+        await asyncio.to_thread(
+            handle_successful_payment,
             user_id=user_id,
             payload=sp.get("invoice_payload", ""),
             stars=sp.get("total_amount", 0),

@@ -66,8 +66,14 @@ async def send_start_message(chat_id: int | str) -> None:
 
 
 async def answer_pre_checkout(pre_checkout_query_id: str) -> None:
-    """Auto-approve all Stars pre-checkout queries."""
-    _tg_api(
+    """Auto-approve all Stars pre-checkout queries.
+
+    Uses asyncio.to_thread so the synchronous urllib call does not block
+    the event loop — Telegram requires a reply within 10 seconds.
+    """
+    import asyncio
+    await asyncio.to_thread(
+        _tg_api,
         "answerPreCheckoutQuery",
         {"pre_checkout_query_id": pre_checkout_query_id, "ok": True},
     )
@@ -149,9 +155,9 @@ def handle_successful_payment(
 
     # Use the Telegram charge ID as the stable idempotency key so Telegram
     # retries of the same payment are deduplicated correctly.  Fall back to a
-    # deterministic key when the charge ID is absent (local dev / mocks).
-    from uuid import uuid4
-    event_id = telegram_payment_charge_id or f"tg-stars-{user_id}-{stars}-{uuid4()}"
+    # deterministic (content-addressed) key when the charge ID is absent so
+    # even mocked/test retries are deduplicated correctly.
+    event_id = telegram_payment_charge_id or f"tg-stars-{user_id}-{stars}-{payload}"
     logger.info("payment_crediting user_id=%s package=%s stars=%s event_id=%s", user_id, package_code, stars, event_id)
     try:
         svc.ingest_webhook(
@@ -177,10 +183,15 @@ def handle_successful_payment(
     # Refund only for the TEST demo package so real purchases are never
     # auto-refunded even when FREE_DEMO_MODE is enabled in production.
     if settings.free_demo_mode and package_code == "TEST" and telegram_payment_charge_id:
-        refund_star_payment(
+        ok = refund_star_payment(
             user_id=user_id,
             telegram_payment_charge_id=telegram_payment_charge_id,
         )
+        if not ok:
+            logger.error(
+                "demo_refund_failed user_id=%s charge_id=%s",
+                user_id, telegram_payment_charge_id,
+            )
 
 
 def _resolve_package(payload: str, stars: int) -> str | None:

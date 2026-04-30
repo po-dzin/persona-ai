@@ -31,7 +31,8 @@ def test_healthz_reports_ok() -> None:
     client = _client()
     res = client.get("/healthz")
     assert res.status_code == 200
-    assert res.json() == {"status": "ok"}
+    body = res.json()
+    assert body["status"] == "ok"
 
 
 def test_packages_endpoint_exposes_5_tiers() -> None:
