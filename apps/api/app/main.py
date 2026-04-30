@@ -29,6 +29,42 @@ from app.services.lifecycle import run_backfill_once
 _logger = logging.getLogger(__name__)
 
 
+def _verify_schema() -> None:
+    """Warn at startup if critical migration columns/tables are missing.
+
+    init_db() / create_all() creates new tables but does NOT add columns to
+    existing tables.  If migration 0010 was never applied on an existing
+    PostgreSQL database, 'max_paid_topup_credits' will be missing from the
+    users table and every payment will fail with an UndefinedColumn error.
+    """
+    from app.core.db import _is_sqlite
+    if _is_sqlite:
+        return  # SQLite bootstrap handles this separately
+    try:
+        with get_system_session() as db:
+            row = db.execute(text("""
+                SELECT
+                    (SELECT COUNT(*) FROM information_schema.tables
+                     WHERE table_schema = 'public'
+                       AND table_name = 'webhook_events') AS has_webhook_events,
+                    (SELECT COUNT(*) FROM information_schema.columns
+                     WHERE table_schema = 'public'
+                       AND table_name = 'users'
+                       AND column_name = 'max_paid_topup_credits') AS has_topup_col
+            """)).fetchone()
+            if row and (row[0] == 0 or row[1] == 0):
+                _logger.critical(
+                    "SCHEMA_MISSING: migration 0010 was not applied. "
+                    "webhook_events=%s max_paid_topup_credits=%s — "
+                    "run: python infra/db/migrate.py",
+                    row[0], row[1],
+                )
+            else:
+                _logger.info("schema_ok webhook_events=1 max_paid_topup_credits=1")
+    except Exception:
+        _logger.warning("schema_check_failed", exc_info=True)
+
+
 def _warn_missing_secrets() -> None:
     """Log warnings for security-critical settings that are not configured."""
     from app.core.settings import settings
@@ -68,6 +104,7 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 _logger.info("lifecycle_backfill_completed users=%s", users_count)
     except Exception:
         _logger.exception("lifecycle_backfill_failed")
+    _verify_schema()
     _warn_missing_secrets()
     _register_tg_webhook()
     yield
@@ -85,13 +122,31 @@ def create_app() -> FastAPI:
 
     @app.get("/healthz", tags=["infra"])
     def healthz() -> Response:
+        import json as _json
+        from app.core.db import _is_sqlite
         try:
             with get_system_session() as db:
                 db.execute(text("SELECT 1"))
-            return Response(content='{"status":"ok"}', media_type="application/json")
+            schema_ok: bool | None = None
+            if not _is_sqlite:
+                try:
+                    row = db.execute(text("""
+                        SELECT
+                            (SELECT COUNT(*) FROM information_schema.tables
+                             WHERE table_schema='public' AND table_name='webhook_events'),
+                            (SELECT COUNT(*) FROM information_schema.columns
+                             WHERE table_schema='public' AND table_name='users'
+                               AND column_name='max_paid_topup_credits')
+                    """)).fetchone()
+                    schema_ok = bool(row and row[0] == 1 and row[1] == 1)
+                except Exception:
+                    schema_ok = False
+            payload = {"status": "ok" if schema_ok is not False else "degraded", "schema_ok": schema_ok}
+            status_code = 200 if schema_ok is not False else 503
+            return Response(content=_json.dumps(payload), media_type="application/json", status_code=status_code)
         except Exception:
             _logger.exception("healthz_db_check_failed")
-            return Response(content='{"status":"degraded"}', media_type="application/json", status_code=503)
+            return Response(content='{"status":"degraded","schema_ok":null}', media_type="application/json", status_code=503)
 
     # Serve built admin app (present after Docker build or manual build)
     admin_dist = REPO_ROOT / "apps" / "admin" / "dist"
