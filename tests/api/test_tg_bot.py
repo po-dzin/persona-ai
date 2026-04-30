@@ -1,13 +1,18 @@
 from dataclasses import replace as dc_replace
 
+import pytest
+
 import app.services.tg_bot as tg_bot
 
 
 class _SvcStub:
-    def __init__(self) -> None:
+    def __init__(self, *, raise_on_ingest: bool = False) -> None:
         self.events: list[tuple[str, str, dict]] = []
+        self._raise = raise_on_ingest
 
     def ingest_webhook(self, provider: str, event_id: str, payload: dict):
+        if self._raise:
+            raise RuntimeError("db_error")
         self.events.append((provider, event_id, payload))
         return {"accepted": True}
 
@@ -89,6 +94,38 @@ def test_successful_payment_no_refund_when_demo_mode_disabled(monkeypatch) -> No
 
     assert svc.events
     assert all(method != "refundStarPayment" for method, _ in calls)
+
+
+def test_payment_ingest_failure_propagates_for_telegram_retry(monkeypatch) -> None:
+    """A DB failure during ingest must propagate so Telegram retries the webhook."""
+    patched_settings = dc_replace(tg_bot.settings, free_demo_mode=False)
+    monkeypatch.setattr(tg_bot, "settings", patched_settings)
+    monkeypatch.setattr(tg_bot, "_tg_api", lambda m, p: {"ok": True, "result": True})
+
+    svc = _SvcStub(raise_on_ingest=True)
+    with pytest.raises(RuntimeError, match="db_error"):
+        tg_bot.handle_successful_payment(
+            user_id="12345",
+            payload="PACKAGE_STARTER",
+            stars=230,
+            telegram_payment_charge_id="chg_123",
+            svc=svc,
+        )
+
+
+def test_register_webhook_always_calls_set_webhook(monkeypatch) -> None:
+    """setWebhook must always be called — URL-only skip would miss secret rotation."""
+    calls: list[str] = []
+
+    def fake_tg_api(method: str, payload: dict):
+        calls.append(method)
+        return {"ok": True, "result": {"url": "https://example.com/v1/tg/webhook"}}
+
+    monkeypatch.setattr(tg_bot, "_tg_api", fake_tg_api)
+    tg_bot.register_webhook("https://example.com/v1/tg/webhook", "secret")
+
+    assert "setWebhook" in calls
+    assert "getWebhookInfo" not in calls
 
 
 def test_create_invoice_link_uses_total_credits_with_bonus(monkeypatch) -> None:

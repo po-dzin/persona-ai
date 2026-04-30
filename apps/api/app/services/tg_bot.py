@@ -166,11 +166,14 @@ def handle_successful_payment(
             },
         )
     except Exception:
+        # Re-raise so the webhook handler returns 5xx to Telegram.
+        # Telegram will retry the delivery, and our stable event_id
+        # (telegram_payment_charge_id) ensures the retry is idempotent.
         logger.error(
             "payment_ingest_failed user_id=%s package=%s event_id=%s",
             user_id, package_code, event_id, exc_info=True,
         )
-        return
+        raise
     # Refund only for the TEST demo package so real purchases are never
     # auto-refunded even when FREE_DEMO_MODE is enabled in production.
     if settings.free_demo_mode and package_code == "TEST" and telegram_payment_charge_id:
@@ -218,26 +221,23 @@ def send_photo_to_user(chat_id: str, photo_url: str, app_link: str | None = None
 
 
 def register_webhook(webhook_url: str, secret: str) -> dict[str, Any]:
-    """Register bot webhook only when the URL has actually changed.
+    """Register (or re-register) the bot webhook with Telegram.
 
-    Avoids dropping pending updates on every cold-start / deploy: we first
-    call getWebhookInfo and skip setWebhook when the URL already matches.
-    drop_pending_updates is intentionally omitted so in-flight payments that
-    arrived during a deploy gap are not silently discarded.
+    Always calls setWebhook so that a rotated TELEGRAM_WEBHOOK_SECRET is
+    applied immediately — getWebhookInfo does not expose the current secret,
+    so a URL-only equality check would silently skip secret updates and cause
+    every subsequent webhook request to be rejected with 403.
+
+    drop_pending_updates is intentionally omitted so successful_payment events
+    that queued during a deploy restart are not silently discarded.
     """
-    info = _tg_api("getWebhookInfo", {})
-    current_url = (info.get("result") or {}).get("url", "")
-    if current_url == webhook_url:
-        logger.info("tg_webhook_already_registered url=%s", webhook_url)
-        return info
-    logger.info("tg_webhook_registering url=%s previous=%s", webhook_url, current_url)
+    logger.info("tg_webhook_registering url=%s", webhook_url)
     return _tg_api(
         "setWebhook",
         {
             "url": webhook_url,
             "secret_token": secret,
             "allowed_updates": ["message", "pre_checkout_query"],
-            # drop_pending_updates intentionally omitted — do not discard
-            # successful_payment events that queued during a deploy restart.
+            # drop_pending_updates intentionally omitted.
         },
     )
