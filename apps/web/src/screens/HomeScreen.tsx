@@ -157,9 +157,14 @@ export function HomeScreen({ styles, photos, generatingOrderIds, onPreviewStyle 
     }
 
     if (isCategoryTransitioning && outgoingCategory) {
-      const outgoingPanel = panelRefs.current[outgoingCategory];
-      const outgoingHeight = outgoingPanel?.offsetHeight ?? activeHeight;
-      setPanelsHeight(Math.max(activeHeight, outgoingHeight));
+      // Lock to the ACTIVE (entering) panel height only.
+      // The outgoing panel is position:absolute so it doesn't contribute to
+      // flow — pinning to max(outgoing, active) would cause an abrupt jump
+      // when released to "auto" at swipeDurationMs if heights differ.
+      // Locking to activeHeight lets the CSS height-transition animate from
+      // the previous height to the new one, and releasing to null at the end
+      // is invisible (auto == activePx at that point).
+      setPanelsHeight(activeHeight);
       if (heightTimerRef.current) window.clearTimeout(heightTimerRef.current);
       heightTimerRef.current = window.setTimeout(() => {
         setPanelsHeight(null);

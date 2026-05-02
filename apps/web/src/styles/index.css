@@ -1660,8 +1660,11 @@ button, a, [role="button"] { touch-action: manipulation; }
   top: 0;
   bottom: 0;
   padding-bottom: 0;
-  animation: stylePreviewZoomIn var(--cmp-motion-enter) var(--cmp-ease-standard) both;
   will-change: transform, opacity;
+}
+/* Zoom-in only plays on initial enter (not after card-expand animation ends). */
+.style-preview-screen.is-entering {
+  animation: stylePreviewZoomIn var(--cmp-motion-enter) var(--cmp-ease-standard) both;
 }
 .style-preview-screen.is-opening-from-card,
 .style-preview-screen.is-closing-to-card {
@@ -1712,7 +1715,11 @@ button, a, [role="button"] { touch-action: manipulation; }
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transform-origin: center top;
+  /* center center matches computeCardTransformVars math:
+     tx = cardCenterX − shellCenterX, ty = cardCenterY − shellCenterY.
+     With center-top the panel was landing ~(cardH/2 − shellH/2) px above
+     the card — visually the card-collapse animation missed its target. */
+  transform-origin: center center;
 }
 .style-preview-panel.is-active {
   z-index: var(--cmp-z-selected);

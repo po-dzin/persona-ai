@@ -66,6 +66,8 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
   const openedAtRef = useRef(0);
   const [isOpeningFromCard, setIsOpeningFromCard] = useState(false);
   const [openingVars, setOpeningVars] = useState<CSSProperties | null>(null);
+  const [isEntering, setIsEntering] = useState(false);
+  const enterTimerRef = useRef<number | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const swipeDurationMs = useMemo(
     () => (prefersReducedMotion ? 0 : readMotionTokenMs("--cmp-motion-swipe", 280)),
@@ -107,6 +109,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       stageRef.current?.style.removeProperty("--style-preview-leave-from");
       setIsOpeningFromCard(false);
       setOpeningVars(null);
+      setIsEntering(false);
       setIsClosingToCard(false);
       setClosingVars(null);
       setIsPulling(false);
@@ -124,6 +127,10 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
         window.clearTimeout(pullReleaseTimerRef.current);
         pullReleaseTimerRef.current = null;
       }
+      if (enterTimerRef.current) {
+        window.clearTimeout(enterTimerRef.current);
+        enterTimerRef.current = null;
+      }
       return;
     }
     openedAtRef.current = performance.now();
@@ -140,6 +147,18 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     if (!isOpen || !originRect || prefersReducedMotion) {
       setIsOpeningFromCard(false);
       setOpeningVars(null);
+      // Normal (non-card) open: schedule zoom-in animation via is-entering class.
+      // This prevents stylePreviewZoomIn from re-triggering later when
+      // is-opening-from-card is removed (which would restart the animation).
+      if (isOpen && !originRect && !prefersReducedMotion) {
+        const enterMs = readMotionTokenMs("--cmp-motion-enter", 180);
+        setIsEntering(true);
+        if (enterTimerRef.current) window.clearTimeout(enterTimerRef.current);
+        enterTimerRef.current = window.setTimeout(() => {
+          setIsEntering(false);
+          enterTimerRef.current = null;
+        }, enterMs + 40);
+      }
       return;
     }
     const shell = document.querySelector(".app-shell") as HTMLElement | null;
@@ -165,7 +184,13 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
     } as CSSProperties);
     setIsOpeningFromCard(true);
     const timer = window.setTimeout(() => setIsOpeningFromCard(false), Math.max(220, closeDurationMs));
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      if (enterTimerRef.current) {
+        window.clearTimeout(enterTimerRef.current);
+        enterTimerRef.current = null;
+      }
+    };
   }, [isOpen, originRect, prefersReducedMotion, closeDurationMs]);
 
   const computeCardTransformVars = (targetRect: { left: number; top: number; width: number; height: number }) => {
@@ -208,6 +233,7 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       if (swipeTimerRef.current) window.clearTimeout(swipeTimerRef.current);
       if (closeTimerRef.current) window.clearTimeout(closeTimerRef.current);
       if (pullReleaseTimerRef.current) window.clearTimeout(pullReleaseTimerRef.current);
+      if (enterTimerRef.current) window.clearTimeout(enterTimerRef.current);
     };
   }, []);
 
@@ -481,6 +507,9 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
   const screenClass = [
     "overlay-screen style-preview-screen",
     isOpeningFromCard ? "is-opening-from-card" : "",
+    // is-entering drives the zoom-in animation on normal (non-card) open.
+    // Scoped to a class so removing is-opening-from-card doesn't retrigger it.
+    isEntering ? "is-entering" : "",
     (isPulling || isPullReleasing) && !isClosing ? "is-pulling" : "",
     // Both card-collapse and pull-direct: the panel handles the animation, screen is transparent
     (isClosingToCard || isClosingPullDirect) ? "is-closing-to-card" : "",
