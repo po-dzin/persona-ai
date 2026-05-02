@@ -1661,6 +1661,12 @@ button, a, [role="button"] { touch-action: manipulation; }
   bottom: 0;
   padding-bottom: 0;
   will-change: transform, opacity;
+  /* Suppress the generic overlayScreenEnter animation that .overlay-screen
+     carries. Without this, removing .is-opening-from-card (which had
+     animation:none to suppress it) causes overlayScreenEnter to restart,
+     producing the translateY micro-shift the user sees at expand end.
+     Per-state rules (is-entering, is-closing-*) override this as needed. */
+  animation: none;
 }
 /* Zoom-in only plays on initial enter (not after card-expand animation ends). */
 .style-preview-screen.is-entering {
