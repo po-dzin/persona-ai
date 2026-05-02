@@ -1723,6 +1723,11 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .style-preview-panel.is-active {
   z-index: var(--cmp-z-selected);
+  /* Keep the GPU compositor layer alive for the full lifetime of the active
+     panel. Without this, removing is-opening-from-card (which carries
+     will-change: transform) causes a layer demotion flush exactly at the
+     end of the expand animation — the one-frame "jitter" the user sees. */
+  will-change: transform;
 }
 .style-preview-panel.is-active.is-opening-from-card {
   animation: stylePreviewCardExpand var(--cmp-motion-swipe) var(--cmp-ease-standard) both;
@@ -1851,7 +1856,7 @@ button, a, [role="button"] { touch-action: manipulation; }
     border-radius: var(--cmp-space-22);
   }
   to {
-    opacity: 0.9;
+    opacity: 0;
     transform: translate(var(--style-preview-origin-tx, 0), var(--style-preview-origin-ty, 0))
       scale(var(--style-preview-origin-sx, 0.12), var(--style-preview-origin-sy, 0.12));
     border-radius: var(--cmp-space-16);

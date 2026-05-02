@@ -155,7 +155,9 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
         setIsEntering(true);
         if (enterTimerRef.current) window.clearTimeout(enterTimerRef.current);
         enterTimerRef.current = window.setTimeout(() => {
-          setIsEntering(false);
+          // Defer one rAF so the class removal doesn't race with the
+          // compositor's last animation frame — eliminates end-of-zoom jitter.
+          requestAnimationFrame(() => setIsEntering(false));
           enterTimerRef.current = null;
         }, enterMs + 40);
       }
@@ -183,7 +185,12 @@ export function StylePreviewScreen({ isOpen, styles, style, originRect = null, o
       "--style-preview-origin-sy": String(sy),
     } as CSSProperties);
     setIsOpeningFromCard(true);
-    const timer = window.setTimeout(() => setIsOpeningFromCard(false), Math.max(220, closeDurationMs));
+    const timer = window.setTimeout(() => {
+      // One rAF delay lets the compositor finish its last animation frame
+      // before the class (and its will-change) are removed — prevents the
+      // GPU layer demotion flash / jitter at the end of the card-expand.
+      requestAnimationFrame(() => setIsOpeningFromCard(false));
+    }, Math.max(220, closeDurationMs));
     return () => {
       window.clearTimeout(timer);
       if (enterTimerRef.current) {
