@@ -1834,7 +1834,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 @keyframes stylePreviewZoomIn {
   from {
     opacity: 1;
-    transform: translateY(var(--cmp-motion-offset-sm)) scale(0.97);
+    transform: translateY(var(--cmp-motion-offset-sm)) scale(var(--cmp-motion-scale-enter));
   }
   to {
     opacity: 1;
@@ -1843,7 +1843,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 @keyframes stylePreviewCardExpand {
   from {
-    opacity: 0.9;
+    opacity: var(--cmp-state-opacity-idle);
     transform: translate(var(--style-preview-origin-tx, 0), var(--style-preview-origin-ty, 0))
       scale(var(--style-preview-origin-sx, 0.12), var(--style-preview-origin-sy, 0.12));
     border-radius: var(--cmp-space-16);
@@ -1875,7 +1875,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   }
   to {
     opacity: 0;
-    transform: translateY(var(--cmp-motion-offset-sm)) scale(0.97);
+    transform: translateY(var(--cmp-motion-offset-sm)) scale(var(--cmp-motion-scale-enter));
   }
 }
 @keyframes stylePreviewPullDownOut {

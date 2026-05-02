@@ -35,6 +35,7 @@
   --pr-color-white: #FFFFFF;
 
   /* Primitive: opacity / overlays */
+  --pr-overlay-01: rgba(255,255,255,0.01);
   --pr-overlay-03: rgba(255,255,255,0.03);
   --pr-overlay-04: rgba(255,255,255,0.04);
   --pr-overlay-05: rgba(255,255,255,0.05);
@@ -137,6 +138,7 @@
   --sem-color-overlay-scrim: var(--pr-scrim-60);
   --sem-color-overlay-image-dim: var(--pr-scrim-45);
   --sem-color-overlay-chip: var(--pr-scrim-50);
+  --sem-color-overlay-01: var(--pr-overlay-01);
   --sem-color-overlay-03: var(--pr-overlay-03);
   --sem-color-overlay-05: var(--pr-overlay-05);
   --sem-color-overlay-07: var(--pr-overlay-07);
@@ -226,6 +228,10 @@
 
   --cmp-motion-offset-sm: 6px;
   --cmp-motion-offset-md: 10px;
+  /* Scale used for screen enter/exit zoom animations (distinct from
+     --cmp-state-scale-press-md which shares the same value but is
+     semantically reserved for interactive press states). */
+  --cmp-motion-scale-enter: 0.97;
 
   --cmp-z-base: 1;
   --cmp-z-selected: 3;
